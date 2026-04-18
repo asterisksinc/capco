@@ -21,6 +21,7 @@ type RawMaterialForm = {
 
 type MetallisationForm = {
   coilNo: string;
+  rmId: string;
   machineNo: string;
   weight: string;
   opticalDensity: string;
@@ -47,6 +48,7 @@ const defaultRawMaterialForm: RawMaterialForm = {
 
 const defaultMetallisationForm: MetallisationForm = {
   coilNo: "",
+  rmId: "",
   machineNo: "M-01",
   weight: "",
   opticalDensity: "2.4",
@@ -102,10 +104,11 @@ function createRawMaterialRow(): RawMaterialForm {
   };
 }
 
-function createMetallisationRow(): MetallisationForm {
+function createMetallisationRow(defaultRmId: string): MetallisationForm {
   return {
     ...defaultMetallisationForm,
     coilNo: generateId("MC"),
+    rmId: defaultRmId,
   };
 }
 
@@ -130,7 +133,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
   const availableRollIds = Array.from(new Set(workOrderFlowData?.rawMaterialRows.map((row) => row.rollNo) ?? []));
 
   const [rawMaterialRowsInput, setRawMaterialRowsInput] = useState<RawMaterialForm[]>([createRawMaterialRow()]);
-  const [metallisationRowsInput, setMetallisationRowsInput] = useState<MetallisationForm[]>([createMetallisationRow()]);
+  const [metallisationRowsInput, setMetallisationRowsInput] = useState<MetallisationForm[]>([createMetallisationRow("")]);
   const [slittingRowsInput, setSlittingRowsInput] = useState<SlittingForm[]>([createSlittingRow("")]);
 
   if (!mounted || !workOrderFlowData) return null;
@@ -138,7 +141,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
   const resetModalState = () => {
     setModalStep(1);
     setRawMaterialRowsInput([createRawMaterialRow()]);
-    setMetallisationRowsInput([createMetallisationRow()]);
+    setMetallisationRowsInput([createMetallisationRow(availableRollIds[0] ?? "")]);
     setSlittingRowsInput([createSlittingRow(availableRollIds[0] ?? "")]);
   };
 
@@ -164,7 +167,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
       return;
     }
     if (activeTab === "Metallisation") {
-      setMetallisationRowsInput((prev) => [...prev, createMetallisationRow()]);
+      setMetallisationRowsInput((prev) => [...prev, createMetallisationRow(availableRollIds[0] ?? "")]);
       return;
     }
     setSlittingRowsInput((prev) => [...prev, createSlittingRow(availableRollIds[0] ?? "")]);
@@ -220,6 +223,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
       payload.forEach((item) => {
         addFlowRow(orderId, "Metallisation", {
           coilNo: item.coilNo || generateId("MC"),
+          rmId: item.rmId || "-",
           machineNo: item.machineNo || "M-01",
           weight: `${item.weight || "0"}kgs`,
           opticalDensity: item.opticalDensity,
@@ -236,6 +240,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
       payload.forEach((item) => {
         addFlowRow(orderId, "Slitting", {
           productNo: item.productNo || generateId("PM"),
+          rmId: item.associatedRmId || "-",
           weight: `${item.weight || "0"}kgs`,
           thickness: item.micron,
           grade: item.grade,
@@ -305,21 +310,11 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Micron</label>
-                  <select value={row.micron} onChange={(e) => updateRawMaterialRow(idx, { micron: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
-                    <option value="3.8">3.8</option>
-                    <option value="4.2">4.2</option>
-                    <option value="4.5">4.5</option>
-                    <option value="5.0">5.0</option>
-                  </select>
+                  <input type="number" step="0.1" value={row.micron} onChange={(e) => updateRawMaterialRow(idx, { micron: e.target.value })} placeholder="Enter micron" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Width</label>
-                  <select value={row.width} onChange={(e) => updateRawMaterialRow(idx, { width: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
-                    <option value="0.8">0.8</option>
-                    <option value="1.0">1.0</option>
-                    <option value="1.2">1.2</option>
-                    <option value="1.4">1.4</option>
-                  </select>
+                  <input type="number" step="0.1" value={row.width} onChange={(e) => updateRawMaterialRow(idx, { width: e.target.value })} placeholder="Enter width" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Quantity</label>
@@ -351,6 +346,15 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Coil No.</label>
                   <input value={row.coilNo} onChange={(e) => updateMetallisationRow(idx, { coilNo: e.target.value })} onBlur={(e) => !e.target.value.trim() && updateMetallisationRow(idx, { coilNo: generateId("MC") })} placeholder="Auto generate or enter coil no" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[13px] font-medium text-[#171717]">RM ID</label>
+                  <select value={row.rmId} onChange={(e) => updateMetallisationRow(idx, { rmId: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
+                    {availableRollIds.length === 0 && <option value="">No RM IDs available</option>}
+                    {availableRollIds.map((rollId) => (
+                      <option key={rollId} value={rollId}>{rollId}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Machine No.</label>
@@ -408,21 +412,11 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Micron</label>
-                <select value={row.micron} onChange={(e) => updateSlittingRow(idx, { micron: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
-                  <option value="3.8">3.8</option>
-                  <option value="4.2">4.2</option>
-                  <option value="4.5">4.5</option>
-                  <option value="5.0">5.0</option>
-                </select>
+                  <input type="number" step="0.1" value={row.micron} onChange={(e) => updateSlittingRow(idx, { micron: e.target.value })} placeholder="Enter micron" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Width</label>
-                <select value={row.width} onChange={(e) => updateSlittingRow(idx, { width: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
-                  <option value="0.8">0.8</option>
-                  <option value="1.0">1.0</option>
-                  <option value="1.2">1.2</option>
-                  <option value="1.4">1.4</option>
-                </select>
+                  <input type="number" step="0.1" value={row.width} onChange={(e) => updateSlittingRow(idx, { width: e.target.value })} placeholder="Enter width" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Weight</label>
@@ -463,6 +457,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
       return rows.map((item, idx) => (
         <div key={`met-${idx}`} className="rounded-[12px] border border-[#78CFFA] bg-[#F4FBFF] p-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-[14px] text-[#49526A]">
           <p>Coil No: {item.coilNo || "Auto"}</p>
+          <p>RM ID: {item.rmId || "-"}</p>
           <p>Machine: {item.machineNo}</p>
           <p>Weight: {item.weight || "0"} kgs</p>
           <p>Optical Density: {item.opticalDensity}</p>
@@ -640,12 +635,12 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Supplier</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Stage</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Action</th>
                   </>
                 )}
                 {activeTab === "Metallisation" && (
                   <>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] uppercase tracking-wider">Coil No.</th>
+                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[12%] uppercase tracking-wider">RM ID</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Machine No.</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[12%] uppercase tracking-wider">Weight</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Optical Density</th>
@@ -653,19 +648,18 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Timestamp</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Next Stage</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[8%] uppercase tracking-wider">Action</th>
                   </>
                 )}
                 {activeTab === "Slitting" && (
                   <>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] uppercase tracking-wider">Product No</th>
+                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[12%] uppercase tracking-wider">RM ID</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Weight</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Thickness</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Grade</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Timestamp Added</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Stage</th>
                     <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Action</th>
                   </>
                 )}
               </tr>
@@ -679,16 +673,12 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.supplier}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.stage}</td>
                   <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
-                  <td className="px-4 py-3">
-                    <button className="px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] transition-colors text-white text-[12px] font-medium rounded-[4px]">
-                      View
-                    </button>
-                  </td>
                 </tr>
               ))}
               {activeTab === "Metallisation" && workOrderFlowData.metallisationRows.map((row, idx) => (
                 <tr key={idx} className="hover:bg-gray-50/50 transition-colors bg-white">
                   <td className="px-4 py-4 text-[14px] text-[#00B6E2] font-semibold">{row.coilNo}</td>
+                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.rmId}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.machineNo}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.weight}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.opticalDensity}</td>
@@ -696,27 +686,18 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.nextStage}</td>
                   <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
-                  <td className="px-4 py-3">
-                    <button className="px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] transition-colors text-white text-[12px] font-medium rounded-[4px]">
-                      View
-                    </button>
-                  </td>
                 </tr>
               ))}
               {activeTab === "Slitting" && workOrderFlowData.slittingRows.map((row, idx) => (
                 <tr key={idx} className="hover:bg-gray-50/50 transition-colors bg-white">
                   <td className="px-4 py-4 text-[14px] text-[#00B6E2] font-semibold">{row.productNo}</td>
+                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.rmId}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.weight}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.thickness}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.grade}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestampAdded}</td>
                   <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.stage}</td>
                   <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
-                  <td className="px-4 py-3">
-                    <button className="px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] transition-colors text-white text-[12px] font-medium rounded-[4px]">
-                      View
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
