@@ -31,6 +31,7 @@ export type RawMaterialRow = {
 
 export type MetallisationRow = {
   coilNo: string;
+  rmId: string;
   machineNo: string;
   weight: string;
   opticalDensity: string;
@@ -42,6 +43,7 @@ export type MetallisationRow = {
 
 export type SlittingRow = {
   productNo: string;
+  rmId: string;
   weight: string;
   thickness: string;
   grade: string;
@@ -82,12 +84,12 @@ export const flowByWorkOrderId: Record<string, WorkOrderFlowData> = {
       { rollNo: "RM-458", weight: "62kgs", thickness: "4.5", supplier: "Global Metals", stage: "METALLISATION", status: "Completed" },
     ],
     metallisationRows: [
-      { coilNo: "MC-0001", machineNo: "M-01", weight: "59.2kgs", opticalDensity: "2.4", resistance: "1.5 Ohms", timestamp: "11/01/2025 08:30", nextStage: "SLITTING", status: "Completed" },
-      { coilNo: "MC-0002", machineNo: "M-02", weight: "59.5kgs", opticalDensity: "2.5", resistance: "1.4 Ohms", timestamp: "11/01/2025 10:15", nextStage: "SLITTING", status: "In-progress" },
+      { coilNo: "MC-0001", rmId: "RM-456", machineNo: "M-01", weight: "59.2kgs", opticalDensity: "2.4", resistance: "1.5 Ohms", timestamp: "11/01/2025 08:30", nextStage: "SLITTING", status: "Completed" },
+      { coilNo: "MC-0002", rmId: "RM-457", machineNo: "M-02", weight: "59.5kgs", opticalDensity: "2.5", resistance: "1.4 Ohms", timestamp: "11/01/2025 10:15", nextStage: "SLITTING", status: "In-progress" },
     ],
     slittingRows: [
-      { productNo: "PM-00001", weight: "58.5kgs", thickness: "4.5", grade: "A", timestampAdded: "13/01/2025 14:30", stage: "Ready for Dispatch", status: "Completed" },
-      { productNo: "PM-00002", weight: "42.0kgs", thickness: "3.8", grade: "B", timestampAdded: "13/01/2025 15:45", stage: "Quality Check", status: "In-progress" },
+      { productNo: "PM-00001", rmId: "RM-456", weight: "58.5kgs", thickness: "4.5", grade: "A", timestampAdded: "13/01/2025 14:30", stage: "Ready for Dispatch", status: "Completed" },
+      { productNo: "PM-00002", rmId: "RM-457", weight: "42.0kgs", thickness: "3.8", grade: "B", timestampAdded: "13/01/2025 15:45", stage: "Quality Check", status: "In-progress" },
     ],
   },
   "WO-0002": {
@@ -105,10 +107,10 @@ export const flowByWorkOrderId: Record<string, WorkOrderFlowData> = {
       { rollNo: "RM-462", weight: "49kgs", thickness: "3.8", supplier: "Nova Foils", stage: "METALLISATION", status: "Yet to Start" },
     ],
     metallisationRows: [
-      { coilNo: "MC-0010", machineNo: "M-03", weight: "TBD", opticalDensity: "TBD", resistance: "TBD", timestamp: "TBD", nextStage: "SLITTING", status: "Yet to Start" },
+      { coilNo: "MC-0010", rmId: "RM-461", machineNo: "M-03", weight: "TBD", opticalDensity: "TBD", resistance: "TBD", timestamp: "TBD", nextStage: "SLITTING", status: "Yet to Start" },
     ],
     slittingRows: [
-      { productNo: "PM-00010", weight: "TBD", thickness: "3.8", grade: "TBD", timestampAdded: "TBD", stage: "Pending", status: "Yet to Start" },
+      { productNo: "PM-00010", rmId: "RM-461", weight: "TBD", thickness: "3.8", grade: "TBD", timestampAdded: "TBD", stage: "Pending", status: "Yet to Start" },
     ],
   },
   "WO-0003": {
@@ -125,11 +127,11 @@ export const flowByWorkOrderId: Record<string, WorkOrderFlowData> = {
       { rollNo: "RM-470", weight: "72kgs", thickness: "5.0", supplier: "Asterisks.Inc", stage: "METALLISATION", status: "Completed" },
     ],
     metallisationRows: [
-      { coilNo: "MC-0021", machineNo: "M-01", weight: "70.8kgs", opticalDensity: "2.7", resistance: "1.3 Ohms", timestamp: "12/01/2025 09:20", nextStage: "SLITTING", status: "Completed" },
+      { coilNo: "MC-0021", rmId: "RM-470", machineNo: "M-01", weight: "70.8kgs", opticalDensity: "2.7", resistance: "1.3 Ohms", timestamp: "12/01/2025 09:20", nextStage: "SLITTING", status: "Completed" },
     ],
     slittingRows: [
-      { productNo: "PM-00021", weight: "35.1kgs", thickness: "5.0", grade: "A", timestampAdded: "13/01/2025 12:05", stage: "Quality Check", status: "In-progress" },
-      { productNo: "PM-00022", weight: "34.9kgs", thickness: "5.0", grade: "A", timestampAdded: "13/01/2025 12:40", stage: "Ready for Dispatch", status: "Completed" },
+      { productNo: "PM-00021", rmId: "RM-470", weight: "35.1kgs", thickness: "5.0", grade: "A", timestampAdded: "13/01/2025 12:05", stage: "Quality Check", status: "In-progress" },
+      { productNo: "PM-00022", rmId: "RM-470", weight: "34.9kgs", thickness: "5.0", grade: "A", timestampAdded: "13/01/2025 12:40", stage: "Ready for Dispatch", status: "Completed" },
     ],
   },
   "WO-0004": {
@@ -148,12 +150,12 @@ export const flowByWorkOrderId: Record<string, WorkOrderFlowData> = {
       { rollNo: "RM-482", weight: "56kgs", thickness: "4.2", supplier: "Asterisks.Inc", stage: "METALLISATION", status: "Completed" },
     ],
     metallisationRows: [
-      { coilNo: "MC-0030", machineNo: "M-02", weight: "54.3kgs", opticalDensity: "2.3", resistance: "1.6 Ohms", timestamp: "12/01/2025 15:10", nextStage: "SLITTING", status: "Completed" },
-      { coilNo: "MC-0031", machineNo: "M-02", weight: "55.1kgs", opticalDensity: "2.3", resistance: "1.6 Ohms", timestamp: "12/01/2025 16:00", nextStage: "SLITTING", status: "Completed" },
+      { coilNo: "MC-0030", rmId: "RM-480", machineNo: "M-02", weight: "54.3kgs", opticalDensity: "2.3", resistance: "1.6 Ohms", timestamp: "12/01/2025 15:10", nextStage: "SLITTING", status: "Completed" },
+      { coilNo: "MC-0031", rmId: "RM-481", machineNo: "M-02", weight: "55.1kgs", opticalDensity: "2.3", resistance: "1.6 Ohms", timestamp: "12/01/2025 16:00", nextStage: "SLITTING", status: "Completed" },
     ],
     slittingRows: [
-      { productNo: "PM-00030", weight: "26.9kgs", thickness: "4.2", grade: "A", timestampAdded: "13/01/2025 10:10", stage: "Ready for Dispatch", status: "Completed" },
-      { productNo: "PM-00031", weight: "27.4kgs", thickness: "4.2", grade: "A", timestampAdded: "13/01/2025 10:50", stage: "Ready for Dispatch", status: "Completed" },
+      { productNo: "PM-00030", rmId: "RM-480", weight: "26.9kgs", thickness: "4.2", grade: "A", timestampAdded: "13/01/2025 10:10", stage: "Ready for Dispatch", status: "Completed" },
+      { productNo: "PM-00031", rmId: "RM-481", weight: "27.4kgs", thickness: "4.2", grade: "A", timestampAdded: "13/01/2025 10:50", stage: "Ready for Dispatch", status: "Completed" },
     ],
   },
   "WO-0005": {
@@ -170,10 +172,10 @@ export const flowByWorkOrderId: Record<string, WorkOrderFlowData> = {
       { rollNo: "RM-490", weight: "80kgs", thickness: "6.0", supplier: "Asterisks.Inc", stage: "METALLISATION", status: "Completed" },
     ],
     metallisationRows: [
-      { coilNo: "MC-0040", machineNo: "M-04", weight: "TBD", opticalDensity: "TBD", resistance: "TBD", timestamp: "TBD", nextStage: "SLITTING", status: "Yet to Start" },
+      { coilNo: "MC-0040", rmId: "RM-490", machineNo: "M-04", weight: "TBD", opticalDensity: "TBD", resistance: "TBD", timestamp: "TBD", nextStage: "SLITTING", status: "Yet to Start" },
     ],
     slittingRows: [
-      { productNo: "PM-00040", weight: "TBD", thickness: "6.0", grade: "TBD", timestampAdded: "TBD", stage: "Pending", status: "Yet to Start" },
+      { productNo: "PM-00040", rmId: "RM-490", weight: "TBD", thickness: "6.0", grade: "TBD", timestampAdded: "TBD", stage: "Pending", status: "Yet to Start" },
     ],
   },
 };

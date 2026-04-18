@@ -136,6 +136,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                   {activeTab === "Metallisation" && (
                     <>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Coil No.</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">RM ID</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Machine No.</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Optical Density (OD)</th>
@@ -147,6 +148,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                   {activeTab === "Slitting" && (
                     <>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Product No</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">RM ID</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Thickness</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Grade</th>
@@ -180,6 +182,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                 {activeTab === "Metallisation" && workOrderFlowData.metallisationRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.coilNo}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rmId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.machineNo}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.opticalDensity}</td>
@@ -200,6 +203,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                 {activeTab === "Slitting" && workOrderFlowData.slittingRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.productNo}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rmId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.thickness}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
