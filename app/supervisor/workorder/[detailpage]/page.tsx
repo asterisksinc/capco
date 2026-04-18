@@ -3,30 +3,11 @@
 import { use } from "react";
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { useStore } from "@/hooks/useStore";
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
 };
-
-const rawMaterialRows = [
-  { id: "RM-0001", micron: "8", width: "1", qty: "1", stage: "Metallisation", date: "10/01/2025", status: "Yet to Start" },
-  { id: "RM-0002", micron: "12", width: "1", qty: "1", stage: "Slitting", date: "10/01/2025", status: "In-progress" },
-  { id: "RM-0003", micron: "5", width: "1", qty: "1", stage: "Slitting", date: "10/01/2025", status: "Completed" },
-  { id: "RM-0004", micron: "15", width: "1", qty: "1", stage: "Metallisation", date: "10/01/2025", status: "Yet to Start" },
-  { id: "RM-0005", micron: "7", width: "1", qty: "1", stage: "Slitting", date: "10/01/2025", status: "Completed" },
-];
-
-const metallisationRows = [
-  { id: "MET-0001", machineNo: "M-01", od: "2.4", resistance: "1.5 Ohms", rollLength: "1500m", date: "11/01/2025", status: "In-progress" },
-  { id: "MET-0002", machineNo: "M-02", od: "2.5", resistance: "1.4 Ohms", rollLength: "2000m", date: "11/01/2025", status: "Completed" },
-  { id: "MET-0003", machineNo: "M-01", od: "TBD", resistance: "TBD", rollLength: "1800m", date: "12/01/2025", status: "Yet to Start" },
-];
-
-const slittingRows = [
-  { id: "SLT-0001", machineNo: "S-04", cutWidth: "10mm", cuts: "50", yieldPct: "98%", date: "13/01/2025", status: "Completed" },
-  { id: "SLT-0002", machineNo: "S-02", cutWidth: "12mm", cuts: "40", yieldPct: "95%", date: "13/01/2025", status: "In-progress" },
-  { id: "SLT-0003", machineNo: "S-03", cutWidth: "8mm", cuts: "60", yieldPct: "TBD", date: "14/01/2025", status: "Yet to Start" },
-];
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "Yet to Start") {
@@ -46,24 +27,23 @@ type TabType = "Raw Material" | "Metallisation" | "Slitting";
 export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProps) {
   const { detailpage } = use(params);
   const orderId = detailpage.toUpperCase();
+  const { store, mounted, addFlowRow } = useStore();
+  const workOrderFlowData = store.flowDataMap[orderId];
   const [activeTab, setActiveTab] = useState<TabType>("Raw Material");
-  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
 
-  const handleRawMaterialView = (index: number) => {
-    setSelectedItemIndex(index);
+  const handleRawMaterialView = () => {
     setActiveTab("Metallisation");
   };
 
-  const handleMetallisationView = (index: number) => {
-    setSelectedItemIndex(index);
+  const handleMetallisationView = () => {
     setActiveTab("Slitting");
   };
 
-  const handleSlittingView = (index: number) => {
-    // This could link to a detailed view or completion screen
-    alert(`Slitting process for SLT-${String(index + 1).padStart(4, "0")} is complete!`);
+  const handleSlittingView = (productNo: string) => {
+    alert(`Slitting process for ${productNo} is complete!`);
   };
-
+  if (!mounted) return null;
+  if (!workOrderFlowData) return null;
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
       {/* Top Section - Overview */}
@@ -74,34 +54,34 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
           {/* Row 1 Stats */}
           <div className="flex flex-col gap-1.5">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Word Count</p>
-            <p className="text-[14px] font-semibold text-[#171717] leading-tight">4,200 words</p>
+            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workOrderFlowData.overview.wordCount}</p>
           </div>
           <div className="flex flex-col gap-1.5">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Micron</p>
-            <p className="text-[14px] font-semibold text-[#171717] leading-tight">8</p>
+            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workOrderFlowData.overview.micron}</p>
           </div>
           <div className="flex flex-col gap-1.5">
              <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Width</p>
-            <p className="text-[14px] font-semibold text-[#171717] leading-tight">1</p>
+            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workOrderFlowData.overview.width}</p>
           </div>
           <div className="flex flex-col gap-1.5">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Quantity</p>
-            <p className="text-[14px] font-semibold text-[#171717] leading-tight">1</p>
+            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workOrderFlowData.overview.quantity}</p>
           </div>
 
           {/* Row 2 Stats */}
           <div className="flex flex-col gap-1.5">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Stage</p>
-            <p className="text-[14px] font-semibold text-[#171717] leading-tight">Metallisation</p>
+            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workOrderFlowData.overview.stage}</p>
           </div>
           <div className="flex flex-col gap-1.5">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Date</p>
-            <p className="text-[14px] font-semibold text-[#171717] leading-tight">10/01/2025</p>
+            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workOrderFlowData.overview.date}</p>
           </div>
           <div className="flex flex-col gap-1.5 items-start">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Status</p>
             <div className="mt-0.5">
-              <StatusBadge status="Yet to Start" />
+              <StatusBadge status={workOrderFlowData.overview.status} />
             </div>
           </div>
         </div>
@@ -146,32 +126,32 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                 <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                   {activeTab === "Raw Material" && (
                     <>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">ID</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Micron</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Width</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Quantity</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Roll No</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Thickness</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Company/Supplier</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Stage</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Date</th>
                     </>
                   )}
                   {activeTab === "Metallisation" && (
                     <>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">ID</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Coil No.</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Machine No.</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Optical Density (OD)</th>
                       <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Resistance</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Roll Length</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Date</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Timestamp</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Next Stage</th>
                     </>
                   )}
                   {activeTab === "Slitting" && (
                     <>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">ID</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Machine No.</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Cut Width</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">No. of Cuts</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Yield (%)</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Date</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Product No</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Thickness</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Grade</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Timestamp Added</th>
+                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Stage</th>
                     </>
                   )}
                   <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Status</th>
@@ -179,57 +159,57 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {activeTab === "Raw Material" && rawMaterialRows.map((row, idx) => (
+                {activeTab === "Raw Material" && workOrderFlowData.rawMaterialRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.qty}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rollNo}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.thickness}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.supplier}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.status} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={() => handleRawMaterialView(idx)} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
+                      <button onClick={handleRawMaterialView} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
                         View
                       </button>
                     </td>
                   </tr>
                 ))}
                 
-                {activeTab === "Metallisation" && metallisationRows.map((row, idx) => (
+                {activeTab === "Metallisation" && workOrderFlowData.metallisationRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.coilNo}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.machineNo}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.od}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.opticalDensity}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.resistance}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rollLength}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.nextStage}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.status} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={() => handleMetallisationView(idx)} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
+                      <button onClick={handleMetallisationView} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
                         View
                       </button>
                     </td>
                   </tr>
                 ))}
 
-                {activeTab === "Slitting" && slittingRows.map((row, idx) => (
+                {activeTab === "Slitting" && workOrderFlowData.slittingRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.machineNo}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.cutWidth}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.cuts}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.yieldPct}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.productNo}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.thickness}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestampAdded}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.status} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={() => handleSlittingView(idx)} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
+                      <button onClick={() => handleSlittingView(row.productNo)} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
                         View
                       </button>
                     </td>

@@ -56,7 +56,7 @@ function StatusBadge({ status }: { status: string }) {
   return null;
 }
 
-export default function SupervisorStockPage() {
+export default function OperatorStockPage() {
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
       {/* Header section (Frame 66 style) */}
@@ -134,3 +134,5 @@ export default function SupervisorStockPage() {
     </div>
   );
 }
+
+
