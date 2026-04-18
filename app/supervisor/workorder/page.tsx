@@ -1,5 +1,10 @@
-import { Plus } from "lucide-react";
+"use client";
+
+import { Plus, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { type WorkOrderSummary } from "@/lib/data";
+import { useStore } from "@/hooks/useStore";
 
 const overviewStats = [
   {
@@ -32,14 +37,6 @@ const overviewStats = [
   },
 ];
 
-const mockRows = [
-  { id: "WO-0001", micron: "8", width: "1", qty: "1", stage: "Metallisation", date: "10/01/2025", status: "Yet to Start" },
-  { id: "WO-0001", micron: "12", width: "1", qty: "1", stage: "Slitting", date: "10/01/2025", status: "In-progress" },
-  { id: "WO-0001", micron: "5", width: "1", qty: "1", stage: "Slitting", date: "10/01/2025", status: "Completed" },
-  { id: "WO-0001", micron: "15", width: "1", qty: "1", stage: "Metallisation", date: "10/01/2025", status: "Yet to Start" },
-  { id: "WO-0001", micron: "7", width: "1", qty: "1", stage: "Slitting", date: "10/01/2025", status: "Completed" },
-];
-
 function StatusBadge({ status }: { status: string }) {
   if (status === "Yet to Start") {
     return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#FFF0F1] text-[#FB3748] text-[12px] font-medium leading-tight">Yet to Start</span>;
@@ -54,8 +51,137 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function SupervisorWorkOrderPage() {
+  const { store, mounted, addWorkOrder } = useStore();
+  const rows = store.workOrders;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    micron: "",
+    width: "",
+    quantity: ""
+  });
+
+  const handleCreateWorkOrder = () => {
+    if (!formData.micron || !formData.width || !formData.quantity) return;
+    
+    const nextIdNum = rows.reduce((maxId, row) => {
+      const parsed = Number.parseInt(row.id.replace("WO-", ""), 10);
+      return Number.isNaN(parsed) ? maxId : Math.max(maxId, parsed);
+    }, 0) + 1;
+    const newId = `WO-${String(nextIdNum).padStart(4, '0')}`;
+    
+    const today = new Date();
+    const dateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+    const newWorkOrder: WorkOrderSummary = {
+      id: newId,
+      micron: formData.micron,
+      width: formData.width,
+      qty: formData.quantity,
+      stage: "Raw Material", // New work orders start at raw material stage
+      date: dateStr,
+      status: "Yet to Start"
+    };
+
+    addWorkOrder(newWorkOrder);
+    setIsModalOpen(false);
+    setFormData({ micron: "", width: "", quantity: "" });
+  };
+
+  if (!mounted) return null;
+
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative">
+      {/* Modal Overlay */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-[12px] w-full max-w-[500px] shadow-lg flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">New Work Order</h2>
+                <p className="text-[14px] text-[#5C5C5C] leading-tight">Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-[#5C5C5C] hover:text-[#171717] transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="flex flex-col gap-5 px-6 py-6 border-b border-[#EBEBEB]">
+              {/* Micron Field */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-medium text-[#171717] uppercase tracking-wider">MICRON</label>
+                <div className="relative">
+                  <select 
+                    value={formData.micron}
+                    onChange={(e) => setFormData({...formData, micron: e.target.value})}
+                    className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#171717] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
+                  >
+                    <option value="" disabled hidden>Select micron...</option>
+                    <option value="5">5 Micron</option>
+                    <option value="7">7 Micron</option>
+                    <option value="8">8 Micron</option>
+                    <option value="12">12 Micron</option>
+                    <option value="15">15 Micron</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Width Field */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-medium text-[#171717] uppercase tracking-wider">WIDTH</label>
+                <div className="relative">
+                  <select 
+                    value={formData.width}
+                    onChange={(e) => setFormData({...formData, width: e.target.value})}
+                    className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#171717] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
+                  >
+                    <option value="" disabled hidden>Select width...</option>
+                    <option value="0.5">0.5 Width</option>
+                    <option value="1">1 Width</option>
+                    <option value="1.5">1.5 Width</option>
+                    <option value="2">2 Width</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Quantity Field */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-medium text-[#171717] uppercase tracking-wider">QUANTITY</label>
+                <input 
+                  type="number"
+                  placeholder="Enter Quantity"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                  className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-5 bg-[#FAFAFA]">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="h-[40px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[14px] font-medium rounded-[6px] hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreateWorkOrder}
+                className="h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors"
+              >
+                Create Work Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header section (Frame 66 style) */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
         <div className="w-full px-6 py-6 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 h-auto">
@@ -65,7 +191,10 @@ export default function SupervisorWorkOrderPage() {
               Lorem ipsum dolor sit amet, consectetur adipiscing elit
             </p>
           </div>
-          <button className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0"
+          >
             <Plus className="w-5 h-5 shrink-0" strokeWidth={2.5} />
             <span className="leading-tight">Add Work Order</span>
           </button>
@@ -111,7 +240,7 @@ export default function SupervisorWorkOrderPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {mockRows.map((row, idx) => (
+                {rows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
