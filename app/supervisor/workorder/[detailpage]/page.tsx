@@ -67,7 +67,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
       {/* Top Section - Overview */}
-      <section className="w-full max-w-[1180px] 2xl:max-w-[1600px] 3xl:max-w-[1900px] px-6 py-8 flex flex-col gap-6 border-b border-[#EBEBEB]">
+      <section className="w-full px-6 py-8 flex flex-col gap-6 border-b border-[#EBEBEB]">
         <h1 className="text-[16px] font-semibold text-[#171717] leading-tight">Work Orders Overview</h1>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-2">
@@ -108,7 +108,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
       </section>
 
       {/* Main Content - Table */}
-      <div className="w-full max-w-[1180px] 2xl:max-w-[1600px] 3xl:max-w-[1900px] px-6 py-6 flex flex-col gap-6">
+      <div className="w-full px-6 py-6 flex flex-col gap-6">
         
         {/* Controls Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

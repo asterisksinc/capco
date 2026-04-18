@@ -26,11 +26,7 @@ export function SupervisorSidebar() {
     <aside className="w-[260px] bg-[#F5F7FA] h-screen hidden md:flex flex-col border-r border-[#EBEBEB] fixed left-0 top-0 font-dm-sans z-20">
       <div className="h-[72px] px-6 flex items-center justify-between border-b border-[#EBEBEB] bg-[#F5F7FA]">
         <div className="flex items-center gap-2">
-          {/* Logo Placeholder */}
-          <div className="flex flex-col text-[#00B6E2] font-bold text-xl leading-none">
-            <span className="tracking-tighter">Capco<sup className="text-xs">&reg;</sup></span>
-            <span className="text-[10px] tracking-widest uppercase font-normal mt-0.5">Capacitors</span>
-          </div>
+          <Image src="/logo (2).svg" alt="Capco Capacitors" width={120} height={40} className="w-auto h-8" priority />
         </div>
         <button className="text-[#171717] hover:bg-white transition-colors bg-transparent border border-[#EBEBEB] rounded p-1.5 shadow-sm">
           <ArrowLeftFromLine className="w-4 h-4" />
