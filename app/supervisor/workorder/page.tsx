@@ -57,8 +57,8 @@ export default function SupervisorWorkOrderPage() {
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
       {/* Header section (Frame 66 style) */}
-      <section className="bg-white w-full flex justify-start">
-        <div className="w-full max-w-[1180px] 2xl:max-w-[1600px] 3xl:max-w-[1900px] px-6 py-6 pb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 h-auto">
+      <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
+        <div className="w-full px-6 py-6 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 h-auto">
           <div className="flex flex-col gap-1">
             <h1 className="text-[16px] font-medium text-[#171717] leading-tight">Work Orders</h1>
             <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight">
@@ -73,7 +73,7 @@ export default function SupervisorWorkOrderPage() {
       </section>
 
       {/* Main Content */}
-      <div className="w-full max-w-[1180px] 2xl:max-w-[1600px] 3xl:max-w-[1900px] px-6 py-6 flex flex-col gap-6">
+      <div className="w-full px-6 py-6 flex flex-col gap-6">
         {/* Stats Cards (Frame 70) */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5">
           {overviewStats.map((stat, i) => (
