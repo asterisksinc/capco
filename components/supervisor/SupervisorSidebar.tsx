@@ -8,6 +8,7 @@ import {
   Calendar,
   BarChart2,
   Share2,
+  PackagePlus,
   LogOut,
 } from "lucide-react";
 import Image from "next/image";
@@ -18,6 +19,7 @@ export function SupervisorSidebar() {
   const navItems = [
     { name: "Overview", href: "/supervisor/overview", icon: LayoutDashboard },
     { name: "Work Orders", href: "/supervisor/workorder", icon: Calendar },
+    { name: "Product Orders", href: "/supervisor/productorders", icon: PackagePlus },
     { name: "Stock", href: "/supervisor/stock", icon: BarChart2 },
     { name: "Pipeline", href: "/supervisor/pipeline", icon: Share2 },
   ];
