@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { use } from "react";
 import { 
   ChevronRight, 
@@ -35,19 +34,7 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col md:px-6 md:py-6 p-4">
       {/* Breadcrumb & Header */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center gap-2 text-sm text-[#5C5C5C]">
-          <Link href="/supervisor" className="hover:text-[#171717] transition-colors">Home</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link href="/supervisor/productorders" className="hover:text-[#171717] transition-colors">Work Orders</Link>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-[#171717] font-medium">{displayId}</span>
-        </div>
-
-        <h1 className="text-xl md:text-2xl font-semibold text-[#171717]">
-          {displayId} - Order Detail
-        </h1>
-      </div>
+      
 
       {/* Top Stats Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

@@ -27,7 +27,8 @@ const server = http.createServer(async (req, res) => {
     return handleBackendRequest(req, res);
   }
 
-  return handle(req, res, url);
+  // Let Next parse req.url internally; passing a WHATWG URL can cause self-redirect loops.
+  return handle(req, res);
 });
 
 server.listen(port, hostname, () => {
