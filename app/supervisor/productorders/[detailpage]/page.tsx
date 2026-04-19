@@ -281,8 +281,7 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
                     <button className="flex items-center gap-1 hover:text-[#171717]"><History className="w-4 h-4"/> View history</button>
                   </div>
                   <div className="flex gap-3">
-                    <button className="bg-[#1CB061] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#169450] transition-colors">Approve</button>
-                    <button className="border border-[#EBEBEB] text-[#171717] text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">Send Back</button>
+                    {/* Approve and Send Back removed */}
                   </div>
                 </div>
               </div>
@@ -353,8 +352,8 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
                   </table>
                 </div>
                 <div className="flex justify-end items-center mt-4 gap-3">
-                  <button className="bg-[#1CB061] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#169450] transition-colors">Approve</button>
-                  <button className="border border-[#EBEBEB] text-[#171717] text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">Send Back</button>
+                  
+                  
                 </div>
               </div>
             </div>
@@ -424,8 +423,8 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
                   </table>
                 </div>
                 <div className="flex justify-end items-center mt-4 gap-3">
-                  <button className="bg-[#1CB061] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#169450] transition-colors">Approve</button>
-                  <button className="border border-[#EBEBEB] text-[#171717] text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">Send Back</button>
+                  
+                  
                 </div>
               </div>
             </div>
@@ -505,8 +504,8 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
                     <AlertTriangle className="w-4 h-4"/> 1 delay flag
                   </div>
                   <div className="flex gap-3">
-                    <button className="bg-[#1CB061] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#169450] transition-colors shadow-sm">Approve</button>
-                    <button className="border border-[#EBEBEB] text-[#171717] text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">Send Back</button>
+                    
+                    
                   </div>
                 </div>
               </div>
@@ -600,9 +599,6 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
               <button className="w-full border border-[#FB3748] text-[#FB3748] text-sm font-medium py-2.5 rounded-lg hover:bg-[#FFF0F1] transition-colors">
                 Raise escalation
               </button>
-              <button className="w-full bg-[#1CB061] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#169450] transition-colors shadow-sm">
-                Approve stage
-              </button>
             </div>
           </div>
         </div>
@@ -610,3 +606,5 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
     </div>
   );
 }
+
+
