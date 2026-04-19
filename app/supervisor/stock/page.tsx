@@ -1,37 +1,6 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
-const overviewStats = [
-  {
-    title: "Total Items in Stock",
-    value: "1,204",
-    subtext: "5% vs Last Month",
-    subtextClass: "text-[#1CB061] font-semibold",
-    valClass: "text-[#171717]",
-  },
-  {
-    title: "Low Stock Items",
-    value: "42",
-    subtext: "Action needed",
-    subtextClass: "text-[#5C5C5C] font-normal",
-    valClass: "text-[#171717]",
-  },
-  {
-    title: "New Arrivals",
-    value: "15",
-    subtext: "+0.2% vs Last Month",
-    subtextClass: "text-[#1CB061] font-semibold",
-    valClass: "text-[#171717]",
-  },
-  {
-    title: "Out of Stock",
-    value: "08",
-    subtext: "Critical",
-    subtextClass: "text-[#FB3748] font-semibold",
-    valClass: "text-[#FB3748]",
-  },
-];
-
 const mockRows = [
   { stockId: "PM-0001", linkedWoId: "WO-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", stage: "Metallisation", timestamp: "10/01/2025" },
   { stockId: "PM-0002", linkedWoId: "WO-0002", weight: "45.2kgs", width: "3.8", micron: "8.0", grade: "B", stage: "Slitting", timestamp: "10/01/2025" },
@@ -57,6 +26,43 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function SupervisorStockPage() {
+  const totalLots = mockRows.length;
+  const metallisationLots = mockRows.filter((row) => row.stage === "Metallisation").length;
+  const slittingLots = mockRows.filter((row) => row.stage === "Slitting").length;
+  const qualityCheckLots = mockRows.filter((row) => row.stage === "Quality Check").length;
+  const gradeALots = mockRows.filter((row) => row.grade === "A").length;
+
+  const overviewStats = [
+    {
+      title: "Total Product Lots",
+      value: String(totalLots),
+      subtext: `${gradeALots} grade A lots`,
+      subtextClass: "text-[#1CB061] font-semibold",
+      valClass: "text-[#171717]",
+    },
+    {
+      title: "Metallisation Stock",
+      value: String(metallisationLots),
+      subtext: "Available for slitting",
+      subtextClass: "text-[#5C5C5C] font-normal",
+      valClass: "text-[#171717]",
+    },
+    {
+      title: "Slitting Queue",
+      value: String(slittingLots),
+      subtext: "Currently in cut processing",
+      subtextClass: "text-[#E19242] font-semibold",
+      valClass: "text-[#171717]",
+    },
+    {
+      title: "Quality Check Lots",
+      value: String(qualityCheckLots),
+      subtext: qualityCheckLots > 0 ? "Needs final clearance" : "No pending QC",
+      subtextClass: qualityCheckLots > 0 ? "text-[#FB3748] font-semibold" : "text-[#1CB061] font-semibold",
+      valClass: "text-[#171717]",
+    },
+  ];
+
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
       {/* Header section (Frame 66 style) */}

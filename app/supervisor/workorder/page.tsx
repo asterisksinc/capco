@@ -3,39 +3,8 @@
 import { Plus, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { type WorkOrderSummary } from "@/lib/data";
+import { type WorkOrderSummary } from "../../../lib/data";
 import { useStore } from "@/hooks/useStore";
-
-const overviewStats = [
-  {
-    title: "Lorem ipsum dolor",
-    value: "124",
-    subtext: "5% vs Last Month",
-    subtextClass: "text-[#1CB061] font-semibold",
-    valClass: "text-[#171717]",
-  },
-  {
-    title: "Lorem ipsum dolor",
-    value: "42",
-    subtext: "Stable",
-    subtextClass: "text-[#5C5C5C] font-normal",
-    valClass: "text-[#171717]",
-  },
-  {
-    title: "Revision Requests",
-    value: "15",
-    subtext: "+0.2% vs Last Month",
-    subtextClass: "text-[#1CB061] font-semibold",
-    valClass: "text-[#171717]",
-  },
-  {
-    title: "Lorem ipsum dolor",
-    value: "08",
-    subtext: "Critical",
-    subtextClass: "text-[#FB3748] font-semibold",
-    valClass: "text-[#FB3748]",
-  },
-];
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "Yet to Start") {
@@ -51,8 +20,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function SupervisorWorkOrderPage() {
-  const { store, mounted, addWorkOrder } = useStore();
-  const rows = store.workOrders;
+  const { workOrders: rows, mounted, addWorkOrder } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     micron: "",
@@ -77,15 +45,58 @@ export default function SupervisorWorkOrderPage() {
       micron: formData.micron,
       width: formData.width,
       qty: formData.quantity,
-      stage: "Raw Material", // New work orders start at raw material stage
       date: dateStr,
-      status: "Yet to Start"
     };
 
     addWorkOrder(newWorkOrder);
     setIsModalOpen(false);
     setFormData({ micron: "", width: "", quantity: "" });
   };
+
+  const totalWorkOrders = rows.length;
+  const rawMaterialCount = rows.filter((row) => row.stage.toLowerCase().includes("raw material")).length;
+  const metallisationCount = rows.filter((row) => row.stage.toLowerCase().includes("metallisation")).length;
+  const slittingCount = rows.filter((row) => row.stage.toLowerCase().includes("slitting")).length;
+  const yetToStartCount = rows.filter((row) => row.status === "Yet to Start").length;
+  const inProgressCount = rows.filter((row) => row.status === "In-progress").length;
+  const completedCount = rows.filter((row) => row.status === "Completed").length;
+  const yetRawCount = rows.filter((row) => row.status === "Yet to Start" && row.stage.toLowerCase().includes("raw material")).length;
+  const yetMetCount = rows.filter((row) => row.status === "Yet to Start" && row.stage.toLowerCase().includes("metallisation")).length;
+  const yetSlitCount = rows.filter((row) => row.status === "Yet to Start" && row.stage.toLowerCase().includes("slitting")).length;
+  const inProgressMetCount = rows.filter((row) => row.status === "In-progress" && row.stage.toLowerCase().includes("metallisation")).length;
+  const inProgressSlitCount = rows.filter((row) => row.status === "In-progress" && row.stage.toLowerCase().includes("slitting")).length;
+  const completedSlitCount = rows.filter((row) => row.status === "Completed" && row.stage.toLowerCase().includes("slitting")).length;
+
+  const overviewStats = [
+    {
+      title: "Total Work Orders",
+      value: String(totalWorkOrders),
+      subtext: `Yet ${yetToStartCount} | In-progress ${inProgressCount} | Completed ${completedCount}`,
+      subtextClass: "text-[#5C5C5C] font-normal",
+      valClass: "text-[#171717]",
+    },
+    {
+      title: "Yet to Start",
+      value: String(yetToStartCount),
+      subtext: `Raw ${yetRawCount} | Met ${yetMetCount} | Slit ${yetSlitCount}`,
+      subtextClass: "text-[#E19242] font-semibold",
+      valClass: "text-[#171717]",
+    },
+    {
+      title: "In-progress",
+      value: String(inProgressCount),
+      subtext: `Met ${inProgressMetCount} | Slit ${inProgressSlitCount}`,
+      subtextClass: "text-[#1CB061] font-semibold",
+      valClass: "text-[#171717]",
+    },
+    {
+      title: "Completed",
+      value: String(completedCount),
+      subtext: `Slitting completed ${completedSlitCount}`,
+      subtextClass: "text-[#1CB061] font-semibold",
+      valClass: "text-[#171717]",
+    },
+  ];
 
   if (!mounted) return null;
 
