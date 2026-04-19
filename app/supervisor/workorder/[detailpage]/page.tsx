@@ -4,6 +4,7 @@ import { use } from "react";
 import { Search } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/hooks/useStore";
+import { computeWorkflowProgress } from "../../../../lib/data";
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
@@ -27,8 +28,9 @@ type TabType = "Raw Material" | "Metallisation" | "Slitting";
 export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProps) {
   const { detailpage } = use(params);
   const orderId = detailpage.toUpperCase();
-  const { store, mounted, addFlowRow } = useStore();
+  const { store, mounted } = useStore();
   const workOrderFlowData = store.flowDataMap[orderId];
+  const workflowProgress = computeWorkflowProgress(workOrderFlowData);
   const [activeTab, setActiveTab] = useState<TabType>("Raw Material");
 
   const handleRawMaterialView = () => {
@@ -72,7 +74,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
           {/* Row 2 Stats */}
           <div className="flex flex-col gap-1.5">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Stage</p>
-            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workOrderFlowData.overview.stage}</p>
+            <p className="text-[14px] font-semibold text-[#171717] leading-tight">{workflowProgress.stage}</p>
           </div>
           <div className="flex flex-col gap-1.5">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Date</p>
@@ -81,7 +83,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
           <div className="flex flex-col gap-1.5 items-start">
             <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Status</p>
             <div className="mt-0.5">
-              <StatusBadge status={workOrderFlowData.overview.status} />
+              <StatusBadge status={workflowProgress.status} />
             </div>
           </div>
         </div>

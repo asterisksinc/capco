@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import { Search, Plus, X, ChevronRight, Check } from "lucide-react";
 import { useStore } from "@/hooks/useStore";
+import { computeWorkflowProgress, godownRawMaterialIds } from "../../../../lib/data";
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
@@ -36,14 +37,20 @@ type SlittingForm = {
   width: string;
   weight: string;
   grade: string;
+  remarks: string;
 };
 
+const rawMaterialIdOptions = godownRawMaterialIds;
+const micronOptions = ["2", "2.5", "3", "3.5", "4", "4.5", "4.5HT", "5", "5.5", "6", "6.5", "7", "7.5"];
+const supplierOptions = ["VedaCap Industries", "ElectroForge Capacitors", "NextGen Metallic Pvt Ltd"];
+const gradeOptions = ["AA", "A", "B", "C", "D"];
+
 const defaultRawMaterialForm: RawMaterialForm = {
-  rawMaterialId: "",
+  rawMaterialId: rawMaterialIdOptions[0],
   micron: "4.5",
   width: "1.0",
   quantity: "",
-  supplier: "",
+  supplier: supplierOptions[0],
 };
 
 const defaultMetallisationForm: MetallisationForm = {
@@ -62,7 +69,8 @@ const defaultSlittingForm: SlittingForm = {
   micron: "4.5",
   width: "1.0",
   weight: "",
-  grade: "A",
+  grade: "AA",
+  remarks: "",
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -97,11 +105,13 @@ function generateId(prefix: string) {
   return `${prefix}-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
 }
 
+function hasPositiveNumber(value: string) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
 function createRawMaterialRow(): RawMaterialForm {
-  return {
-    ...defaultRawMaterialForm,
-    rawMaterialId: generateId("RM"),
-  };
+  return { ...defaultRawMaterialForm };
 }
 
 function createMetallisationRow(defaultRmId: string): MetallisationForm {
@@ -115,7 +125,7 @@ function createMetallisationRow(defaultRmId: string): MetallisationForm {
 function createSlittingRow(defaultRmId: string): SlittingForm {
   return {
     ...defaultSlittingForm,
-    productNo: generateId("PM"),
+    productNo: `PM-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
     associatedRmId: defaultRmId,
   };
 }
@@ -129,6 +139,9 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
   const [activeTab, setActiveTab] = useState<TabType>("Raw Material");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState<ModalStep>(1);
+  const [showValidationHint, setShowValidationHint] = useState(false);
+  const [slittingReviewRemarks, setSlittingReviewRemarks] = useState("");
+  const workflowProgress = computeWorkflowProgress(workOrderFlowData);
 
   const availableRollIds = Array.from(new Set(workOrderFlowData?.rawMaterialRows.map((row) => row.rollNo) ?? []));
 
@@ -140,6 +153,8 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
 
   const resetModalState = () => {
     setModalStep(1);
+    setShowValidationHint(false);
+    setSlittingReviewRemarks("");
     setRawMaterialRowsInput([createRawMaterialRow()]);
     setMetallisationRowsInput([createMetallisationRow(availableRollIds[0] ?? "")]);
     setSlittingRowsInput([createSlittingRow(availableRollIds[0] ?? "")]);
@@ -161,7 +176,54 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
     return slittingRowsInput.length;
   };
 
+  const isRawMaterialRowValid = (row: RawMaterialForm) => {
+    return Boolean(
+      rawMaterialIdOptions.includes(row.rawMaterialId.trim()) &&
+      micronOptions.includes(row.micron.trim()) &&
+      row.width.trim() &&
+      hasPositiveNumber(row.quantity) &&
+      row.supplier.trim(),
+    );
+  };
+
+  const isMetallisationRowValid = (row: MetallisationForm) => {
+    return Boolean(
+      row.coilNo.trim() &&
+      row.rmId.trim() &&
+      row.machineNo.trim() &&
+      hasPositiveNumber(row.weight) &&
+      row.opticalDensity.trim() &&
+      row.resistance.trim() &&
+      row.nextStage.trim(),
+    );
+  };
+
+  const isSlittingRowValid = (row: SlittingForm) => {
+    return Boolean(
+      row.productNo.trim() &&
+      row.associatedRmId.trim() &&
+      micronOptions.includes(row.micron.trim()) &&
+      row.width.trim() &&
+      hasPositiveNumber(row.weight) &&
+      row.grade.trim(),
+    );
+  };
+
+  const isCurrentStepOneValid =
+    activeTab === "Raw Material"
+      ? rawMaterialRowsInput.every(isRawMaterialRowValid)
+      : activeTab === "Metallisation"
+        ? metallisationRowsInput.every(isMetallisationRowValid)
+        : slittingRowsInput.every(isSlittingRowValid);
+
+  const isStepTwoValid = activeTab === "Slitting" ? Boolean(slittingReviewRemarks.trim()) : true;
+
   const addCurrentItemToDraft = () => {
+    if (!isCurrentStepOneValid) {
+      setShowValidationHint(true);
+      return;
+    }
+
     if (activeTab === "Raw Material") {
       setRawMaterialRowsInput((prev) => [...prev, createRawMaterialRow()]);
       return;
@@ -201,6 +263,11 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
   };
 
   const submitCurrentStage = () => {
+    if (!isCurrentStepOneValid || !isStepTwoValid) {
+      setShowValidationHint(true);
+      return;
+    }
+
     const date = getDateString();
     const dateTime = getDateTimeString();
 
@@ -244,8 +311,9 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
           weight: `${item.weight || "0"}kgs`,
           thickness: item.micron,
           grade: item.grade,
+          remarks: slittingReviewRemarks,
           timestampAdded: date,
-          stage: "Ready for Dispatch",
+          stage: "Ready for Winding",
           status: "Completed",
         });
       });
@@ -259,9 +327,9 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
     { label: "Micron", value: workOrderFlowData.overview.micron },
     { label: "Width", value: workOrderFlowData.overview.width },
     { label: "Quantity", value: workOrderFlowData.overview.quantity },
-    { label: "Stage", value: workOrderFlowData.overview.stage },
+    { label: "Stage", value: workflowProgress.stage },
     { label: "Date", value: workOrderFlowData.overview.date },
-    { label: "Status", value: <StatusBadge status={workOrderFlowData.overview.status} /> },
+    { label: "Status", value: <StatusBadge status={workflowProgress.status} /> },
   ];
 
   const renderStepHeader = () => {
@@ -306,23 +374,47 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Raw Material ID</label>
-                  <input value={row.rawMaterialId} onChange={(e) => updateRawMaterialRow(idx, { rawMaterialId: e.target.value })} onBlur={(e) => !e.target.value.trim() && updateRawMaterialRow(idx, { rawMaterialId: generateId("RM") })} placeholder="Auto generate or enter RM-ID" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
+                  <>
+                    <input
+                      list="raw-material-id-options"
+                      value={row.rawMaterialId}
+                      onChange={(e) => updateRawMaterialRow(idx, { rawMaterialId: e.target.value })}
+                      placeholder="Search RM-8300 to RM-8400"
+                      className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]"
+                    />
+                    <datalist id="raw-material-id-options">
+                      {rawMaterialIdOptions.map((id) => (
+                        <option key={id} value={id} />
+                      ))}
+                    </datalist>
+                  </>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Micron</label>
-                  <input type="number" step="0.1" value={row.micron} onChange={(e) => updateRawMaterialRow(idx, { micron: e.target.value })} placeholder="Enter micron" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
+                  <select value={row.micron} onChange={(e) => updateRawMaterialRow(idx, { micron: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
+                    {micronOptions.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Width</label>
                   <input type="number" step="0.1" value={row.width} onChange={(e) => updateRawMaterialRow(idx, { width: e.target.value })} placeholder="Enter width" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-[13px] font-medium text-[#171717]">Quantity</label>
-                  <input value={row.quantity} onChange={(e) => updateRawMaterialRow(idx, { quantity: e.target.value })} placeholder="Enter quantity" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
+                  <label className="text-[13px] font-medium text-[#171717]">Quantity (Kgs)</label>
+                  <div className="relative">
+                    <input type="number" min="0.1" step="0.1" value={row.quantity} onChange={(e) => updateRawMaterialRow(idx, { quantity: e.target.value })} placeholder="Enter quantity" className="h-[42px] w-full rounded-[8px] border border-[#DDE1E8] pl-3 pr-12 text-[14px]" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[#5C5C5C]">Kgs</span>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-[13px] font-medium text-[#171717]">Supplier</label>
-                  <input value={row.supplier} onChange={(e) => updateRawMaterialRow(idx, { supplier: e.target.value })} placeholder="Select or enter supplier" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
+                  <select value={row.supplier} onChange={(e) => updateRawMaterialRow(idx, { supplier: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
+                    {supplierOptions.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -399,7 +491,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Product Material ID</label>
-                <input value={row.productNo} onChange={(e) => updateSlittingRow(idx, { productNo: e.target.value })} onBlur={(e) => !e.target.value.trim() && updateSlittingRow(idx, { productNo: generateId("PM") })} placeholder="Auto generate PM-ID" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
+                <input value={row.productNo} readOnly className="h-[42px] rounded-[8px] border border-[#DDE1E8] bg-[#F8FAFC] px-3 text-[14px] text-[#5C5C5C]" />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Associated RM ID</label>
@@ -412,7 +504,11 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Micron</label>
-                  <input type="number" step="0.1" value={row.micron} onChange={(e) => updateSlittingRow(idx, { micron: e.target.value })} placeholder="Enter micron" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
+                <select value={row.micron} onChange={(e) => updateSlittingRow(idx, { micron: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
+                  {micronOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Width</label>
@@ -425,9 +521,9 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-medium text-[#171717]">Grade</label>
                 <select value={row.grade} onChange={(e) => updateSlittingRow(idx, { grade: e.target.value })} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
+                  {gradeOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -476,6 +572,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
         <p>Width: {item.width}</p>
         <p>Weight: {item.weight || "0"} kgs</p>
         <p>Grade: {item.grade}</p>
+        <p className="md:col-span-2">Remarks / Observation: {slittingReviewRemarks || "Pending in this step"}</p>
       </div>
     ));
   };
@@ -488,6 +585,9 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
           <button onClick={addCurrentItemToDraft} className="h-[42px] rounded-[8px] bg-[#00B6E2] text-white text-[15px] font-medium hover:bg-[#0092b5] transition-colors">
             Add Item
           </button>
+          {showValidationHint && !isCurrentStepOneValid && (
+            <p className="text-[12px] text-[#D92D20]">All input fields are mandatory before adding an item or moving to the next step.</p>
+          )}
           <p className="text-[12px] text-[#667085]">Items queued for review: {getCurrentDraftCount()}</p>
         </div>
       );
@@ -501,6 +601,20 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
             <p className="text-[13px] text-[#6B7280]">Review all values before submitting to the workflow queue.</p>
           </div>
           {renderReviewCards()}
+          {activeTab === "Slitting" && (
+            <div className="rounded-[12px] border border-[#DDE1E8] bg-white p-4 flex flex-col gap-2">
+              <label className="text-[13px] font-medium text-[#171717]">Remarks / Observation</label>
+              <textarea
+                value={slittingReviewRemarks}
+                onChange={(e) => setSlittingReviewRemarks(e.target.value)}
+                placeholder="Add remarks for winding readiness"
+                className="min-h-[92px] rounded-[8px] border border-[#DDE1E8] px-3 py-2 text-[14px] resize-none"
+              />
+              {showValidationHint && !isStepTwoValid && (
+                <p className="text-[12px] text-[#D92D20]">Remarks / Observation is mandatory for slitting in step 2.</p>
+              )}
+            </div>
+          )}
         </div>
       );
     }
@@ -542,14 +656,31 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
               {modalStep === 1 && (
                 <>
                   <button onClick={closeModal} className="h-[40px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[14px] font-medium rounded-[6px] hover:bg-gray-50 transition-colors">Cancel</button>
-                  <button onClick={() => setModalStep(2)} className="h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors">Next</button>
+                  <button
+                    onClick={() => {
+                      if (!isCurrentStepOneValid) {
+                        setShowValidationHint(true);
+                        return;
+                      }
+                      setShowValidationHint(false);
+                      setModalStep(2);
+                    }}
+                    className={`h-[40px] px-5 text-[14px] font-medium rounded-[6px] transition-colors ${isCurrentStepOneValid ? "bg-[#00B6E2] text-white hover:bg-[#0092b5]" : "bg-[#A7DDEB] text-white cursor-not-allowed"}`}
+                  >
+                    Next
+                  </button>
                 </>
               )}
 
               {modalStep === 2 && (
                 <>
                   <button onClick={() => setModalStep(1)} className="h-[40px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[14px] font-medium rounded-[6px] hover:bg-gray-50 transition-colors">Back</button>
-                  <button onClick={submitCurrentStage} className="h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors">Submit Details</button>
+                  <button
+                    onClick={submitCurrentStage}
+                    className={`h-[40px] px-5 text-[14px] font-medium rounded-[6px] transition-colors ${(isCurrentStepOneValid && isStepTwoValid) ? "bg-[#00B6E2] text-white hover:bg-[#0092b5]" : "bg-[#A7DDEB] text-white cursor-not-allowed"}`}
+                  >
+                    Submit Details
+                  </button>
                 </>
               )}
 
