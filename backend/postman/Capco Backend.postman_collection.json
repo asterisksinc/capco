@@ -1,0 +1,246 @@
+{
+  "info": {
+    "name": "Capco Backend",
+    "_postman_id": "f7f0d6d7-6e1e-4f7c-9f70-5c2f7c9a2000",
+    "description": "Backend collection for Capco work-order workflow with Supabase email/password auth.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"super.admin@capco.local\",\n  \"password\": \"SuperAdmin@1234\"\n}"
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/me"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/users"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"person_a\",\n  \"stage_scope\": [\"raw_material\", \"metallisation\", \"slitting\"]\n}"
+            },
+            "url": "{{base_url}}/users/{{user_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Work Orders",
+      "item": [
+        {
+          "name": "List Work Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/work-orders"
+          }
+        },
+        {
+          "name": "Create Work Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"micron\": 4.5,\n  \"width\": 1.0,\n  \"quantity\": 10,\n  \"production_priority\": 1\n}"
+            },
+            "url": "{{base_url}}/work-orders"
+          }
+        },
+        {
+          "name": "Get Work Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/work-orders/{{work_order_id}}"
+          }
+        },
+        {
+          "name": "Update Work Order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}"
+            },
+            "url": "{{base_url}}/work-orders/{{work_order_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Raw Material",
+      "item": [
+        {
+          "name": "Add Raw Material",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"micron\": 4.5,\n  \"width\": 1.0,\n  \"quantity\": 10,\n  \"supplier\": \"Asterisks.Inc\",\n  \"other\": \"Received and verified\"\n}"
+            },
+            "url": "{{base_url}}/work-orders/{{work_order_id}}/raw-materials"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stages",
+      "item": [
+        {
+          "name": "Add Metallisation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"input1\": \"60kgs\",\n    \"input2\": \"4.5\",\n    \"input3\": \"M-01\",\n    \"input4\": \"2.4\",\n    \"input5\": \"1.5 Ohms\",\n    \"input6\": \"11/01/2025 08:30\",\n    \"input7\": \"SLITTING\"\n  },\n  \"observations\": \"Metallisation done\"\n}"
+            },
+            "url": "{{base_url}}/work-orders/{{work_order_id}}/stages/metallisation"
+          }
+        },
+        {
+          "name": "Add Slitting",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": {\n    \"product_material_id\": \"PM-00001\",\n    \"micron\": 4.5,\n    \"width\": 1.0,\n    \"weight\": \"58.5kgs\",\n    \"grade\": \"A\"\n  },\n  \"observations\": \"Slitting done\"\n}"
+            },
+            "url": "{{base_url}}/work-orders/{{work_order_id}}/stages/slitting"
+          }
+        },
+        {
+          "name": "Advance Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/work-orders/{{work_order_id}}/advance"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Orders",
+      "item": [
+        {
+          "name": "List Product Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/product-orders"
+          }
+        },
+        {
+          "name": "Create Product Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_code\": \"CPC-1001\",\n  \"model_no\": \"MODE-01\",\n  \"capacitance_value\": \"10uF\",\n  \"voltage_rating\": \"25V\",\n  \"capacitor_type\": \"Electrolytic\",\n  \"grade\": \"A\",\n  \"tolerance\": \"5%\",\n  \"dielectric_material\": \"Aluminum\",\n  \"batch_size\": 1000,\n  \"production_priority\": 1\n}"
+            },
+            "url": "{{base_url}}/product-orders"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inbox",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": "{{base_url}}/inbox"
+      }
+    }
+  ]
+}
