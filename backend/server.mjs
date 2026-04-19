@@ -1,4 +1,5 @@
 import http from "node:http";
+import "dotenv/config.js";
 import { config, ensureConfig } from "./lib/config.mjs";
 import {
   asPositiveInt,

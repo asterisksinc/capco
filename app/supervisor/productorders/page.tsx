@@ -1,7 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { Plus, X, ChevronDown, Search, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+
+type ProductOrderRow = {
+  id: string;
+  code: string;
+  type: string;
+  grade: string;
+  batchSize: string;
+  status: string;
+  stage: string;
+  timestamp: string;
+};
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "Yet to Start") {
@@ -18,6 +30,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function SupervisorProductOrdersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     poId: "PO-CC-4567",
     productCode: "",
@@ -31,21 +44,66 @@ export default function SupervisorProductOrdersPage() {
     priority: ""
   });
 
-  // Dummy data based on the screenshot
-  const productOrders = Array.from({ length: 8 }).map(() => ({
-    id: `#PO-CC-4567`,
-    code: `C-450V-100uF`,
-    type: `Motor`,
-    grade: `AA`,
-    batchSize: `5000`,
-    status: `Yet to Start`,
-    stage: `Yet to Start`,
-    timestamp: `19/03/2026:01:55:26`
-  }));
+  const [productOrders, setProductOrders] = useState<ProductOrderRow[]>(
+    Array.from({ length: 8 }).map((_, index) => ({
+      id: `#PO-CC-${String(4567 - index).padStart(4, "0")}`,
+      code: "C-450V-100uF",
+      type: "Motor",
+      grade: "AA",
+      batchSize: "5000",
+      status: "Yet to Start",
+      stage: "Yet to Start",
+      timestamp: "19/03/2026:01:55:26",
+    }))
+  );
 
   const handleCreateOrder = () => {
+    if (
+      !formData.poId.trim() ||
+      !formData.productCode ||
+      !formData.capacitorType ||
+      !formData.grade ||
+      !formData.batchSize
+    ) {
+      return;
+    }
+
+    const now = new Date();
+    const timestamp = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}:${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    const normalizedId = formData.poId.trim().startsWith("#")
+      ? formData.poId.trim()
+      : `#${formData.poId.trim()}`;
+
+    const newOrder: ProductOrderRow = {
+      id: normalizedId,
+      code: formData.productCode,
+      type: formData.capacitorType,
+      grade: formData.grade.toUpperCase(),
+      batchSize: formData.batchSize,
+      status: "Yet to Start",
+      stage: "Yet to Start",
+      timestamp,
+    };
+
+    setProductOrders((prev) => [newOrder, ...prev]);
     setIsModalOpen(false);
+    setFormData({
+      poId: `PO-CC-${String(Date.now()).slice(-4)}`,
+      productCode: "",
+      capacitance: "",
+      voltage: "",
+      capacitorType: "",
+      grade: "",
+      tolerance: "",
+      dielectric: "",
+      batchSize: "",
+      priority: ""
+    });
   };
+
+  const filteredProductOrders = productOrders.filter((row) =>
+    row.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col relative">
@@ -341,6 +399,8 @@ export default function SupervisorProductOrdersPage() {
             <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by Product Order ID..." 
               className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] shadow-sm" 
             />
@@ -379,7 +439,7 @@ export default function SupervisorProductOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {productOrders.map((row, idx) => (
+                {filteredProductOrders.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
@@ -394,14 +454,22 @@ export default function SupervisorProductOrdersPage() {
                     </td>
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                     <td className="px-1 py-3 whitespace-nowrap">
-                      <button 
+                      <Link 
+                        href={`/supervisor/productorders/${row.id.replace('#', '')}`}
                         className="inline-flex items-center justify-center px-5 py-[8px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[14px] font-medium rounded-[6px] transition-colors"
                       >
                         View
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}
+                {filteredProductOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-1 py-8 text-center text-[14px] text-[#5C5C5C]">
+                      No product orders found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
