@@ -47,6 +47,28 @@ export default function SupervisorProductOrdersPage() {
     specialInstructions: ""
   });
 
+  const generateProductOrderId = () => `PO-CC-${String(Date.now()).slice(-6)}`;
+
+  const openNewOrderModal = () => {
+    setFormData((current) => ({
+      ...current,
+      poId: generateProductOrderId(),
+      productCode: "",
+      capacitance: "",
+      voltage: "",
+      capacitorType: "",
+      grade: "",
+      tolerance: "",
+      dielectric: "",
+      batchSize: "",
+      priority: "",
+      customerName: "",
+      customerReference: "",
+      specialInstructions: "",
+    }));
+    setIsModalOpen(true);
+  };
+
   const [productOrders, setProductOrders] = useState<ProductOrderRow[]>(
     Array.from({ length: 8 }).map((_, index) => ({
       id: `#PO-CC-${String(4567 - index).padStart(4, "0")}`,
@@ -62,7 +84,6 @@ export default function SupervisorProductOrdersPage() {
 
   const handleCreateOrder = () => {
     if (
-      !formData.poId.trim() ||
       !formData.productCode ||
       !formData.capacitorType ||
       !formData.grade ||
@@ -73,9 +94,10 @@ export default function SupervisorProductOrdersPage() {
 
     const now = new Date();
     const timestamp = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}:${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-    const normalizedId = formData.poId.trim().startsWith("#")
+    const generatedOrderId = formData.poId.trim() || generateProductOrderId();
+    const normalizedId = generatedOrderId.startsWith("#")
       ? formData.poId.trim()
-      : `#${formData.poId.trim()}`;
+      : `#${generatedOrderId}`;
 
     const newOrder: ProductOrderRow = {
       id: normalizedId,
@@ -91,7 +113,7 @@ export default function SupervisorProductOrdersPage() {
     setProductOrders((prev) => [newOrder, ...prev]);
     setIsModalOpen(false);
     setFormData({
-      poId: `PO-CC-${String(Date.now()).slice(-4)}`,
+      poId: generateProductOrderId(),
       productCode: "",
       capacitance: "",
       voltage: "",
@@ -143,9 +165,9 @@ export default function SupervisorProductOrdersPage() {
                   <input 
                     type="text"
                     value={formData.poId}
-                    onChange={(e) => setFormData({...formData, poId: e.target.value})}
-                    placeholder="PO-CC-4567"
-                    className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2] transition-colors"
+                    readOnly
+                    placeholder="PO-CC-000000"
+                    className="w-full h-[44px] bg-[#F5F7FA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2] transition-colors"
                   />
                   <div className="flex items-center gap-1.5 text-[12px] text-[#5C5C5C] mt-1">
                     <Info className="w-3.5 h-3.5" />
@@ -300,20 +322,15 @@ export default function SupervisorProductOrdersPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
                   <div className="flex flex-col gap-2">
                     <label className="text-[14px] text-[#171717] leading-tight">Batch Size</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.batchSize}
-                        onChange={(e) => setFormData({...formData, batchSize: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Batch Size...</option>
-                        <option value="1000">1,000</option>
-                        <option value="2500">2,500</option>
-                        <option value="5000">5,000</option>
-                        <option value="10000">10,000</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={formData.batchSize}
+                      onChange={(e) => setFormData({...formData, batchSize: e.target.value})}
+                      placeholder="Enter batch size"
+                      className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
+                    />
                   </div>
 
                   <div className="flex flex-col gap-2">
@@ -400,7 +417,7 @@ export default function SupervisorProductOrdersPage() {
             </p>
           </div>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={openNewOrderModal}
             className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0"
           >
             <Plus className="w-5 h-5 shrink-0" strokeWidth={2.5} />
