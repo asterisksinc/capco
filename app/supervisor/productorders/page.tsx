@@ -351,27 +351,7 @@ export default function SupervisorProductOrdersPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Customer Name</label>
-                    <input
-                      type="text"
-                      value={formData.customerName}
-                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                      placeholder="Enter customer name"
-                      className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Customer PO Reference</label>
-                    <input
-                      type="text"
-                      value={formData.customerReference}
-                      onChange={(e) => setFormData({ ...formData, customerReference: e.target.value })}
-                      placeholder="Ex: CUST-PO-12984"
-                      className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
-                    />
-                  </div>
+                 
 
                   <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
                     <label className="text-[14px] text-[#171717] leading-tight">Special Instructions</label>
