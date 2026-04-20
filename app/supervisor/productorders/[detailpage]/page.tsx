@@ -128,10 +128,7 @@ export default function ProductOrderDetail({ params }: DetailPageProps) {
                   <span className="text-sm text-[#5C5C5C]">Spray requirement</span>
                   <span className="text-sm font-medium text-[#171717]">Zinc-spray, Batch ZS-447</span>
                 </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-sm text-[#5C5C5C]">Customer reference</span>
-                  <span className="text-sm font-medium text-[#171717]">CUST-TN-2847</span>
-                </div>
+               
                 <div className="flex justify-between items-center py-1">
                   <span className="text-sm text-[#5C5C5C]">Delivery commitment</span>
                   <span className="text-sm font-medium text-[#171717]">31 Jan 2025, 09:00 IST</span>
