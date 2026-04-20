@@ -41,7 +41,10 @@ export default function SupervisorProductOrdersPage() {
     tolerance: "",
     dielectric: "",
     batchSize: "",
-    priority: ""
+    priority: "",
+    customerName: "",
+    customerReference: "",
+    specialInstructions: ""
   });
 
   const [productOrders, setProductOrders] = useState<ProductOrderRow[]>(
@@ -97,7 +100,10 @@ export default function SupervisorProductOrdersPage() {
       tolerance: "",
       dielectric: "",
       batchSize: "",
-      priority: ""
+      priority: "",
+      customerName: "",
+      customerReference: "",
+      specialInstructions: ""
     });
   };
 
@@ -115,7 +121,7 @@ export default function SupervisorProductOrdersPage() {
             <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
               <div className="flex flex-col gap-1">
                 <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">Add New Product Order</h2>
-                <p className="text-[14px] text-[#5C5C5C] leading-tight">Lorem ipsum dolor sit amet, consectetur adipiscing elit</p>
+                <p className="text-[14px] text-[#5C5C5C] leading-tight">Enter product specifications and planning details to create a new order.</p>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -138,11 +144,12 @@ export default function SupervisorProductOrdersPage() {
                     type="text"
                     value={formData.poId}
                     onChange={(e) => setFormData({...formData, poId: e.target.value})}
+                    placeholder="PO-CC-4567"
                     className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2] transition-colors"
                   />
                   <div className="flex items-center gap-1.5 text-[12px] text-[#5C5C5C] mt-1">
                     <Info className="w-3.5 h-3.5" />
-                    <p>Lorem ipsum dolor self amet consectetur</p>
+                    <p>Use format like PO-CC-4589 for easier tracking.</p>
                   </div>
                 </div>
 
@@ -156,7 +163,11 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Select or Search Product Code...</option>
-                        <option value="c450">C-450V-100uF</option>
+                        <option value="C-450V-100uF">C-450V-100uF</option>
+                        <option value="C-630V-47uF">C-630V-47uF</option>
+                        <option value="MKT-250V-22uF">MKT-250V-22uF</option>
+                        <option value="MKP-400V-10uF">MKP-400V-10uF</option>
+                        <option value="SNUB-1KV-1uF">SNUB-1KV-1uF</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -171,7 +182,11 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Select Value...</option>
-                        <option value="100uf">100uF</option>
+                        <option value="1uF">1uF</option>
+                        <option value="10uF">10uF</option>
+                        <option value="22uF">22uF</option>
+                        <option value="47uF">47uF</option>
+                        <option value="100uF">100uF</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -186,7 +201,11 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Select Voltage Rating...</option>
-                        <option value="450v">450V</option>
+                        <option value="63V">63V</option>
+                        <option value="250V">250V</option>
+                        <option value="400V">400V</option>
+                        <option value="450V">450V</option>
+                        <option value="630V">630V</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -201,7 +220,11 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Select type...</option>
-                        <option value="motor">Motor</option>
+                        <option value="Motor">Motor</option>
+                        <option value="Snubber">Snubber</option>
+                        <option value="Power">Power</option>
+                        <option value="Lighting">Lighting</option>
+                        <option value="General Purpose">General Purpose</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -223,7 +246,10 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Choose Grade...</option>
-                        <option value="aa">AA</option>
+                        <option value="A+">A+</option>
+                        <option value="AA">AA</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -238,7 +264,10 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Select Value...</option>
-                        <option value="5">± 5%</option>
+                        <option value="±1%">±1%</option>
+                        <option value="±2%">±2%</option>
+                        <option value="±5%">±5%</option>
+                        <option value="±10%">±10%</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -253,7 +282,10 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Select Material...</option>
-                        <option value="film">Metallized Film</option>
+                        <option value="Metallized Polypropylene">Metallized Polypropylene</option>
+                        <option value="Metallized Polyester">Metallized Polyester</option>
+                        <option value="Paper-Oil">Paper-Oil</option>
+                        <option value="Ceramic Hybrid">Ceramic Hybrid</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -274,8 +306,11 @@ export default function SupervisorProductOrdersPage() {
                         onChange={(e) => setFormData({...formData, batchSize: e.target.value})}
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
-                        <option value="" disabled hidden>Choose Grade...</option>
-                        <option value="5000">5000</option>
+                        <option value="" disabled hidden>Select Batch Size...</option>
+                        <option value="1000">1,000</option>
+                        <option value="2500">2,500</option>
+                        <option value="5000">5,000</option>
+                        <option value="10000">10,000</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -290,10 +325,46 @@ export default function SupervisorProductOrdersPage() {
                         className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                       >
                         <option value="" disabled hidden>Select Value...</option>
-                        <option value="high">High</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[14px] text-[#171717] leading-tight">Customer Name</label>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      placeholder="Enter customer name"
+                      className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[14px] text-[#171717] leading-tight">Customer PO Reference</label>
+                    <input
+                      type="text"
+                      value={formData.customerReference}
+                      onChange={(e) => setFormData({ ...formData, customerReference: e.target.value })}
+                      placeholder="Ex: CUST-PO-12984"
+                      className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
+                    <label className="text-[14px] text-[#171717] leading-tight">Special Instructions</label>
+                    <textarea
+                      rows={3}
+                      value={formData.specialInstructions}
+                      onChange={(e) => setFormData({ ...formData, specialInstructions: e.target.value })}
+                      placeholder="Add any process notes, dispatch priority, or QC instructions..."
+                      className="w-full bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 py-2.5 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors resize-none"
+                    />
                   </div>
                 </div>
               </div>
