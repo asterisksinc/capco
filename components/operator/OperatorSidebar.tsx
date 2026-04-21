@@ -18,6 +18,7 @@ export function OperatorSidebar() {
   const navItems = [
     { name: "Overview", href: "/operator/overview", icon: LayoutDashboard },
     { name: "Work Orders", href: "/operator/workorder", icon: Calendar },
+    { name: "Product Orders", href: "/operator/product-orders", icon: Calendar },
     { name: "Stock", href: "/operator/stock", icon: BarChart2 },
     { name: "Pipeline", href: "/operator/pipeline", icon: Share2 },
   ];
