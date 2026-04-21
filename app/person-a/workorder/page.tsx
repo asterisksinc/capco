@@ -134,7 +134,7 @@ export default function OperatorWorkOrderPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Link 
-                        href={`/operator/workorder/${row.id}`} 
+                        href={`/person-a/workorder/${row.id}`} 
                         className="inline-flex items-center justify-center px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors"
                       >
                         View

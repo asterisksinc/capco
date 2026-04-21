@@ -659,7 +659,7 @@ export default function OperatorProductOrdersPage() {
                     <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <Link 
-                        href={`/operator/product-orders/${row.id.replace('#', '')}`}
+                        href={`/person-a/product-orders/${row.id.replace('#', '')}`}
                         className="inline-flex items-center justify-center rounded-[6px] bg-[#00B6E2] px-4 py-[10px] text-[12px] font-medium text-white transition-colors hover:bg-[#0092b5]"
                       >
                         View

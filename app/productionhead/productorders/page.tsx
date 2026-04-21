@@ -523,7 +523,7 @@ export default function SupervisorProductOrdersPage() {
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                     <td className="px-1 py-3 whitespace-nowrap">
                       <Link 
-                        href={`/supervisor/productorders/${row.id.replace('#', '')}`}
+                        href={`/productionhead/productorders/${row.id.replace('#', '')}`}
                         className="inline-flex items-center justify-center px-5 py-[8px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[14px] font-medium rounded-[6px] transition-colors"
                       >
                         View
