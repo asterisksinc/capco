@@ -273,7 +273,7 @@ export default function PersonBProductOrdersPage() {
               </button>
             </div>
             
-            {/* Modal Body */}
+            {/* Modal Bdy */}
             <div className="flex flex-col gap-8 px-6 py-6 overflow-y-auto custom-scrollbar">
               
               {/* Capacitor Specification */}
