@@ -21,7 +21,7 @@ export function OperatorTopbar() {
       for (let i = 0; i < relevantSegments.length; i++) {
         const segment = relevantSegments[i];
         let name = "Overview";
-        let href = `/operator/${relevantSegments.slice(0, i + 1).join("/")}`;
+        let href = `/person-a/${relevantSegments.slice(0, i + 1).join("/")}`;
         
         if (segment === "workorder") name = "Work Orders";
         else if (segment === "stock") name = "Stock";
@@ -34,7 +34,7 @@ export function OperatorTopbar() {
     }
     
     if (paths.length === 0) {
-      paths.push({ name: "Overview", href: "/operator/overview" });
+      paths.push({ name: "Overview", href: "/person-a/overview" });
     }
     
     return paths;
@@ -45,7 +45,7 @@ export function OperatorTopbar() {
   return (
     <header className="h-[72px] shrink-0 bg-white border-b border-[#EBEBEB] flex items-center justify-between px-6 font-dm-sans sticky top-0 z-10 w-full">
       <div className="flex items-center gap-1 text-[12px] font-dm-sans">
-        <Link href="/operator/overview" className="text-[#5C5C5C] hover:text-[#171717] transition-colors">
+        <Link href="/person-a/overview" className="text-[#5C5C5C] hover:text-[#171717] transition-colors">
           Home
         </Link>
         {breadcrumbs.map((bc, index) => (

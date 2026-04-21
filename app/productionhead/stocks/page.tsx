@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function SupervisorStocksAliasPage() {
-  redirect("/supervisor/stock");
+  redirect("/productionhead/stock");
 }

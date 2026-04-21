@@ -21,7 +21,7 @@ export function SupervisorTopbar() {
       for (let i = 0; i < relevantSegments.length; i++) {
         const segment = relevantSegments[i];
         let name = "Overview";
-        let href = `/supervisor/${relevantSegments.slice(0, i + 1).join("/")}`;
+        let href = `/productionhead/${relevantSegments.slice(0, i + 1).join("/")}`;
         
         if (segment === "workorder") name = "Work Orders";
         else if (segment === "stock") name = "Stock";
@@ -34,7 +34,7 @@ export function SupervisorTopbar() {
     }
     
     if (paths.length === 0) {
-      paths.push({ name: "Overview", href: "/supervisor/overview" });
+      paths.push({ name: "Overview", href: "/productionhead/overview" });
     }
     
     return paths;
@@ -45,7 +45,7 @@ export function SupervisorTopbar() {
   return (
     <header className="h-[72px] shrink-0 bg-white border-b border-[#EBEBEB] flex items-center justify-between px-6 font-dm-sans sticky top-0 z-10 w-full">
       <div className="flex items-center gap-1 text-[12px] font-dm-sans">
-        <Link href="/supervisor/overview" className="text-[#5C5C5C] hover:text-[#171717] transition-colors">
+        <Link href="/productionhead/overview" className="text-[#5C5C5C] hover:text-[#171717] transition-colors">
           Home
         </Link>
         {breadcrumbs.map((bc, index) => (

@@ -17,11 +17,11 @@ export function SupervisorSidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Overview", href: "/supervisor/overview", icon: LayoutDashboard },
-    { name: "Work Orders", href: "/supervisor/workorder", icon: Calendar },
-    { name: "Product Orders", href: "/supervisor/productorders", icon: PackagePlus },
-    { name: "Stock", href: "/supervisor/stock", icon: BarChart2 },
-    { name: "Pipeline", href: "/supervisor/pipeline", icon: Share2 },
+    { name: "Overview", href: "/productionhead/overview", icon: LayoutDashboard },
+    { name: "Work Orders", href: "/productionhead/workorder", icon: Calendar },
+    { name: "Product Orders", href: "/productionhead/productorders", icon: PackagePlus },
+    { name: "Stock", href: "/productionhead/stock", icon: BarChart2 },
+    { name: "Pipeline", href: "/productionhead/pipeline", icon: Share2 },
   ];
 
   return (

@@ -16,11 +16,11 @@ export function OperatorSidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Overview", href: "/operator/overview", icon: LayoutDashboard },
-    { name: "Work Orders", href: "/operator/workorder", icon: Calendar },
-    { name: "Product Orders", href: "/operator/product-orders", icon: Calendar },
-    { name: "Stock", href: "/operator/stock", icon: BarChart2 },
-    { name: "Pipeline", href: "/operator/pipeline", icon: Share2 },
+    { name: "Overview", href: "/person-a/overview", icon: LayoutDashboard },
+    { name: "Work Orders", href: "/person-a/workorder", icon: Calendar },
+    { name: "Product Orders", href: "/person-a/product-orders", icon: Calendar },
+    { name: "Stock", href: "/person-a/stock", icon: BarChart2 },
+    { name: "Pipeline", href: "/person-a/pipeline", icon: Share2 },
   ];
 
   return (
