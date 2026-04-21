@@ -17,7 +17,7 @@ function StatusBadge({ status }: { status: string }) {
   return null;
 }
 
-export default function OperatorWorkOrderPage() {
+export default function PersonBWorkOrderPage() {
   const { workOrders: rows, mounted } = useStore();
 
   const totalWorkOrders = rows.length;
@@ -78,7 +78,7 @@ export default function OperatorWorkOrderPage() {
               Lorem ipsum dolor sit amet, consectetur adipiscing elit
             </p>
           </div>
-          {/* Operator cannot add work order */}
+          {/* PersonB cannot add work order */}
         </div>
       </section>
 
@@ -134,7 +134,7 @@ export default function OperatorWorkOrderPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Link 
-                        href={`/person-a/workorder/${row.id}`} 
+                        href={`/person-b/workorder/${row.id}`} 
                         className="inline-flex items-center justify-center px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors"
                       >
                         View
