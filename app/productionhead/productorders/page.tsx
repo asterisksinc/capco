@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { Plus, X, ChevronDown, Search, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 
-type ProductOrderRow = {
+export type ProductOrderRow = {
   id: string;
   code: string;
   type: string;
@@ -13,6 +18,35 @@ type ProductOrderRow = {
   status: string;
   stage: string;
   timestamp: string;
+  [key: string]: string; // for type safety in useTableControls
+};
+
+const productOrderConfig: TableConfig<ProductOrderRow> = {
+  columns: [
+    { key: "id", label: "Order ID", type: "text", sortable: true },
+    { key: "code", label: "Product Code", type: "text", sortable: true },
+    { key: "type", label: "Capacitor Type", type: "text", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "batchSize", label: "Batch Size", type: "number", sortable: true },
+    { 
+      key: "status", 
+      label: "Status", 
+      type: "enum", 
+      sortable: false, 
+      filter: "dropdown", 
+      options: ["Yet to Start", "In-progress", "Completed"] 
+    },
+    { 
+      key: "stage", 
+      label: "Stage", 
+      type: "enum", 
+      sortable: false, 
+      filter: "dropdown", 
+      options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"] 
+    },
+    { key: "timestamp", label: "Created Timestamp", type: "date", sortable: true },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ],
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -25,7 +59,7 @@ function StatusBadge({ status }: { status: string }) {
   if (status === "Completed") {
     return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#E8F8F0] text-[#1CB061] text-[12px] font-medium leading-tight">Completed</span>;
   }
-  return null;
+  return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-gray-100 text-gray-700 text-[12px] font-medium leading-tight">{status}</span>;
 }
 
 export default function SupervisorProductOrdersPage() {
@@ -82,6 +116,16 @@ export default function SupervisorProductOrdersPage() {
     }))
   );
 
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: productOrders, config: productOrderConfig });
+
   const handleCreateOrder = () => {
     if (
       !formData.productCode ||
@@ -129,7 +173,7 @@ export default function SupervisorProductOrdersPage() {
     });
   };
 
-  const filteredProductOrders = productOrders.filter((row) =>
+  const searchedData = processedData.filter((row) =>
     row.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -139,7 +183,6 @@ export default function SupervisorProductOrdersPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-[12px] w-full max-w-[700px] shadow-lg flex flex-col overflow-hidden max-h-[90vh]">
-            {/* Modal Header */}
             <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
               <div className="flex flex-col gap-1">
                 <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">Add New Product Order</h2>
@@ -153,10 +196,7 @@ export default function SupervisorProductOrdersPage() {
               </button>
             </div>
             
-            {/* Modal Body */}
             <div className="flex flex-col gap-8 px-6 py-6 overflow-y-auto custom-scrollbar">
-              
-              {/* Capacitor Specification */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Capacitor Specification</h3>
                 
@@ -254,7 +294,6 @@ export default function SupervisorProductOrdersPage() {
                 </div>
               </div>
 
-              {/* Grade & Tolerance */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Grade & Tolerance</h3>
                 
@@ -315,7 +354,6 @@ export default function SupervisorProductOrdersPage() {
                 </div>
               </div>
 
-              {/* Production Quantity */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Production Quantity</h3>
                 
@@ -351,8 +389,6 @@ export default function SupervisorProductOrdersPage() {
                     </div>
                   </div>
 
-                 
-
                   <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
                     <label className="text-[14px] text-[#171717] leading-tight">Special Instructions</label>
                     <textarea
@@ -368,7 +404,6 @@ export default function SupervisorProductOrdersPage() {
 
             </div>
 
-            {/* Modal Footer */}
             <div className="flex items-center justify-between px-6 py-5 bg-white border-t border-[#EBEBEB]">
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -393,7 +428,7 @@ export default function SupervisorProductOrdersPage() {
           <div className="flex flex-col gap-1">
             <h1 className="text-[18px] font-semibold text-[#171717] leading-tight">Product Orders</h1>
             <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit
+              Manage your product orders and specifications
             </p>
           </div>
           <button 
@@ -473,42 +508,36 @@ export default function SupervisorProductOrdersPage() {
               className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] shadow-sm" 
             />
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative">
-              <select className="h-[40px] appearance-none bg-white border border-[#EBEBEB] rounded-[8px] pl-3 pr-9 text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] shadow-sm font-medium">
-                <option>This Month</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select className="h-[40px] appearance-none bg-white border border-[#EBEBEB] rounded-[8px] pl-3 pr-9 text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] shadow-sm font-medium">
-                <option>Completion Date</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
+          
+          <TableToolbar
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            onExport={() => alert("Exporting data...")}
+          />
         </section>
 
         {/* Data Table */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] px-6 py-4 flex flex-col gap-4 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="border-b border-[#EBEBEB]">
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[14%]">Order ID</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[12%]">Product Code</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[12%]">Capacitor Type</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[8%]">Grade</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[10%]">Batch Size</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[10%]">Status</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[10%]">Stage</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[16%]">Created Timestamp</th>
-                  <th className="px-1 py-[12px] text-[14px] font-semibold text-[#171717] w-[8%]">Action</th>
+                  {productOrderConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-1 py-[12px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {filteredProductOrders.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                {searchedData.map((row) => (
+                  <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
@@ -522,16 +551,19 @@ export default function SupervisorProductOrdersPage() {
                     </td>
                     <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                     <td className="px-1 py-3 whitespace-nowrap">
-                      <Link 
-                        href={`/productionhead/productorders/${row.id.replace('#', '')}`}
-                        className="inline-flex items-center justify-center px-5 py-[8px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[14px] font-medium rounded-[6px] transition-colors"
-                      >
-                        View
-                      </Link>
+                      <OptionsDropdown 
+                        viewHref={`/productionhead/productorders/${row.id.replace('#', '')}`}
+                        onEdit={() => alert(`Edit ${row.id}`)}
+                        onDelete={() => {
+                          if (confirm(`Are you sure you want to delete ${row.id}?`)) {
+                            setProductOrders(prev => prev.filter(p => p.id !== row.id));
+                          }
+                        }}
+                      />
                     </td>
                   </tr>
                 ))}
-                {filteredProductOrders.length === 0 && (
+                {searchedData.length === 0 && (
                   <tr>
                     <td colSpan={9} className="px-1 py-8 text-center text-[14px] text-[#5C5C5C]">
                       No product orders found.
@@ -545,7 +577,7 @@ export default function SupervisorProductOrdersPage() {
           {/* Pagination Footer */}
           <div className="flex items-center justify-between border-t border-[#EAECF0] pt-4 mt-2">
             <p className="text-[14px] text-[#5C5C5C]">
-              Showing <span className="font-semibold text-[#171717]">6</span> of <span className="font-semibold text-[#171717]">12</span> documents
+              Showing <span className="font-semibold text-[#171717]">{searchedData.length}</span> documents
             </p>
             <div className="flex items-center gap-1">
               <button className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#EBEBEB] text-[#5C5C5C] hover:bg-gray-50 transition-colors">
@@ -553,9 +585,6 @@ export default function SupervisorProductOrdersPage() {
               </button>
               <button className="w-8 h-8 flex items-center justify-center rounded-[6px] bg-[#00B6E2] text-white font-medium text-[14px]">
                 1
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#EBEBEB] text-[#5C5C5C] font-medium text-[14px] hover:bg-gray-50 transition-colors">
-                2
               </button>
               <button className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#EBEBEB] text-[#5C5C5C] hover:bg-gray-50 transition-colors">
                 <ChevronRight className="w-4 h-4" />
@@ -568,3 +597,4 @@ export default function SupervisorProductOrdersPage() {
     </div>
   );
 }
+

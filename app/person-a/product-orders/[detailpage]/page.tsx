@@ -3,6 +3,40 @@
 import { use, useState } from "react";
 import { Search, ChevronDown, Check, X } from "lucide-react";
 import Link from "next/link";
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+
+type ProductOrderRow = {
+  stockId: string;
+  weight: string;
+  width: string;
+  micron: string;
+  grade: string;
+  status: string;
+};
+
+const productOrderConfig: TableConfig<ProductOrderRow> = {
+  columns: [
+    { key: "stockId", label: "Stock ID", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Pending", "Approved"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const initialData: ProductOrderRow[] = [
+  { stockId: "PM-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", status: "Pending" },
+  { stockId: "PM-0002", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", status: "Approved" },
+  { stockId: "PM-0003", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", status: "Pending" },
+  { stockId: "PM-0004", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", status: "Pending" },
+  { stockId: "PM-0005", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", status: "Approved" },
+];
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
@@ -10,8 +44,20 @@ type DetailPageProps = {
 
 export default function OperatorProductOrderDetail({ params }: DetailPageProps) {
   const { detailpage } = use(params);
-  const displayId = detailpage.toUpperCase() || "WO-0001"; // keeping WO-0001 visually identical if needed, or PO-0001
+  const displayId = detailpage.toUpperCase() || "WO-0001";
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [tableData, setTableData] = useState<ProductOrderRow[]>(initialData);
+
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: tableData, config: productOrderConfig });
 
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative w-full pt-[72px] md:pt-0">
@@ -92,21 +138,12 @@ export default function OperatorProductOrderDetail({ params }: DetailPageProps) 
       {/* Table section matching Image 3 closely */}
       <section className="px-6 py-6 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative w-full max-w-[340px]">
-            <Search className="w-[18px] h-[18px] text-[#5C5C5C] absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Search" 
-              className="w-full h-[40px] pl-9 pr-3 rounded-[8px] border border-[#EBEBEB] text-[14px] focus:outline-none focus:border-[#00B6E2] placeholder:text-[#8F8F8F]"
-            />
-          </div>
+          <TableToolbar
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            onExport={() => alert("Exporting data...")}
+          />
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative w-[150px]">
-              <select className="w-full h-[40px] px-3 pr-9 appearance-none border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] bg-white focus:outline-none focus:border-[#00B6E2]">
-                <option>All</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
             <button 
               onClick={() => setIsModalOpen(true)}
               className="h-[40px] px-4 bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[14px] font-medium rounded-[8px] flex items-center justify-center gap-2 whitespace-nowrap transition-colors"
@@ -120,77 +157,42 @@ export default function OperatorProductOrderDetail({ params }: DetailPageProps) 
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                <th className="px-5 py-[12px] text-[12px] font-semibold text-[#5C5C5C] uppercase tracking-wider">Stock ID</th>
-                <th className="px-5 py-[12px] text-[12px] font-semibold text-[#5C5C5C] uppercase tracking-wider">Weight</th>
-                <th className="px-5 py-[12px] text-[12px] font-semibold text-[#5C5C5C] uppercase tracking-wider">Width</th>
-                <th className="px-5 py-[12px] text-[12px] font-semibold text-[#5C5C5C] uppercase tracking-wider">Micron</th>
-                <th className="px-5 py-[12px] text-[12px] font-semibold text-[#5C5C5C] uppercase tracking-wider">Grade</th>
-                <th className="px-5 py-[12px] text-[12px] font-semibold text-[#5C5C5C] uppercase tracking-wider">Status</th>
-                <th className="px-5 py-[12px] text-[12px] font-semibold text-[#5C5C5C] uppercase tracking-wider">Action</th>
+                {productOrderConfig.columns.map((col) => (
+                  <th key={String(col.key)} className="px-5 py-[12px]">
+                    <SortableHeader
+                      column={col}
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      filters={filters}
+                      onFilterChange={handleFilterChange}
+                    />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EBEBEB]">
-              <tr className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">PM-0001</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">58.5kgs</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">4.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">6.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">A</td>
-                <td className="px-5 py-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#FFF4ED] text-[#E19242] text-[12px] font-medium">Pending</span>
-                </td>
-                <td className="px-5 py-4">
-                  <button className="text-[#FB3748] text-[13px] font-medium hover:underline">Remove</button>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">PM-0001</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">58.5kgs</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">4.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">6.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">A</td>
-                <td className="px-5 py-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#E8F8F0] text-[#1CB061] text-[12px] font-medium">Approved</span>
-                </td>
-                <td className="px-5 py-4 text-[#5C5C5C] text-[14px]">-</td>
-              </tr>
-              <tr className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">PM-0001</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">58.5kgs</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">4.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">6.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">A</td>
-                <td className="px-5 py-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#FFF4ED] text-[#E19242] text-[12px] font-medium">Pending</span>
-                </td>
-                <td className="px-5 py-4">
-                  <button className="text-[#FB3748] text-[13px] font-medium hover:underline">Remove</button>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">PM-0001</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">58.5kgs</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">4.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">6.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">A</td>
-                <td className="px-5 py-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#FFF4ED] text-[#E19242] text-[12px] font-medium">Pending</span>
-                </td>
-                <td className="px-5 py-4">
-                  <button className="text-[#FB3748] text-[13px] font-medium hover:underline">Remove</button>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">PM-0001</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">58.5kgs</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">4.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">6.5</td>
-                <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">A</td>
-                <td className="px-5 py-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#E8F8F0] text-[#1CB061] text-[12px] font-medium">Approved</span>
-                </td>
-                <td className="px-5 py-4 text-[#5C5C5C] text-[14px]">-</td>
-              </tr>
+              {processedData.map((row, idx) => (
+                <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C] whitespace-nowrap">{row.stockId}</td>
+                  <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
+                  <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
+                  <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
+                  <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
+                  <td className="px-5 py-4 whitespace-nowrap">
+                     <span className={`inline-flex items-center px-2 py-0.5 rounded-[12px] text-[12px] font-medium ${row.status === 'Approved' ? 'bg-[#E8F8F0] text-[#1CB061]' : 'bg-[#FFF4ED] text-[#E19242]'}`}>{row.status}</span>
+                  </td>
+                  <td className="px-5 py-3 whitespace-nowrap">
+                    <OptionsDropdown 
+                      onEdit={() => alert(`Edit ${row.stockId}`)}
+                      onDelete={() => {
+                        if (confirm(`Are you sure you want to remove ${row.stockId}?`)) {
+                          setTableData(prev => prev.filter(item => item.stockId !== row.stockId));
+                        }
+                      }}
+                    />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -13,6 +13,27 @@ type ProductOrderRow = {
   status: string;
   stage: string;
   timestamp: string;
+  [key: string]: string;
+};
+
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+
+const productOrderConfig: TableConfig<ProductOrderRow> = {
+  columns: [
+    { key: "id", label: "Order ID", type: "text", sortable: true },
+    { key: "code", label: "Product Code", type: "text", sortable: true },
+    { key: "type", label: "Capacitor Type", type: "text", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "batchSize", label: "Batch Size", type: "number", sortable: true },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"] },
+    { key: "timestamp", label: "Created Timestamp", type: "date", sortable: true },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
 };
 
 type ProductOrderFormData = {
@@ -31,107 +52,23 @@ type ProductOrderFormData = {
   specialInstructions: string;
 };
 
-type TimeFilter = "All Time" | "Today" | "This Month" | "Last 30 Days";
-type SortOption =
-  | "Newest First"
-  | "Oldest First"
-  | "Order ID (A-Z)"
-  | "Order ID (Z-A)"
-  | "Product Code (A-Z)"
-  | "Batch Size (High-Low)"
-  | "Batch Size (Low-High)"
-  | "Grade (A-Z)";
+const createDefaultFormData = (poId = ""): ProductOrderFormData => ({
+  poId,
+  productCode: "",
+  capacitance: "",
+  voltage: "",
+  capacitorType: "",
+  grade: "",
+  tolerance: "",
+  dielectric: "",
+  batchSize: "",
+  priority: "",
+  customerName: "",
+  customerReference: "",
+  specialInstructions: "",
+});
 
-const TIME_FILTER_OPTIONS: TimeFilter[] = ["All Time", "Today", "This Month", "Last 30 Days"];
-const SORT_OPTIONS: SortOption[] = [
-  "Newest First",
-  "Oldest First",
-  "Order ID (A-Z)",
-  "Order ID (Z-A)",
-  "Product Code (A-Z)",
-  "Batch Size (High-Low)",
-  "Batch Size (Low-High)",
-  "Grade (A-Z)",
-];
-
-function createDefaultFormData(poId = "PO-CC-4567"): ProductOrderFormData {
-  return {
-    poId,
-    productCode: "C-450V-100uF",
-    capacitance: "100uF",
-    voltage: "450V",
-    capacitorType: "Motor",
-    grade: "AA",
-    tolerance: "±5%",
-    dielectric: "Metallized Polypropylene",
-    batchSize: "5000",
-    priority: "High",
-    customerName: "Apex Industrial Systems",
-    customerReference: "APS-2026-041",
-    specialInstructions: "Standard QC hold before dispatch.",
-  };
-}
-
-function parseTimestamp(timestamp: string) {
-  const separatorIndex = timestamp.indexOf(":");
-  if (separatorIndex === -1) {
-    return new Date(timestamp);
-  }
-
-  const datePart = timestamp.slice(0, separatorIndex);
-  const timePart = timestamp.slice(separatorIndex + 1);
-  const [day, month, year] = datePart.split("/").map(Number);
-  const [hour, minute, second] = timePart.split(":").map(Number);
-  return new Date(year, month - 1, day, hour, minute, second);
-}
-
-function isWithinTimeFilter(date: Date, filter: TimeFilter) {
-  if (filter === "All Time") return true;
-
-  const now = new Date();
-  const sameDay =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
-
-  if (filter === "Today") {
-    return sameDay;
-  }
-
-  if (filter === "This Month") {
-    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
-  }
-
-  const dayDiff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  return dayDiff >= 0 && dayDiff <= 30;
-}
-
-function compareProductOrders(a: ProductOrderRow, b: ProductOrderRow, sortOption: SortOption) {
-  const batchA = Number.parseInt(a.batchSize, 10) || 0;
-  const batchB = Number.parseInt(b.batchSize, 10) || 0;
-  const dateA = parseTimestamp(a.timestamp).getTime();
-  const dateB = parseTimestamp(b.timestamp).getTime();
-
-  switch (sortOption) {
-    case "Oldest First":
-      return dateA - dateB;
-    case "Order ID (A-Z)":
-      return a.id.localeCompare(b.id);
-    case "Order ID (Z-A)":
-      return b.id.localeCompare(a.id);
-    case "Product Code (A-Z)":
-      return a.code.localeCompare(b.code);
-    case "Batch Size (High-Low)":
-      return batchB - batchA;
-    case "Batch Size (Low-High)":
-      return batchA - batchB;
-    case "Grade (A-Z)":
-      return a.grade.localeCompare(b.grade);
-    case "Newest First":
-    default:
-      return dateB - dateA;
-  }
-}
+// Note: Previous manual sorting logic is replaced by useTableControls hook.
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "Yet to Start") {
@@ -149,8 +86,6 @@ function StatusBadge({ status }: { status: string }) {
 export default function OperatorProductOrdersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("All Time");
-  const [sortOption, setSortOption] = useState<SortOption>("Newest First");
   const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState<ProductOrderFormData>(() => createDefaultFormData());
 
@@ -173,6 +108,16 @@ export default function OperatorProductOrdersPage() {
       timestamp: "19/03/2026:01:55:26",
     }))
   );
+
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: productOrders, config: productOrderConfig });
 
   const handleCreateOrder = () => {
     const nextFormData = {
@@ -204,29 +149,19 @@ export default function OperatorProductOrdersPage() {
     setCurrentPage(1);
   };
 
-  const filteredSortedProductOrders = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return [...productOrders]
-      .filter((row) => {
-        if (!query) return true;
-
-        return [row.id, row.code, row.type, row.grade, row.batchSize, row.status, row.stage, row.timestamp]
-          .some((value) => value.toLowerCase().includes(query));
-      })
-      .filter((row) => isWithinTimeFilter(parseTimestamp(row.timestamp), timeFilter))
-      .sort((a, b) => compareProductOrders(a, b, sortOption));
-  }, [productOrders, searchQuery, timeFilter, sortOption]);
+  const searchedData = processedData.filter((row) =>
+    row.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const pageSize = 6;
-  const totalPages = Math.max(1, Math.ceil(filteredSortedProductOrders.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(searchedData.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedProductOrders = filteredSortedProductOrders.slice(
+  const paginatedProductOrders = searchedData.slice(
     (safeCurrentPage - 1) * pageSize,
     safeCurrentPage * pageSize,
   );
-  const rangeStart = filteredSortedProductOrders.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
-  const rangeEnd = Math.min(safeCurrentPage * pageSize, filteredSortedProductOrders.length);
+  const rangeStart = searchedData.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safeCurrentPage * pageSize, searchedData.length);
 
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).slice(
     Math.max(0, safeCurrentPage - 2),
@@ -240,16 +175,6 @@ export default function OperatorProductOrdersPage() {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setCurrentPage(1);
-  };
-
-  const handleTimeFilterChange = (value: TimeFilter) => {
-    setTimeFilter(value);
-    setCurrentPage(1);
-  };
-
-  const handleSortChange = (value: SortOption) => {
-    setSortOption(value);
     setCurrentPage(1);
   };
 
@@ -593,53 +518,31 @@ export default function OperatorProductOrdersPage() {
               className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] shadow-sm" 
             />
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative">
-              <select
-                value={timeFilter}
-                onChange={(e) => handleTimeFilterChange(e.target.value as TimeFilter)}
-                className="h-[40px] appearance-none bg-white border border-[#EBEBEB] rounded-[8px] pl-3 pr-9 text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] shadow-sm font-medium"
-              >
-                {TIME_FILTER_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select
-                value={sortOption}
-                onChange={(e) => handleSortChange(e.target.value as SortOption)}
-                className="h-[40px] appearance-none bg-white border border-[#EBEBEB] rounded-[8px] pl-3 pr-9 text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] shadow-sm font-medium"
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
+          
+          <TableToolbar
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            onExport={() => alert("Exporting data...")}
+          />
         </section>
 
         {/* Data Table */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-0 flex flex-col gap-0 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full min-w-[1000px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-[#EBEBEB] bg-[#F5F7FA]">
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[14%]">Order ID</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[12%]">Product Code</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[12%]">Capacitor Type</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[8%]">Grade</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[10%]">Batch Size</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[10%]">Status</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[10%]">Stage</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[16%]">Created Timestamp</th>
-                  <th className="px-5 py-[12px] text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5C] w-[8%]">Action</th>
+                  {productOrderConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-5 py-[12px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -658,12 +561,15 @@ export default function OperatorProductOrdersPage() {
                     </td>
                     <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <Link 
-                        href={`/person-a/product-orders/${row.id.replace('#', '')}`}
-                        className="inline-flex items-center justify-center rounded-[6px] bg-[#00B6E2] px-4 py-[10px] text-[12px] font-medium text-white transition-colors hover:bg-[#0092b5]"
-                      >
-                        View
-                      </Link>
+                      <OptionsDropdown 
+                        viewHref={`/person-a/product-orders/${row.id.replace('#', '')}`}
+                        onEdit={() => alert(`Edit ${row.id}`)}
+                        onDelete={() => {
+                          if (confirm(`Are you sure you want to delete ${row.id}?`)) {
+                            setProductOrders(prev => prev.filter(p => p.id !== row.id));
+                          }
+                        }}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -681,7 +587,7 @@ export default function OperatorProductOrdersPage() {
           {/* Pagination Footer */}
           <div className="flex items-center justify-between border-t border-[#EAECF0] px-6 py-4">
             <p className="text-[14px] text-[#5C5C5C]">
-              Showing <span className="font-semibold text-[#171717]">{rangeStart}</span> to <span className="font-semibold text-[#171717]">{rangeEnd}</span> of <span className="font-semibold text-[#171717]">{filteredSortedProductOrders.length}</span> documents
+              Showing <span className="font-semibold text-[#171717]">{rangeStart}</span> to <span className="font-semibold text-[#171717]">{rangeEnd}</span> of <span className="font-semibold text-[#171717]">{searchedData.length}</span> documents
             </p>
             <div className="flex items-center gap-1">
               <button

@@ -1,7 +1,12 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useMemo } from "react";
 import { Search } from "lucide-react";
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
@@ -9,10 +14,89 @@ type DetailPageProps = {
 
 type TabType = "Product Material" | "Winding" | "Spray";
 
+const productMaterialConfig: TableConfig<any> = {
+  columns: [
+    { key: "stockId", label: "STOCK ID", type: "text", sortable: true },
+    { key: "linkedWoId", label: "Linked WO ID", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "handoverBy", label: "Handover By", type: "text", sortable: true },
+    { key: "timestamp", label: "Timestamp", type: "text", sortable: true },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const windingConfig: TableConfig<any> = {
+  columns: [
+    { key: "wdId", label: "WD-ID", type: "text", sortable: true },
+    { key: "linkedPmId", label: "Linked PM-ID", type: "text", sortable: true },
+    { key: "filmWidth", label: "Film Width", type: "text", sortable: true },
+    { key: "windingTension", label: "Winding Tension", type: "text", sortable: true },
+    { key: "turnsCount", label: "Turns Count", type: "text", sortable: true },
+    { key: "quantityWound", label: "Quantity Wound", type: "text", sortable: true },
+    { key: "stage", label: "Stage", type: "text", sortable: true },
+    { key: "timestamp", label: "Timestamp", type: "text", sortable: true },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const sprayConfig: TableConfig<any> = {
+  columns: [
+    { key: "spId", label: "SP-ID", type: "text", sortable: true },
+    { key: "linkedWdId", label: "Linked WD-ID", type: "text", sortable: true },
+    { key: "sprayType", label: "Spray Type", type: "text", sortable: true },
+    { key: "feedRate", label: "Feed Rate", type: "text", sortable: true },
+    { key: "pressureSitting", label: "Pressure Sitting", type: "text", sortable: true },
+    { key: "stage", label: "Stage", type: "text", sortable: true },
+    { key: "timestamp", label: "Timestamp", type: "text", sortable: true },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const mockProductMaterial = Array(6).fill(null).map((_, i) => ({
+  id: i, stockId: "PM-0001", linkedWoId: "WO-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", handoverBy: "Person A", timestamp: "10/01/2025: 08:24:20"
+}));
+const mockWinding = Array(6).fill(null).map((_, i) => ({
+  id: i, wdId: "WD-0001", linkedPmId: "PM-0001", filmWidth: "7mm", windingTension: "0.5 N", turnsCount: "120", quantityWound: "250", stage: "Spray", timestamp: "10/01/2025: 08:24:20"
+}));
+const mockSpray = Array(6).fill(null).map((_, i) => ({
+  id: i, spId: "SP-0001", linkedWdId: "WD-0001", sprayType: "7mm", feedRate: "0.5 N", pressureSitting: "120", stage: "Moved to Person C", timestamp: "10/01/2025: 08:24:20"
+}));
+
 export default function PersonBProductOrderDetail({ params }: DetailPageProps) {
   const { detailpage } = use(params);
   const displayId = (detailpage || "PO-0001").toUpperCase();
   const [activeTab, setActiveTab] = useState<TabType>("Winding");
+
+  const currentConfig = useMemo(() => {
+    switch (activeTab) {
+      case "Product Material": return productMaterialConfig;
+      case "Winding": return windingConfig;
+      case "Spray": return sprayConfig;
+      default: return windingConfig;
+    }
+  }, [activeTab]);
+
+  const currentData = useMemo(() => {
+    switch (activeTab) {
+      case "Product Material": return mockProductMaterial;
+      case "Winding": return mockWinding;
+      case "Spray": return mockSpray;
+      default: return [];
+    }
+  }, [activeTab]);
+
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: currentData, config: currentConfig });
 
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col relative w-full pt-[72px] md:pt-0 pb-10">
@@ -108,14 +192,11 @@ export default function PersonBProductOrderDetail({ params }: DetailPageProps) {
         {/* Table Controls section */}
         <div className="px-6 py-6 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-             <div className="relative w-full max-w-[340px]">
-              <Search className="w-[18px] h-[18px] text-[#5C5C5C] absolute left-3 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text" 
-                placeholder="Search" 
-                className="w-full h-[40px] pl-9 pr-3 rounded-[8px] border border-[#EBEBEB] text-[14px] focus:outline-none focus:border-[#00B6E2] placeholder:text-[#8F8F8F]"
-               />
-            </div>
+            <TableToolbar
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              onExport={() => alert("Exporting data...")}
+            />
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {activeTab === "Winding" && (
                 <button className="h-[40px] px-4 bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[14px] font-medium rounded-[8px] flex items-center justify-center gap-2 whitespace-nowrap transition-colors">
@@ -131,96 +212,53 @@ export default function PersonBProductOrderDetail({ params }: DetailPageProps) {
           </div>
 
           <div className="overflow-x-auto border border-[#EBEBEB] rounded-[8px] mt-2">
-            {activeTab === "Product Material" && (
-               <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead>
-                  <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">STOCK ID</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Linked WO ID</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Weight</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Width</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Micron</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Grade</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Handover By</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EBEBEB]">
-                  {Array(6).fill(null).map((_, i) => (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">PM-0001</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">WO-0001</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">58.5kgs</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">4.5</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">6.5</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">A</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">Person A</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">10/01/2025: 08:24:20</td>
-                    </tr>
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
+                  {currentConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-5 py-[12px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
                   ))}
-                </tbody>
-              </table>
-            )}
-
-            {activeTab === "Winding" && (
-              <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead>
-                  <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">WD-ID</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Linked PM-ID</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Film Width</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Winding Tension</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Turns Count</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Quantity Wound</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Stage</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EBEBEB]">
+                {processedData.map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                    {currentConfig.columns.map((col) => {
+                      if (String(col.key) === "options") {
+                        return (
+                          <td key={String(col.key)} className="px-5 py-3 whitespace-nowrap">
+                            <OptionsDropdown 
+                              onEdit={() => alert(`Edit row ${i}`)}
+                              onDelete={() => alert(`Delete row ${i}`)}
+                            />
+                          </td>
+                        );
+                      }
+                      return (
+                        <td key={String(col.key)} className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
+                          {row[col.key]}
+                        </td>
+                      );
+                    })}
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EBEBEB]">
-                  {Array(6).fill(null).map((_, i) => (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                       <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">WD-0001</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">PM-0001</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">7mm</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">0.5 N</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">120</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">250</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">Spray</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">10/01/2025: 08:24:20</td>
-                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {activeTab === "Spray" && (
-              <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead>
-                  <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">SP-ID</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Linked WD-ID</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Spray Type</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Feed Rate</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Pressure Sitting</th>
-                    <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Stage</th>
-                     <th className="px-5 py-[12px] text-[12px] font-semibold text-[#171717] uppercase tracking-wider">Timestamp</th>
+                ))}
+                {processedData.length === 0 && (
+                  <tr>
+                    <td colSpan={currentConfig.columns.length} className="px-5 py-8 text-center text-[#5C5C5C]">
+                      No records found
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EBEBEB]">
-                  {Array(6).fill(null).map((_, i) => (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                       <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C]">SP-0001</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">WD-0001</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">7mm</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">0.5 N</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">120</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">Moved to Person C</td>
-                      <td className="px-5 py-4 text-[14px] text-[#5C5C5C]">10/01/2025: 08:24:20</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>

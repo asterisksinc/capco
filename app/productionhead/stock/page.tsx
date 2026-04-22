@@ -3,12 +3,43 @@
 import { Plus } from "lucide-react";
 import { useStore } from "@/hooks/useStore";
 
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+
+type StockRow = {
+  stockId: string;
+  linkedWoId: string;
+  weight: string;
+  width: string;
+  micron: string;
+  grade: string;
+  stage: string;
+  timestamp: string;
+};
+
+const stockConfig: TableConfig<StockRow> = {
+  columns: [
+    { key: "stockId", label: "STOCK ID", type: "text", sortable: true },
+    { key: "linkedWoId", label: "Linked WO ID", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "number", sortable: true },
+    { key: "width", label: "Width", type: "number", sortable: true },
+    { key: "micron", label: "Micron", type: "number", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Ready for Winding", "Ready for Dispatch", "QC Pending", "Hold"] },
+    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
 export default function SupervisorStockPage() {
   const { store, mounted } = useStore();
 
   const getStockRows = () => {
     if (!mounted) return [];
-    const rows = [];
+    const rows: StockRow[] = [];
     for (const [woId, flow] of Object.entries(store.flowDataMap)) {
       for (const row of flow.slittingRows) {
         rows.push({
@@ -28,6 +59,16 @@ export default function SupervisorStockPage() {
   };
 
   const actualRows = getStockRows();
+
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: actualRows, config: stockConfig });
 
   const totalLots = actualRows.length;
   // Basic metrics from the slitting output rules
@@ -104,26 +145,39 @@ export default function SupervisorStockPage() {
           ))}
         </section>
 
+        {/* Filters Row Component */}
+        <section className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="relative max-w-[400px] w-full">
+            <h2 className="text-[16px] font-semibold text-[#171717] leading-tight">Current Stock</h2>
+          </div>
+          <TableToolbar
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            onExport={() => alert("Exporting data...")}
+          />
+        </section>
+
         {/* Data Table (Frame 71) */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-6 flex flex-col gap-4 overflow-hidden">
-          <h2 className="text-[16px] font-semibold text-[#171717] leading-tight">Current Stock</h2>
-          
-          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[300px]">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">STOCK ID</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">Linked WO ID</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">Weight</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Width</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Micron</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[8%]">Grade</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[15%]">Stage</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">Timestamp</th>
+                  {stockConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-4 py-[11px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {mounted ? actualRows.length > 0 ? (actualRows.map((row, idx) => (
+                {mounted ? processedData.length > 0 ? (processedData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] font-medium text-[#00B6E2] whitespace-nowrap">{row.stockId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.linkedWoId}</td>
@@ -137,16 +191,22 @@ export default function SupervisorStockPage() {
                        </span>
                     </td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <OptionsDropdown 
+                        onEdit={() => alert(`Edit ${row.stockId}`)}
+                        onDelete={() => alert(`Delete ${row.stockId}`)}
+                      />
+                    </td>
                   </tr>
                 ))) : (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
-                      No stock available. Complete a slitting order to generate stock.
+                    <td colSpan={9} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
+                      No stock available.
                     </td>
                   </tr>
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
+                    <td colSpan={9} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
                       Loading stock data...
                     </td>
                   </tr>

@@ -1,7 +1,40 @@
+"use client";
+
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 
-const mockRows = [
+type StockRow = {
+  stockId: string;
+  linkedWoId: string;
+  weight: string;
+  width: string;
+  micron: string;
+  grade: string;
+  stage: string;
+  timestamp: string;
+};
+
+const stockConfig: TableConfig<StockRow> = {
+  columns: [
+    { key: "stockId", label: "STOCK ID", type: "text", sortable: true },
+    { key: "linkedWoId", label: "Linked WO ID", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Metallisation", "Slitting", "Packaging", "Quality Check"] },
+    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const mockRows: StockRow[] = [
   { stockId: "PM-0001", linkedWoId: "WO-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", stage: "Metallisation", timestamp: "10/01/2025" },
   { stockId: "PM-0002", linkedWoId: "WO-0002", weight: "45.2kgs", width: "3.8", micron: "8.0", grade: "B", stage: "Slitting", timestamp: "10/01/2025" },
   { stockId: "PM-0003", linkedWoId: "WO-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", stage: "Metallisation", timestamp: "10/01/2025" },
@@ -26,11 +59,23 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function PersonBStockPage() {
-  const totalLots = mockRows.length;
-  const metallisationLots = mockRows.filter((row) => row.stage === "Metallisation").length;
-  const slittingLots = mockRows.filter((row) => row.stage === "Slitting").length;
-  const qualityCheckLots = mockRows.filter((row) => row.stage === "Quality Check").length;
-  const gradeALots = mockRows.filter((row) => row.grade === "A").length;
+  const [data, setData] = useState(mockRows);
+
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: data, config: stockConfig });
+
+  const totalLots = data.length;
+  const metallisationLots = data.filter((row) => row.stage === "Metallisation").length;
+  const slittingLots = data.filter((row) => row.stage === "Slitting").length;
+  const qualityCheckLots = data.filter((row) => row.stage === "Quality Check").length;
+  const gradeALots = data.filter((row) => row.grade === "A").length;
 
   const overviewStats = [
     {
@@ -101,26 +146,39 @@ export default function PersonBStockPage() {
           ))}
         </section>
 
+        {/* Filters Row Component */}
+        <section className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="relative max-w-[400px] w-full">
+            <h2 className="text-[16px] font-semibold text-[#171717] leading-tight">Current Stock</h2>
+          </div>
+          <TableToolbar
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            onExport={() => alert("Exporting data...")}
+          />
+        </section>
+
         {/* Data Table (Frame 71) */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-6 flex flex-col gap-4 overflow-hidden">
-          <h2 className="text-[16px] font-semibold text-[#171717] leading-tight">Current Stock</h2>
-          
-          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[300px]">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">STOCK ID</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">Linked WO ID</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">Weight</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Width</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Micron</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[8%]">Grade</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[15%]">Stage</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[12%]">Timestamp</th>
+                  {stockConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-4 py-[11px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {mockRows.map((row, idx) => (
+                {processedData.length > 0 ? processedData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stockId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.linkedWoId}</td>
@@ -128,10 +186,30 @@ export default function PersonBStockPage() {
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
                     <td className="px-4 py-4 text-[14px] font-medium text-[#171717] whitespace-nowrap">{row.grade}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
+                       <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-[6px] text-xs font-medium tracking-wide">
+                          {row.stage}
+                       </span>
+                    </td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <OptionsDropdown 
+                        onEdit={() => alert(`Edit ${row.stockId}`)}
+                        onDelete={() => {
+                          if (confirm(`Delete ${row.stockId}?`)) {
+                            setData(prev => prev.filter(r => r.stockId !== row.stockId));
+                          }
+                        }}
+                      />
+                    </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
+                      No stock available.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

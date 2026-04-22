@@ -1,9 +1,14 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useMemo } from "react";
 import { Search, Plus, X, ChevronRight, Check } from "lucide-react";
 import { useStore } from "@/hooks/useStore";
 import { computeWorkflowProgress, godownRawMaterialIds } from "../../../../lib/data";
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
@@ -44,6 +49,47 @@ const rawMaterialIdOptions = godownRawMaterialIds;
 const micronOptions = ["2", "2.5", "3", "3.5", "4", "4.5", "4.5HT", "5", "5.5", "6", "6.5", "7", "7.5"];
 const supplierOptions = ["VedaCap Industries", "ElectroForge Capacitors", "NextGen Metallic Pvt Ltd"];
 const gradeOptions = ["AA", "A", "B", "C", "D"];
+
+const rawMaterialConfig: TableConfig<any> = {
+  columns: [
+    { key: "rollNo", label: "Roll No", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "thickness", label: "Thickness", type: "text", sortable: true },
+    { key: "supplier", label: "Company/Supplier", type: "text", sortable: true },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Raw Material", "METALLISATION"] },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const metallisationConfig: TableConfig<any> = {
+  columns: [
+    { key: "coilNo", label: "Coil No.", type: "text", sortable: true },
+    { key: "rmId", label: "RM ID", type: "text", sortable: true },
+    { key: "machineNo", label: "Machine No.", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "opticalDensity", label: "Optical Density (OD)", type: "text", sortable: true },
+    { key: "resistance", label: "Resistance", type: "text", sortable: true },
+    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: false },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const slittingConfig: TableConfig<any> = {
+  columns: [
+    { key: "productNo", label: "Product No", type: "text", sortable: true },
+    { key: "rmId", label: "RM ID", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "thickness", label: "Thickness", type: "text", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "timestampAdded", label: "Timestamp Added", type: "date", sortable: true },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Slitting", "Ready for Winding", "Completed"] },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
 
 const defaultRawMaterialForm: RawMaterialForm = {
   rawMaterialId: rawMaterialIdOptions[0],
@@ -148,6 +194,35 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
   const [rawMaterialRowsInput, setRawMaterialRowsInput] = useState<RawMaterialForm[]>([createRawMaterialRow()]);
   const [metallisationRowsInput, setMetallisationRowsInput] = useState<MetallisationForm[]>([createMetallisationRow("")]);
   const [slittingRowsInput, setSlittingRowsInput] = useState<SlittingForm[]>([createSlittingRow("")]);
+
+  const currentConfig = useMemo(() => {
+    switch (activeTab) {
+      case "Raw Material": return rawMaterialConfig;
+      case "Metallisation": return metallisationConfig;
+      case "Slitting": return slittingConfig;
+      default: return rawMaterialConfig;
+    }
+  }, [activeTab]);
+
+  const currentData = useMemo(() => {
+    if (!workOrderFlowData) return [];
+    switch (activeTab) {
+      case "Raw Material": return workOrderFlowData.rawMaterialRows;
+      case "Metallisation": return workOrderFlowData.metallisationRows;
+      case "Slitting": return workOrderFlowData.slittingRows;
+      default: return [];
+    }
+  }, [workOrderFlowData, activeTab]);
+
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: currentData, config: currentConfig });
 
   if (!mounted || !workOrderFlowData) return null;
 
@@ -733,14 +808,12 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="relative w-full max-w-[400px]">
-            <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search"
-              className="w-full h-[40px] pl-9 pr-4 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
-            />
-          </div>
+          <TableToolbar
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            onExport={() => alert("Exporting data...")}
+          />
+
           <button
             onClick={openModal}
             className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0"
@@ -754,85 +827,56 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
           </button>
         </div>
 
-        <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto w-full shadow-sm">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead>
-              <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                {activeTab === "Raw Material" && (
-                  <>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] uppercase tracking-wider">Roll No</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Weight</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Thickness</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Supplier</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Stage</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Status</th>
-                  </>
-                )}
-                {activeTab === "Metallisation" && (
-                  <>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] uppercase tracking-wider">Coil No.</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[12%] uppercase tracking-wider">RM ID</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Machine No.</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[12%] uppercase tracking-wider">Weight</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Optical Density</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[12%] uppercase tracking-wider">Resistance</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Timestamp</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Next Stage</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Status</th>
-                  </>
-                )}
-                {activeTab === "Slitting" && (
-                  <>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] uppercase tracking-wider">Product No</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[12%] uppercase tracking-wider">RM ID</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Weight</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Thickness</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Grade</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Timestamp Added</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[15%] uppercase tracking-wider">Stage</th>
-                    <th className="px-4 py-[11px] text-[12px] font-medium text-[#171717] w-[10%] uppercase tracking-wider">Status</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#EAECF0]">
-              {activeTab === "Raw Material" && workOrderFlowData.rawMaterialRows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/50 transition-colors bg-white">
-                  <td className="px-4 py-4 text-[14px] text-[#00B6E2] font-semibold">{row.rollNo}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.weight}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.thickness}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.supplier}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.stage}</td>
-                  <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
+        <div className="bg-white border border-[#EBEBEB] rounded-[12px] overflow-hidden">
+          <div className="overflow-x-auto min-h-[300px]">
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
+                  {currentConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-4 py-[11px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
+                  ))}
                 </tr>
-              ))}
-              {activeTab === "Metallisation" && workOrderFlowData.metallisationRows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/50 transition-colors bg-white">
-                  <td className="px-4 py-4 text-[14px] text-[#00B6E2] font-semibold">{row.coilNo}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.rmId}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.machineNo}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.weight}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.opticalDensity}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.resistance}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.nextStage}</td>
-                  <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
-                </tr>
-              ))}
-              {activeTab === "Slitting" && workOrderFlowData.slittingRows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/50 transition-colors bg-white">
-                  <td className="px-4 py-4 text-[14px] text-[#00B6E2] font-semibold">{row.productNo}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.rmId}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.weight}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.thickness}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.grade}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestampAdded}</td>
-                  <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.stage}</td>
-                  <td className="px-4 py-4"><StatusBadge status={row.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#EAECF0]">
+                {processedData.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+                    {currentConfig.columns.map((col) => {
+                      if (String(col.key) === "options") {
+                        return (
+                          <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
+                            <OptionsDropdown 
+                              onEdit={() => alert(`Edit ${activeTab} Row ${idx}`)}
+                              onDelete={() => alert(`Delete ${activeTab} Row ${idx}`)}
+                            />
+                          </td>
+                        );
+                      }
+                      if (String(col.key) === "status") {
+                        return (
+                          <td key={String(col.key)} className="px-4 py-4 whitespace-nowrap">
+                            <StatusBadge status={row[col.key]} />
+                          </td>
+                        );
+                      }
+                      return (
+                        <td key={String(col.key)} className={`px-4 py-4 text-[14px] ${['rollNo', 'coilNo', 'productNo'].includes(String(col.key)) ? 'text-[#00B6E2] font-semibold' : 'text-[#5C5C5C]'} whitespace-nowrap`}>
+                          {row[col.key]}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>
