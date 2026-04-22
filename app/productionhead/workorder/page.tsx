@@ -10,6 +10,28 @@ import { useTableControls } from "@/hooks/useTableControls";
 import { SortableHeader } from "@/components/table/SortableHeader";
 import { TableToolbar } from "@/components/table/TableToolbar";
 import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+import { FilterPopover, FilterChips, type FilterConfig, type FilterState, type EnumFilter, type TextFilter, type NumberRangeFilter } from "@/components/table/FilterPopover";
+import { exportToExcel } from "@/lib/exportExcel";
+
+const WO_STATUS_OPTIONS = ["Yet to Start", "In-progress", "Completed"];
+const WO_STAGE_OPTIONS = ["Metalisation", "Raw Material", "Metallisation", "Slitting"];
+
+const statusFilter: EnumFilter = { label: "Status", key: "status", options: WO_STATUS_OPTIONS };
+const stageFilter: EnumFilter = { label: "Stage", key: "stage", options: WO_STAGE_OPTIONS };
+const textFilters: TextFilter[] = [
+  { label: "Work Order ID", key: "woId", placeholder: "Search..." },
+  { label: "Micron", key: "micron" },
+  { label: "Width", key: "width" },
+];
+const numberFilters: NumberRangeFilter[] = [
+  { label: "Quantity", minKey: "qtyMin", maxKey: "qtyMax" },
+];
+
+const filterConfig: FilterConfig = {
+  enums: [statusFilter, stageFilter],
+  texts: textFilters,
+  numberRanges: numberFilters,
+};
 
 const workOrderConfig: TableConfig<ComputedWorkOrderSummary> = {
   columns: [
@@ -46,6 +68,15 @@ export default function SupervisorWorkOrderPage() {
     quantity: ""
   });
 
+  const openEditWorkOrder = (order: ComputedWorkOrderSummary) => {
+    setFormData({
+      micron: order.micron,
+      width: order.width,
+      quantity: order.qty
+    });
+    setIsModalOpen(true);
+  };
+
   const {
     processedData,
     sortConfig,
@@ -55,6 +86,50 @@ export default function SupervisorWorkOrderPage() {
     dateRange,
     setDateRange
   } = useTableControls({ data: rows, config: workOrderConfig });
+
+  const [tableFilters, setTableFilters] = useState<FilterState>(() => {
+    const state: FilterState = {};
+    state.status = [...WO_STATUS_OPTIONS];
+    state.stage = [...WO_STAGE_OPTIONS];
+    state.woId = "";
+    state.micron = "";
+    state.width = "";
+    state.qtyMin = "";
+    state.qtyMax = "";
+    return state;
+  });
+
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setTableFilters(newFilters);
+  };
+
+  const handleRemoveFilter = (key: string) => {
+    if (key === "status") {
+      setTableFilters({ ...tableFilters, status: [...WO_STATUS_OPTIONS] });
+    } else if (key === "stage") {
+      setTableFilters({ ...tableFilters, stage: [...WO_STAGE_OPTIONS] });
+    } else if (key === "woId") {
+      setTableFilters({ ...tableFilters, woId: "" });
+    } else if (key === "micron") {
+      setTableFilters({ ...tableFilters, micron: "" });
+    } else if (key === "width") {
+      setTableFilters({ ...tableFilters, width: "" });
+    } else if (key === "qtyMin") {
+      setTableFilters({ ...tableFilters, qtyMin: "", qtyMax: "" });
+    }
+  };
+
+  const filteredData = processedData.filter((row) => {
+    const f = tableFilters;
+    if (!(f.status as string[])?.includes(row.status)) return false;
+    if (f.stage && !(f.stage as string[])?.includes(row.stage)) return false;
+    if (f.woId && !row.id.toLowerCase().includes((f.woId as string).toLowerCase())) return false;
+    if (f.micron && row.micron !== (f.micron as string)) return false;
+    if (f.width && row.width !== (f.width as string)) return false;
+    if (f.qtyMin && parseInt(row.qty) < parseInt(f.qtyMin as string)) return false;
+    if (f.qtyMax && parseInt(row.qty) > parseInt(f.qtyMax as string)) return false;
+    return true;
+  });
 
   const handleCreateWorkOrder = () => {
     if (!formData.micron || !formData.width || !formData.quantity) return;
@@ -268,9 +343,26 @@ export default function SupervisorWorkOrderPage() {
           <TableToolbar
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
-            onExport={() => alert("Exporting data...")}
+            onExport={() => {
+              const exportData = filteredData.map(row => ({
+                "Work Order ID": row.id,
+                "Micron": row.micron,
+                "Width": row.width,
+                "Quantity": row.qty,
+                "Stage": row.stage,
+                "Date": row.date,
+                "Status": row.status,
+              }));
+              exportToExcel(exportData, "work-orders", "Work Orders");
+            }}
+            filterConfig={filterConfig}
+            filters={tableFilters}
+            onApplyFilters={handleApplyFilters}
           />
         </section>
+
+        {/* Active Filter Chips */}
+        <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table (Frame 71) */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-6 flex flex-col gap-4 overflow-hidden">
@@ -291,10 +383,14 @@ export default function SupervisorWorkOrderPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#EAECF0]">
-                {processedData.map((row, idx) => (
+<tbody className="divide-y divide-[#EAECF0]">
+                {filteredData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
+                      <Link href={`/productionhead/workorder/${row.id}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
+                        {row.id}
+                      </Link>
+                    </td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.qty}</td>
@@ -306,13 +402,18 @@ export default function SupervisorWorkOrderPage() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
                         viewHref={`/productionhead/workorder/${row.id}`}
-                        onEdit={() => alert(`Edit ${row.id}`)}
-                        onDelete={() => alert(`Delete ${row.id}`)}
+                        status={row.status}
+                        onEdit={() => openEditWorkOrder(row)}
+                        onDelete={() => {
+                          if (confirm(`Are you sure you want to delete ${row.id}?`)) {
+                            // Handle delete
+                          }
+                        }}
                       />
                     </td>
                   </tr>
                 ))}
-                {processedData.length === 0 && (
+                {filteredData.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-4 py-8 text-center text-[14px] text-[#5C5C5C]">
                       No work orders found.

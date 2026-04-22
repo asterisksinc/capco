@@ -21,6 +21,28 @@ import { useTableControls } from "@/hooks/useTableControls";
 import { SortableHeader } from "@/components/table/SortableHeader";
 import { TableToolbar } from "@/components/table/TableToolbar";
 import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+import { FilterPopover, FilterChips, type FilterConfig, type FilterState, type EnumFilter, type TextFilter, type NumberRangeFilter } from "@/components/table/FilterPopover";
+import { exportToExcel } from "@/lib/exportExcel";
+
+const STATUS_OPTIONS = ["Yet to Start", "In-progress", "Completed"];
+const STAGE_OPTIONS = ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"];
+
+const statusFilter: EnumFilter = { label: "Status", key: "status", options: STATUS_OPTIONS };
+const stageFilter: EnumFilter = { label: "Stage", key: "stage", options: STAGE_OPTIONS };
+const textFilters: TextFilter[] = [
+  { label: "Product Code", key: "productCode", placeholder: "Search..." },
+  { label: "Capacitor Type", key: "capacitorType" },
+  { label: "Grade", key: "grade" },
+];
+const numberFilters: NumberRangeFilter[] = [
+  { label: "Batch Size", minKey: "batchSizeMin", maxKey: "batchSizeMax" },
+];
+
+const filterConfig: FilterConfig = {
+  enums: [statusFilter, stageFilter],
+  texts: textFilters,
+  numberRanges: numberFilters,
+};
 
 const productOrderConfig: TableConfig<ProductOrderRow> = {
   columns: [
@@ -119,6 +141,50 @@ export default function OperatorProductOrdersPage() {
     setDateRange
   } = useTableControls({ data: productOrders, config: productOrderConfig });
 
+  const [tableFilters, setTableFilters] = useState<FilterState>(() => {
+    const state: FilterState = {};
+    state.status = [...STATUS_OPTIONS];
+    state.stage = [...STAGE_OPTIONS];
+    state.productCode = "";
+    state.capacitorType = "";
+    state.grade = "";
+    state.batchSizeMin = "";
+    state.batchSizeMax = "";
+    return state;
+  });
+
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setTableFilters(newFilters);
+  };
+
+  const handleRemoveFilter = (key: string) => {
+    if (key === "status") {
+      setTableFilters({ ...tableFilters, status: [...STATUS_OPTIONS] });
+    } else if (key === "stage") {
+      setTableFilters({ ...tableFilters, stage: [...STAGE_OPTIONS] });
+    } else if (key === "productCode") {
+      setTableFilters({ ...tableFilters, productCode: "" });
+    } else if (key === "capacitorType") {
+      setTableFilters({ ...tableFilters, capacitorType: "" });
+    } else if (key === "grade") {
+      setTableFilters({ ...tableFilters, grade: "" });
+    } else if (key === "batchSizeMin") {
+      setTableFilters({ ...tableFilters, batchSizeMin: "", batchSizeMax: "" });
+    }
+  };
+
+  const filteredData = processedData.filter((row) => {
+    const f = tableFilters;
+    if (!(f.status as string[])?.includes(row.status)) return false;
+    if (!(f.stage as string[])?.includes(row.stage)) return false;
+    if (f.productCode && !row.code.toLowerCase().includes((f.productCode as string).toLowerCase())) return false;
+    if (f.capacitorType && row.type !== (f.capacitorType as string)) return false;
+    if (f.grade && row.grade !== (f.grade as string)) return false;
+    if (f.batchSizeMin && parseInt(row.batchSize) < parseInt(f.batchSizeMin as string)) return false;
+    if (f.batchSizeMax && parseInt(row.batchSize) > parseInt(f.batchSizeMax as string)) return false;
+    return true;
+  });
+
   const handleCreateOrder = () => {
     const nextFormData = {
       ...createDefaultFormData(generateProductOrderId()),
@@ -149,7 +215,7 @@ export default function OperatorProductOrdersPage() {
     setCurrentPage(1);
   };
 
-  const searchedData = processedData.filter((row) =>
+  const searchedData = filteredData.filter((row) =>
     row.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -522,9 +588,27 @@ export default function OperatorProductOrdersPage() {
           <TableToolbar
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
-            onExport={() => alert("Exporting data...")}
+            onExport={() => {
+              const exportData = searchedData.map(row => ({
+                "Order ID": row.id,
+                "Product Code": row.code,
+                "Capacitor Type": row.type,
+                "Grade": row.grade,
+                "Batch Size": row.batchSize,
+                "Status": row.status,
+                "Stage": row.stage,
+                "Created Timestamp": row.timestamp,
+              }));
+              exportToExcel(exportData, "product-orders", "Product Orders");
+            }}
+            filterConfig={filterConfig}
+            filters={tableFilters}
+            onApplyFilters={handleApplyFilters}
           />
         </section>
+
+        {/* Active Filter Chips */}
+        <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-0 flex flex-col gap-0 overflow-hidden shadow-sm">
@@ -547,8 +631,12 @@ export default function OperatorProductOrdersPage() {
               </thead>
               <tbody>
                 {paginatedProductOrders.map((row, idx) => (
-                  <tr key={idx} className="border-b border-[#EBEBEB] last:border-b-0 hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
+                  <tr key={idx} className="border-b border-[#EBEBEB] last:border-b-0 hover:bg-gray-50 transition-colors group">
+                    <td className="px-5 py-4 text-[14px] font-medium text-[#00B6E2] whitespace-nowrap">
+                      <Link href={`/person-a/product-orders/${row.id.replace('#', '')}`} className="hover:underline cursor-pointer">
+                        {row.id}
+                      </Link>
+                    </td>
                     <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
                     <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
                     <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
@@ -563,7 +651,8 @@ export default function OperatorProductOrdersPage() {
                     <td className="px-5 py-4 whitespace-nowrap">
                       <OptionsDropdown 
                         viewHref={`/person-a/product-orders/${row.id.replace('#', '')}`}
-                        onEdit={() => alert(`Edit ${row.id}`)}
+                        status={row.status}
+                        onEdit={() => {}}
                         onDelete={() => {
                           if (confirm(`Are you sure you want to delete ${row.id}?`)) {
                             setProductOrders(prev => prev.filter(p => p.id !== row.id));
