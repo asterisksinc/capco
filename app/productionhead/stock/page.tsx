@@ -1,13 +1,17 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import Link from "next/link";
 import { useStore } from "@/hooks/useStore";
+import { useState } from "react";
 
 import type { TableConfig } from "@/hooks/useTableControls";
 import { useTableControls } from "@/hooks/useTableControls";
 import { SortableHeader } from "@/components/table/SortableHeader";
 import { TableToolbar } from "@/components/table/TableToolbar";
 import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+import { FilterPopover, FilterChips, type FilterConfig, type FilterState, type EnumFilter, type TextFilter, type NumberRangeFilter } from "@/components/table/FilterPopover";
+import { exportToExcel } from "@/lib/exportExcel";
 
 type StockRow = {
   stockId: string;
@@ -18,6 +22,26 @@ type StockRow = {
   grade: string;
   stage: string;
   timestamp: string;
+};
+
+const STAGE_OPTIONS = ["Ready for Winding", "Ready for Dispatch", "QC Pending", "Hold"];
+
+const statusFilter: EnumFilter = { label: "Stage", key: "stage", options: STAGE_OPTIONS };
+const textFilters: TextFilter[] = [
+  { label: "Stock ID", key: "stockId", placeholder: "Search..." },
+  { label: "Linked WO ID", key: "linkedWoId", placeholder: "Search..." },
+  { label: "Grade", key: "grade" },
+];
+const numberFilters: NumberRangeFilter[] = [
+  { label: "Weight", minKey: "weightMin", maxKey: "weightMax" },
+  { label: "Width", minKey: "widthMin", maxKey: "widthMax" },
+  { label: "Micron", minKey: "micronMin", maxKey: "micronMax" },
+];
+
+const filterConfig: FilterConfig = {
+  enums: [statusFilter],
+  texts: textFilters,
+  numberRanges: numberFilters,
 };
 
 const stockConfig: TableConfig<StockRow> = {
@@ -69,6 +93,58 @@ export default function SupervisorStockPage() {
     dateRange,
     setDateRange
   } = useTableControls({ data: actualRows, config: stockConfig });
+
+  const [tableFilters, setTableFilters] = useState<FilterState>(() => {
+    const state: FilterState = {};
+    state.stage = [...STAGE_OPTIONS];
+    state.stockId = "";
+    state.linkedWoId = "";
+    state.grade = "";
+    state.weightMin = "";
+    state.weightMax = "";
+    state.widthMin = "";
+    state.widthMax = "";
+    state.micronMin = "";
+    state.micronMax = "";
+    return state;
+  });
+
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setTableFilters(newFilters);
+  };
+
+  const handleRemoveFilter = (key: string) => {
+    if (key === "stage") {
+      setTableFilters({ ...tableFilters, stage: [...STAGE_OPTIONS] });
+    } else if (key === "stockId") {
+      setTableFilters({ ...tableFilters, stockId: "" });
+    } else if (key === "linkedWoId") {
+      setTableFilters({ ...tableFilters, linkedWoId: "" });
+    } else if (key === "grade") {
+      setTableFilters({ ...tableFilters, grade: "" });
+    } else if (key === "weightMin") {
+      setTableFilters({ ...tableFilters, weightMin: "", weightMax: "" });
+    } else if (key === "widthMin") {
+      setTableFilters({ ...tableFilters, widthMin: "", widthMax: "" });
+    } else if (key === "micronMin") {
+      setTableFilters({ ...tableFilters, micronMin: "", micronMax: "" });
+    }
+  };
+
+  const filteredData = processedData.filter((row) => {
+    const f = tableFilters;
+    if (!(f.stage as string[])?.includes(row.stage)) return false;
+    if (f.stockId && !row.stockId.toLowerCase().includes((f.stockId as string).toLowerCase())) return false;
+    if (f.linkedWoId && !row.linkedWoId.toLowerCase().includes((f.linkedWoId as string).toLowerCase())) return false;
+    if (f.grade && row.grade !== (f.grade as string)) return false;
+    if (f.weightMin && parseFloat(row.weight) < parseFloat(f.weightMin as string)) return false;
+    if (f.weightMax && parseFloat(row.weight) > parseFloat(f.weightMax as string)) return false;
+    if (f.widthMin && parseFloat(row.width) < parseFloat(f.widthMin as string)) return false;
+    if (f.widthMax && parseFloat(row.width) > parseFloat(f.widthMax as string)) return false;
+    if (f.micronMin && parseFloat(row.micron) < parseFloat(f.micronMin as string)) return false;
+    if (f.micronMax && parseFloat(row.micron) > parseFloat(f.micronMax as string)) return false;
+    return true;
+  });
 
   const totalLots = actualRows.length;
   // Basic metrics from the slitting output rules
@@ -153,9 +229,27 @@ export default function SupervisorStockPage() {
           <TableToolbar
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
-            onExport={() => alert("Exporting data...")}
+            onExport={() => {
+              const exportData = filteredData.map(row => ({
+                "Stock ID": row.stockId,
+                "Linked WO ID": row.linkedWoId,
+                "Weight": row.weight,
+                "Width": row.width,
+                "Micron": row.micron,
+                "Grade": row.grade,
+                "Stage": row.stage,
+                "Timestamp": row.timestamp,
+              }));
+              exportToExcel(exportData, "stock", "Stock");
+            }}
+            filterConfig={filterConfig}
+            filters={tableFilters}
+            onApplyFilters={handleApplyFilters}
           />
         </section>
+
+        {/* Active Filter Chips */}
+        <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table (Frame 71) */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-6 flex flex-col gap-4 overflow-hidden">
@@ -177,9 +271,13 @@ export default function SupervisorStockPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {mounted ? processedData.length > 0 ? (processedData.map((row, idx) => (
+                {mounted ? filteredData.length > 0 ? (filteredData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] font-medium text-[#00B6E2] whitespace-nowrap">{row.stockId}</td>
+                    <td className="px-4 py-4 text-[14px] font-medium text-[#00B6E2] whitespace-nowrap">
+                      <Link href={`/productionhead/stock/${row.stockId}`} className="hover:underline cursor-pointer">
+                        {row.stockId}
+                      </Link>
+                    </td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.linkedWoId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
@@ -193,7 +291,8 @@ export default function SupervisorStockPage() {
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
-                        onEdit={() => alert(`Edit ${row.stockId}`)}
+                        status="Yet to Start"
+                        onEdit={() => {}}
                         onDelete={() => alert(`Delete ${row.stockId}`)}
                       />
                     </td>

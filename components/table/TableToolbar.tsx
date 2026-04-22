@@ -1,16 +1,23 @@
 import React from "react";
 import { Download } from "lucide-react";
+import { FilterPopover, type FilterConfig, type FilterState } from "./FilterPopover";
 
 export function TableToolbar({
   dateRange,
   onDateRangeChange,
   onExport,
   hasDateCol = true,
+  filterConfig,
+  filters,
+  onApplyFilters,
 }: {
   dateRange: { from: string; to: string };
   onDateRangeChange: (range: { from: string; to: string }) => void;
   onExport?: () => void;
   hasDateCol?: boolean;
+  filterConfig?: FilterConfig;
+  filters?: FilterState;
+  onApplyFilters?: (filters: FilterState) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto ml-auto">
@@ -40,6 +47,16 @@ export function TableToolbar({
             </button>
           )}
         </div>
+      )}
+
+      {filterConfig && filters && onApplyFilters && (
+        <FilterPopover
+          config={filterConfig}
+          filters={filters}
+          onApply={onApplyFilters}
+          externalDateRange={dateRange}
+          onExternalDateRangeChange={onDateRangeChange}
+        />
       )}
 
       <button 
