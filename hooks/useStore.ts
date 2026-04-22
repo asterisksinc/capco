@@ -150,6 +150,16 @@ export function useStore() {
     saveStore(nextStore);
   };
 
+  const deleteWorkOrder = (woId: string) => {
+    const normalizedId = woId.toUpperCase();
+    const nextStore = loadStore();
+
+    nextStore.workOrders = nextStore.workOrders.filter((row) => row.id !== normalizedId);
+    delete nextStore.flowDataMap[normalizedId];
+
+    saveStore(nextStore);
+  };
+
   const addFlowRow = (woId: string, tab: string, rowData: any) => {
     const nextStore = loadStore();
     let flow = nextStore.flowDataMap[woId];
@@ -181,5 +191,5 @@ export function useStore() {
     saveStore(nextStore);
   };
 
-  return { store, mounted, workOrders, addWorkOrder, addFlowRow };
+  return { store, mounted, workOrders, addWorkOrder, deleteWorkOrder, addFlowRow };
 }

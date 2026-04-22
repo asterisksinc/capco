@@ -1,0 +1,267 @@
+
+> capco@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.4 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 11 errors:
+./app/person-a/workorder/[detailpage]/page.tsx:880:17
+Expected '</', got 'jsx text'
+  878 |             </table>
+  879 |         </div>
+> 880 |       </section>
+      |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 881 |     </div>
+      | ^^^^
+  882 |   );
+  883 | }
+
+Parsing ecmascript source code failed
+
+
+./app/person-b/workorder/[detailpage]/page.tsx:880:17
+Expected '</', got 'jsx text'
+  878 |             </table>
+  879 |         </div>
+> 880 |       </section>
+      |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 881 |     </div>
+      | ^^^^
+  882 |   );
+  883 | }
+
+Parsing ecmascript source code failed
+
+
+./components/table/OptionsDropdown.tsx:1:35
+You're importing a module that depends on `useEffect` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+> 1 | import React, { useState, useRef, useEffect } from "react";
+    |                                   ^^^^^^^^^
+  2 | import { MoreVertical, Edit2, Trash2, Eye } from "lucide-react";
+  3 | import Link from "next/link";
+  4 |
+
+Ecmascript file had an error
+
+Import traces:
+  Server Component:
+    ./components/table/OptionsDropdown.tsx
+    ./app/person-b/stock/page.tsx
+
+  Client Component Browser:
+    ./components/table/OptionsDropdown.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/table/OptionsDropdown.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+
+./components/table/SortableHeader.tsx:1:35
+You're importing a module that depends on `useEffect` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+> 1 | import React, { useState, useRef, useEffect } from "react";
+    |                                   ^^^^^^^^^
+  2 | import { ArrowDown, ArrowUp, ArrowUpDown, Filter } from "lucide-react";
+  3 | import type { ColumnConfig } from "@/hooks/useTableControls";
+  4 |
+
+Ecmascript file had an error
+
+Import traces:
+  Server Component:
+    ./components/table/SortableHeader.tsx
+    ./app/person-b/stock/page.tsx
+
+  Client Component Browser:
+    ./components/table/SortableHeader.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/table/SortableHeader.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+
+./components/table/OptionsDropdown.tsx:1:27
+You're importing a module that depends on `useRef` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+> 1 | import React, { useState, useRef, useEffect } from "react";
+    |                           ^^^^^^
+  2 | import { MoreVertical, Edit2, Trash2, Eye } from "lucide-react";
+  3 | import Link from "next/link";
+  4 |
+
+Ecmascript file had an error
+
+Import traces:
+  Server Component:
+    ./components/table/OptionsDropdown.tsx
+    ./app/person-b/stock/page.tsx
+
+  Client Component Browser:
+    ./components/table/OptionsDropdown.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/table/OptionsDropdown.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+
+./components/table/SortableHeader.tsx:1:27
+You're importing a module that depends on `useRef` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+> 1 | import React, { useState, useRef, useEffect } from "react";
+    |                           ^^^^^^
+  2 | import { ArrowDown, ArrowUp, ArrowUpDown, Filter } from "lucide-react";
+  3 | import type { ColumnConfig } from "@/hooks/useTableControls";
+  4 |
+
+Ecmascript file had an error
+
+Import traces:
+  Server Component:
+    ./components/table/SortableHeader.tsx
+    ./app/person-b/stock/page.tsx
+
+  Client Component Browser:
+    ./components/table/SortableHeader.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/table/SortableHeader.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+
+./app/person-a/stock/page.tsx:3:10
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  1 | import { Plus } from "lucide-react";
+  2 | import Link from "next/link";
+> 3 | import { useState } from "react";
+    |          ^^^^^^^^
+  4 | import type { TableConfig } from "@/hooks/useTableControls";
+  5 | import { useTableControls } from "@/hooks/useTableControls";
+  6 | import { SortableHeader } from "@/components/table/SortableHeader";
+
+Ecmascript file had an error
+
+
+./app/person-b/stock/page.tsx:3:10
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+  1 | import { Plus } from "lucide-react";
+  2 | import Link from "next/link";
+> 3 | import { useState } from "react";
+    |          ^^^^^^^^
+  4 | import type { TableConfig } from "@/hooks/useTableControls";
+  5 | import { useTableControls } from "@/hooks/useTableControls";
+  6 | import { SortableHeader } from "@/components/table/SortableHeader";
+
+Ecmascript file had an error
+
+
+./components/table/OptionsDropdown.tsx:1:17
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+> 1 | import React, { useState, useRef, useEffect } from "react";
+    |                 ^^^^^^^^
+  2 | import { MoreVertical, Edit2, Trash2, Eye } from "lucide-react";
+  3 | import Link from "next/link";
+  4 |
+
+Ecmascript file had an error
+
+Import traces:
+  Server Component:
+    ./components/table/OptionsDropdown.tsx
+    ./app/person-b/stock/page.tsx
+
+  Client Component Browser:
+    ./components/table/OptionsDropdown.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/table/OptionsDropdown.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+
+./components/table/SortableHeader.tsx:1:17
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+> 1 | import React, { useState, useRef, useEffect } from "react";
+    |                 ^^^^^^^^
+  2 | import { ArrowDown, ArrowUp, ArrowUpDown, Filter } from "lucide-react";
+  3 | import type { ColumnConfig } from "@/hooks/useTableControls";
+  4 |
+
+Ecmascript file had an error
+
+Import traces:
+  Server Component:
+    ./components/table/SortableHeader.tsx
+    ./app/person-b/stock/page.tsx
+
+  Client Component Browser:
+    ./components/table/SortableHeader.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/table/SortableHeader.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+
+./hooks/useTableControls.ts:1:10
+You're importing a module that depends on `useState` into a React Server Component module. This API is only available in Client Components. To fix, mark the file (or its parent) with the `"use client"` directive.
+    Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+> 1 | import { useState, useMemo } from "react";
+    |          ^^^^^^^^
+  2 |
+  3 | export type ColumnType = "text" | "number" | "date" | "enum" | "boolean";
+  4 |
+
+Ecmascript file had an error
+
+Import traces:
+  Server Component:
+    ./hooks/useTableControls.ts
+    ./app/person-b/stock/page.tsx
+
+  Client Component Browser:
+    ./hooks/useTableControls.ts [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component Browser]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./hooks/useTableControls.ts [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Client Component SSR]
+    ./app/person-a/product-orders/[detailpage]/page.tsx [Server Component]
+
+
+    at <unknown> (./app/person-a/workorder/[detailpage]/page.tsx:880:17)
+    at <unknown> (./app/person-b/workorder/[detailpage]/page.tsx:880:17)
+    at <unknown> (./components/table/OptionsDropdown.tsx:1:35)
+    at <unknown> (./components/table/SortableHeader.tsx:1:35)
+    at <unknown> (./components/table/OptionsDropdown.tsx:1:27)
+    at <unknown> (./components/table/SortableHeader.tsx:1:27)
+    at <unknown> (./app/person-a/stock/page.tsx:3:10)
+    at <unknown> (./app/person-b/stock/page.tsx:3:10)
+    at <unknown> (./components/table/OptionsDropdown.tsx:1:17)
+    at <unknown> (./components/table/SortableHeader.tsx:1:17)
+    at <unknown> (./hooks/useTableControls.ts:1:10)

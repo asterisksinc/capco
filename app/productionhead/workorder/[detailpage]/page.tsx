@@ -1,10 +1,14 @@
 "use client";
 
-import { use } from "react";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { use, useState, useMemo } from "react";
 import { useStore } from "@/hooks/useStore";
 import { computeWorkflowProgress } from "../../../../lib/data";
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
@@ -25,6 +29,47 @@ function StatusBadge({ status }: { status: string }) {
 
 type TabType = "Raw Material" | "Metallisation" | "Slitting";
 
+const rawMaterialConfig: TableConfig<any> = {
+  columns: [
+    { key: "rollNo", label: "Roll No", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "number", sortable: true },
+    { key: "thickness", label: "Thickness", type: "number", sortable: true },
+    { key: "supplier", label: "Company/Supplier", type: "text", sortable: true },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Raw Material"] },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const metallisationConfig: TableConfig<any> = {
+  columns: [
+    { key: "coilNo", label: "Coil No.", type: "text", sortable: true },
+    { key: "rmId", label: "RM ID", type: "text", sortable: true },
+    { key: "machineNo", label: "Machine No.", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "number", sortable: true },
+    { key: "opticalDensity", label: "Optical Density (OD)", type: "text", sortable: true },
+    { key: "resistance", label: "Resistance", type: "text", sortable: true },
+    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: false },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
+const slittingConfig: TableConfig<any> = {
+  columns: [
+    { key: "productNo", label: "Product No", type: "text", sortable: true },
+    { key: "rmId", label: "RM ID", type: "text", sortable: true },
+    { key: "weight", label: "Weight", type: "number", sortable: true },
+    { key: "thickness", label: "Thickness", type: "number", sortable: true },
+    { key: "grade", label: "Grade", type: "text", sortable: true },
+    { key: "timestampAdded", label: "Timestamp Added", type: "date", sortable: true },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Slitting", "Completed"] },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
+
 export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProps) {
   const { detailpage } = use(params);
   const orderId = detailpage.toUpperCase();
@@ -33,17 +78,35 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
   const workflowProgress = computeWorkflowProgress(workOrderFlowData);
   const [activeTab, setActiveTab] = useState<TabType>("Raw Material");
 
-  const handleRawMaterialView = () => {
-    setActiveTab("Metallisation");
-  };
+  const currentConfig = useMemo(() => {
+    switch (activeTab) {
+      case "Raw Material": return rawMaterialConfig;
+      case "Metallisation": return metallisationConfig;
+      case "Slitting": return slittingConfig;
+      default: return rawMaterialConfig;
+    }
+  }, [activeTab]);
 
-  const handleMetallisationView = () => {
-    setActiveTab("Slitting");
-  };
+  const currentData = useMemo(() => {
+    if (!workOrderFlowData) return [];
+    switch (activeTab) {
+      case "Raw Material": return workOrderFlowData.rawMaterialRows;
+      case "Metallisation": return workOrderFlowData.metallisationRows;
+      case "Slitting": return workOrderFlowData.slittingRows;
+      default: return [];
+    }
+  }, [workOrderFlowData, activeTab]);
 
-  const handleSlittingView = (productNo: string) => {
-    alert(`Slitting process for ${productNo} is complete!`);
-  };
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: currentData, config: currentConfig });
+
   if (!mounted) return null;
   if (!workOrderFlowData) return null;
   return (
@@ -103,122 +166,77 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
             />
           </div>
 
-          <div className="flex items-center bg-[#F5F7FA] rounded-[6px] p-1 border border-[#EBEBEB] w-full sm:w-auto overflow-x-auto shrink-0 pt-1 pb-1">
-            {(["Raw Material", "Metallisation", "Slitting"] as TabType[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`h-[32px] px-4 rounded-[4px] text-[14px] font-medium shadow-sm transition-colors whitespace-nowrap ${
-                  activeTab === tab
-                    ? "bg-[#00B6E2] text-white"
-                    : "bg-transparent text-[#5C5C5C] hover:text-[#171717]"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center bg-[#F5F7FA] rounded-[6px] p-1 border border-[#EBEBEB] w-full sm:w-auto overflow-x-auto shrink-0 pt-1 pb-1">
+              {(["Raw Material", "Metallisation", "Slitting"] as TabType[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`h-[32px] px-4 rounded-[4px] text-[14px] font-medium shadow-sm transition-colors whitespace-nowrap ${
+                    activeTab === tab
+                      ? "bg-[#00B6E2] text-white"
+                      : "bg-transparent text-[#5C5C5C] hover:text-[#171717]"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <TableToolbar
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              onExport={() => alert("Exporting data...")}
+            />
           </div>
         </div>
 
         {/* Table itself */}
         <div className="bg-white border border-[#EBEBEB] rounded-[12px] overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[300px]">
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                  {activeTab === "Raw Material" && (
-                    <>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Roll No</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Thickness</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Company/Supplier</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Stage</th>
-                    </>
-                  )}
-                  {activeTab === "Metallisation" && (
-                    <>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Coil No.</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">RM ID</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Machine No.</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Optical Density (OD)</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Resistance</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Timestamp</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Next Stage</th>
-                    </>
-                  )}
-                  {activeTab === "Slitting" && (
-                    <>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Product No</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">RM ID</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Weight</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Thickness</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Grade</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Timestamp Added</th>
-                      <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Stage</th>
-                    </>
-                  )}
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Status</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717]">Action</th>
+                  {currentConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-4 py-[11px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {activeTab === "Raw Material" && workOrderFlowData.rawMaterialRows.map((row, idx) => (
+                {processedData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rollNo}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.thickness}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.supplier}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={handleRawMaterialView} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                
-                {activeTab === "Metallisation" && workOrderFlowData.metallisationRows.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.coilNo}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rmId}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.machineNo}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.opticalDensity}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.resistance}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.nextStage}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={handleMetallisationView} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-
-                {activeTab === "Slitting" && workOrderFlowData.slittingRows.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.productNo}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rmId}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.thickness}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestampAdded}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={() => handleSlittingView(row.productNo)} className="inline-flex px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors">
-                        View
-                      </button>
-                    </td>
+                    {currentConfig.columns.map((col) => {
+                      if (String(col.key) === "options") {
+                        return (
+                          <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
+                            <OptionsDropdown 
+                              onEdit={() => alert(`Edit ${activeTab} Row ${idx}`)}
+                              onDelete={() => alert(`Delete ${activeTab} Row ${idx}`)}
+                            />
+                          </td>
+                        );
+                      }
+                      if (String(col.key) === "status") {
+                        return (
+                          <td key={String(col.key)} className="px-4 py-4 whitespace-nowrap">
+                            <StatusBadge status={row[col.key]} />
+                          </td>
+                        );
+                      }
+                      return (
+                        <td key={String(col.key)} className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
+                          {row[col.key]}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

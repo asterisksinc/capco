@@ -2,14 +2,9 @@
 
 import Link from "next/link";
 import { Plus, X, ChevronDown, Search, Info, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
-import type { TableConfig } from "@/hooks/useTableControls";
-import { useTableControls } from "@/hooks/useTableControls";
-import { SortableHeader } from "@/components/table/SortableHeader";
-import { TableToolbar } from "@/components/table/TableToolbar";
-import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+import { useMemo, useState } from "react";
 
-export type ProductOrderRow = {
+type ProductOrderRow = {
   id: string;
   code: string;
   type: string;
@@ -18,8 +13,14 @@ export type ProductOrderRow = {
   status: string;
   stage: string;
   timestamp: string;
-  [key: string]: string; // for type safety in useTableControls
+  [key: string]: string;
 };
+
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 
 const productOrderConfig: TableConfig<ProductOrderRow> = {
   columns: [
@@ -28,26 +29,46 @@ const productOrderConfig: TableConfig<ProductOrderRow> = {
     { key: "type", label: "Capacitor Type", type: "text", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "batchSize", label: "Batch Size", type: "number", sortable: true },
-    { 
-      key: "status", 
-      label: "Status", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "In-progress", "Completed"] 
-    },
-    { 
-      key: "stage", 
-      label: "Stage", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"] 
-    },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"] },
     { key: "timestamp", label: "Created Timestamp", type: "date", sortable: true },
     { key: "options", label: "Action", type: "text", sortable: false }
-  ],
+  ]
 };
+
+type ProductOrderFormData = {
+  poId: string;
+  productCode: string;
+  capacitance: string;
+  voltage: string;
+  capacitorType: string;
+  grade: string;
+  tolerance: string;
+  dielectric: string;
+  batchSize: string;
+  priority: string;
+  customerName: string;
+  customerReference: string;
+  specialInstructions: string;
+};
+
+const createDefaultFormData = (poId = ""): ProductOrderFormData => ({
+  poId,
+  productCode: "",
+  capacitance: "",
+  voltage: "",
+  capacitorType: "",
+  grade: "",
+  tolerance: "",
+  dielectric: "",
+  batchSize: "",
+  priority: "",
+  customerName: "",
+  customerReference: "",
+  specialInstructions: "",
+});
+
+// Note: Previous manual sorting logic is replaced by useTableControls hook.
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "Yet to Start") {
@@ -59,47 +80,19 @@ function StatusBadge({ status }: { status: string }) {
   if (status === "Completed") {
     return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#E8F8F0] text-[#1CB061] text-[12px] font-medium leading-tight">Completed</span>;
   }
-  return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-gray-100 text-gray-700 text-[12px] font-medium leading-tight">{status}</span>;
+  return null;
 }
 
-export default function SupervisorProductOrdersPage() {
+export default function PersonBProductOrdersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [formData, setFormData] = useState({
-    poId: "PO-CC-4567",
-    productCode: "",
-    capacitance: "",
-    voltage: "",
-    capacitorType: "",
-    grade: "",
-    tolerance: "",
-    dielectric: "",
-    batchSize: "",
-    priority: "",
-    customerName: "",
-    customerReference: "",
-    specialInstructions: ""
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [formData, setFormData] = useState<ProductOrderFormData>(() => createDefaultFormData());
 
   const generateProductOrderId = () => `PO-CC-${String(Date.now()).slice(-6)}`;
 
   const openNewOrderModal = () => {
-    setFormData((current) => ({
-      ...current,
-      poId: generateProductOrderId(),
-      productCode: "",
-      capacitance: "",
-      voltage: "",
-      capacitorType: "",
-      grade: "",
-      tolerance: "",
-      dielectric: "",
-      batchSize: "",
-      priority: "",
-      customerName: "",
-      customerReference: "",
-      specialInstructions: "",
-    }));
+    setFormData(createDefaultFormData(generateProductOrderId()));
     setIsModalOpen(true);
   };
 
@@ -127,28 +120,24 @@ export default function SupervisorProductOrdersPage() {
   } = useTableControls({ data: productOrders, config: productOrderConfig });
 
   const handleCreateOrder = () => {
-    if (
-      !formData.productCode ||
-      !formData.capacitorType ||
-      !formData.grade ||
-      !formData.batchSize
-    ) {
-      return;
-    }
+    const nextFormData = {
+      ...createDefaultFormData(generateProductOrderId()),
+      ...formData,
+    };
 
     const now = new Date();
     const timestamp = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}:${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-    const generatedOrderId = formData.poId.trim() || generateProductOrderId();
+    const generatedOrderId = nextFormData.poId.trim() || generateProductOrderId();
     const normalizedId = generatedOrderId.startsWith("#")
-      ? formData.poId.trim()
+      ? generatedOrderId
       : `#${generatedOrderId}`;
 
     const newOrder: ProductOrderRow = {
       id: normalizedId,
-      code: formData.productCode,
-      type: formData.capacitorType,
-      grade: formData.grade.toUpperCase(),
-      batchSize: formData.batchSize,
+      code: nextFormData.productCode,
+      type: nextFormData.capacitorType,
+      grade: nextFormData.grade.toUpperCase(),
+      batchSize: nextFormData.batchSize,
       status: "Yet to Start",
       stage: "Yet to Start",
       timestamp,
@@ -156,26 +145,38 @@ export default function SupervisorProductOrdersPage() {
 
     setProductOrders((prev) => [newOrder, ...prev]);
     setIsModalOpen(false);
-    setFormData({
-      poId: generateProductOrderId(),
-      productCode: "",
-      capacitance: "",
-      voltage: "",
-      capacitorType: "",
-      grade: "",
-      tolerance: "",
-      dielectric: "",
-      batchSize: "",
-      priority: "",
-      customerName: "",
-      customerReference: "",
-      specialInstructions: ""
-    });
+    setFormData(createDefaultFormData(generateProductOrderId()));
+    setCurrentPage(1);
   };
 
   const searchedData = processedData.filter((row) =>
     row.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const pageSize = 6;
+  const totalPages = Math.max(1, Math.ceil(searchedData.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProductOrders = searchedData.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize,
+  );
+  const rangeStart = searchedData.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safeCurrentPage * pageSize, searchedData.length);
+
+  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).slice(
+    Math.max(0, safeCurrentPage - 2),
+    Math.min(totalPages, safeCurrentPage + 1),
+  );
+
+  const goToPage = (page: number) => {
+    const nextPage = Math.max(1, Math.min(page, totalPages));
+    setCurrentPage(nextPage);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col relative">
@@ -183,6 +184,7 @@ export default function SupervisorProductOrdersPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-[12px] w-full max-w-[700px] shadow-lg flex flex-col overflow-hidden max-h-[90vh]">
+            {/* Modal Header */}
             <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
               <div className="flex flex-col gap-1">
                 <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">Add New Product Order</h2>
@@ -196,7 +198,10 @@ export default function SupervisorProductOrdersPage() {
               </button>
             </div>
             
+            {/* Modal Bdy */}
             <div className="flex flex-col gap-8 px-6 py-6 overflow-y-auto custom-scrollbar">
+              
+              {/* Capacitor Specification */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Capacitor Specification</h3>
                 
@@ -294,6 +299,7 @@ export default function SupervisorProductOrdersPage() {
                 </div>
               </div>
 
+              {/* Grade & Tolerance */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Grade & Tolerance</h3>
                 
@@ -354,6 +360,7 @@ export default function SupervisorProductOrdersPage() {
                 </div>
               </div>
 
+              {/* Production Quantity */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Production Quantity</h3>
                 
@@ -389,6 +396,8 @@ export default function SupervisorProductOrdersPage() {
                     </div>
                   </div>
 
+                 
+
                   <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
                     <label className="text-[14px] text-[#171717] leading-tight">Special Instructions</label>
                     <textarea
@@ -404,6 +413,7 @@ export default function SupervisorProductOrdersPage() {
 
             </div>
 
+            {/* Modal Footer */}
             <div className="flex items-center justify-between px-6 py-5 bg-white border-t border-[#EBEBEB]">
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -428,7 +438,7 @@ export default function SupervisorProductOrdersPage() {
           <div className="flex flex-col gap-1">
             <h1 className="text-[18px] font-semibold text-[#171717] leading-tight">Product Orders</h1>
             <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight">
-              Manage your product orders and specifications
+              Manage and track all capacitor production orders in the facility.
             </p>
           </div>
           <button 
@@ -503,7 +513,7 @@ export default function SupervisorProductOrdersPage() {
             <input 
               type="text" 
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search by Product Order ID..." 
               className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] shadow-sm" 
             />
@@ -517,13 +527,13 @@ export default function SupervisorProductOrdersPage() {
         </section>
 
         {/* Data Table */}
-        <section className="bg-white border border-[#EBEBEB] rounded-[12px] px-6 py-4 flex flex-col gap-4 overflow-hidden shadow-sm">
+        <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-0 flex flex-col gap-0 overflow-hidden shadow-sm">
           <div className="overflow-x-auto min-h-[400px]">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
+            <table className="w-full min-w-[1000px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-[#EBEBEB]">
+                <tr className="border-b border-[#EBEBEB] bg-[#F5F7FA]">
                   {productOrderConfig.columns.map((col) => (
-                    <th key={String(col.key)} className="px-1 py-[12px]">
+                    <th key={String(col.key)} className="px-5 py-[12px]">
                       <SortableHeader
                         column={col}
                         sortConfig={sortConfig}
@@ -535,24 +545,24 @@ export default function SupervisorProductOrdersPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#EAECF0]">
-                {searchedData.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
-                    <td className="px-1 py-4 whitespace-nowrap">
+              <tbody>
+                {paginatedProductOrders.map((row, idx) => (
+                  <tr key={idx} className="border-b border-[#EBEBEB] last:border-b-0 hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-4 text-[14px] font-medium text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
+                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
+                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
+                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
+                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
+                    <td className="px-5 py-4 whitespace-nowrap">
                       <StatusBadge status={row.status} />
                     </td>
-                    <td className="px-1 py-4 whitespace-nowrap">
+                    <td className="px-5 py-4 whitespace-nowrap">
                       <StatusBadge status={row.stage} />
                     </td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                    <td className="px-1 py-3 whitespace-nowrap">
+                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-5 py-4 whitespace-nowrap">
                       <OptionsDropdown 
-                        viewHref={`/productionhead/productorders/${row.id.replace('#', '')}`}
+                        viewHref={`/person-b/product-orders/${row.id.replace('#', '')}`}
                         onEdit={() => alert(`Edit ${row.id}`)}
                         onDelete={() => {
                           if (confirm(`Are you sure you want to delete ${row.id}?`)) {
@@ -563,9 +573,9 @@ export default function SupervisorProductOrdersPage() {
                     </td>
                   </tr>
                 ))}
-                {searchedData.length === 0 && (
+                {paginatedProductOrders.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="px-1 py-8 text-center text-[14px] text-[#5C5C5C]">
+                    <td colSpan={9} className="px-5 py-8 text-center text-[14px] text-[#5C5C5C]">
                       No product orders found.
                     </td>
                   </tr>
@@ -573,20 +583,41 @@ export default function SupervisorProductOrdersPage() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination Footer */}
-          <div className="flex items-center justify-between border-t border-[#EAECF0] pt-4 mt-2">
+          <div className="flex items-center justify-between border-t border-[#EAECF0] px-6 py-4">
             <p className="text-[14px] text-[#5C5C5C]">
-              Showing <span className="font-semibold text-[#171717]">{searchedData.length}</span> documents
+              Showing <span className="font-semibold text-[#171717]">{rangeStart}</span> to <span className="font-semibold text-[#171717]">{rangeEnd}</span> of <span className="font-semibold text-[#171717]">{searchedData.length}</span> documents
             </p>
             <div className="flex items-center gap-1">
-              <button className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#EBEBEB] text-[#5C5C5C] hover:bg-gray-50 transition-colors">
+              <button
+                type="button"
+                onClick={() => goToPage(safeCurrentPage - 1)}
+                disabled={safeCurrentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#EBEBEB] text-[#5C5C5C] hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-[6px] bg-[#00B6E2] text-white font-medium text-[14px]">
-                1
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#EBEBEB] text-[#5C5C5C] hover:bg-gray-50 transition-colors">
+              {pageNumbers.map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => goToPage(pageNumber)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-[6px] text-[14px] font-medium transition-colors ${
+                    pageNumber === safeCurrentPage
+                      ? "bg-[#00B6E2] text-white"
+                      : "border border-[#EBEBEB] text-[#5C5C5C] hover:bg-gray-50"
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => goToPage(safeCurrentPage + 1)}
+                disabled={safeCurrentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#EBEBEB] text-[#5C5C5C] hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -597,4 +628,3 @@ export default function SupervisorProductOrdersPage() {
     </div>
   );
 }
-

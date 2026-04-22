@@ -1,8 +1,8 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useStore } from "@/hooks/useStore";
-
+import Link from "next/link";
+import { useState } from "react";
 import type { TableConfig } from "@/hooks/useTableControls";
 import { useTableControls } from "@/hooks/useTableControls";
 import { SortableHeader } from "@/components/table/SortableHeader";
@@ -24,41 +24,42 @@ const stockConfig: TableConfig<StockRow> = {
   columns: [
     { key: "stockId", label: "STOCK ID", type: "text", sortable: true },
     { key: "linkedWoId", label: "Linked WO ID", type: "text", sortable: true },
-    { key: "weight", label: "Weight", type: "number", sortable: true },
-    { key: "width", label: "Width", type: "number", sortable: true },
-    { key: "micron", label: "Micron", type: "number", sortable: true },
+    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
-    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Ready for Winding", "Ready for Dispatch", "QC Pending", "Hold"] },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Metallisation", "Slitting", "Packaging", "Quality Check"] },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "options", label: "Action", type: "text", sortable: false }
   ]
 };
 
-export default function SupervisorStockPage() {
-  const { store, mounted } = useStore();
+const mockRows: StockRow[] = [
+  { stockId: "PM-0001", linkedWoId: "WO-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", stage: "Metallisation", timestamp: "10/01/2025" },
+  { stockId: "PM-0002", linkedWoId: "WO-0002", weight: "45.2kgs", width: "3.8", micron: "8.0", grade: "B", stage: "Slitting", timestamp: "10/01/2025" },
+  { stockId: "PM-0003", linkedWoId: "WO-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", stage: "Metallisation", timestamp: "10/01/2025" },
+  { stockId: "PM-0004", linkedWoId: "WO-0003", weight: "62.8kgs", width: "5.0", micron: "7.5", grade: "A", stage: "Packaging", timestamp: "10/01/2025" },
+  { stockId: "PM-0005", linkedWoId: "WO-0002", weight: "45.2kgs", width: "3.8", micron: "8.0", grade: "B", stage: "Slitting", timestamp: "10/01/2025" },
+  { stockId: "PM-0006", linkedWoId: "WO-0004", weight: "55.0kgs", width: "4.2", micron: "6.8", grade: "A", stage: "Metallisation", timestamp: "10/01/2025" },
+  { stockId: "PM-0007", linkedWoId: "WO-0001", weight: "58.5kgs", width: "4.5", micron: "6.5", grade: "A", stage: "Metallisation", timestamp: "10/01/2025" },
+  { stockId: "PM-0008", linkedWoId: "WO-0005", weight: "48.3kgs", width: "4.0", micron: "7.2", grade: "B", stage: "Quality Check", timestamp: "10/01/2025" },
+];
 
-  const getStockRows = () => {
-    if (!mounted) return [];
-    const rows: StockRow[] = [];
-    for (const [woId, flow] of Object.entries(store.flowDataMap)) {
-      for (const row of flow.slittingRows) {
-        rows.push({
-          stockId: row.productNo,
-          linkedWoId: woId,
-          weight: row.weight,
-          width: flow.overview.width || "-",
-          micron: row.thickness || flow.overview.micron || "-",
-          grade: row.grade,
-          stage: row.stage || "Ready for Winding",
-          timestamp: row.timestampAdded || flow.overview.date || "-",
-        });
-      }
-    }
-    // Most recent first (basic reverse, properly they are chronological as pushed)
-    return rows.reverse();
-  };
+function StatusBadge({ status }: { status: string }) {
+  if (status === "Out of Stock") {
+    return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#FFF0F1] text-[#FB3748] text-[12px] font-medium leading-tight">Out of Stock</span>;
+  }
+  if (status === "Low Stock") {
+    return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#FFF4ED] text-[#E19242] text-[12px] font-medium leading-tight">Low Stock</span>;
+  }
+  if (status === "In Stock") {
+    return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-[#E8F8F0] text-[#1CB061] text-[12px] font-medium leading-tight">In Stock</span>;
+  }
+  return null;
+}
 
-  const actualRows = getStockRows();
+export default function PersonBStockPage() {
+  const [data, setData] = useState(mockRows);
 
   const {
     processedData,
@@ -68,41 +69,41 @@ export default function SupervisorStockPage() {
     handleFilterChange,
     dateRange,
     setDateRange
-  } = useTableControls({ data: actualRows, config: stockConfig });
+  } = useTableControls({ data: data, config: stockConfig });
 
-  const totalLots = actualRows.length;
-  // Basic metrics from the slitting output rules
-  const qualityCheckLots = actualRows.filter((row) => row.stage.includes("QC") || row.stage.includes("Hold")).length;
-  const gradeALots = actualRows.filter((row) => row.grade === "A").length;
-  const inStockLots = actualRows.filter((row) => row.stage === "Ready for Winding" || row.stage === "Ready for Dispatch").length;
+  const totalLots = data.length;
+  const metallisationLots = data.filter((row) => row.stage === "Metallisation").length;
+  const slittingLots = data.filter((row) => row.stage === "Slitting").length;
+  const qualityCheckLots = data.filter((row) => row.stage === "Quality Check").length;
+  const gradeALots = data.filter((row) => row.grade === "A").length;
 
   const overviewStats = [
     {
       title: "Total Product Lots",
-      value: mounted ? String(totalLots) : "-",
+      value: String(totalLots),
       subtext: `${gradeALots} grade A lots`,
       subtextClass: "text-[#1CB061] font-semibold",
       valClass: "text-[#171717]",
     },
     {
-      title: "In Stock / Dispatch",
-      value: mounted ? String(inStockLots) : "-",
-      subtext: "Available for next stage",
+      title: "Metallisation Stock",
+      value: String(metallisationLots),
+      subtext: "Available for slitting",
       subtextClass: "text-[#5C5C5C] font-normal",
       valClass: "text-[#171717]",
     },
     {
-      title: "Quality Check Pending",
-      value: mounted ? String(qualityCheckLots) : "-",
-      subtext: qualityCheckLots > 0 ? "Needs final clearance" : "All cleared",
-      subtextClass: qualityCheckLots > 0 ? "text-[#E19242] font-semibold" : "text-[#1CB061] font-semibold",
+      title: "Slitting Queue",
+      value: String(slittingLots),
+      subtext: "Currently in cut processing",
+      subtextClass: "text-[#E19242] font-semibold",
       valClass: "text-[#171717]",
     },
     {
-      title: "Recent Additions",
-      value: mounted ? String(Math.min(totalLots, 5)) : "-",
-      subtext: "Last 48 hours",
-      subtextClass: "text-[#5C5C5C] font-normal",
+      title: "Quality Check Lots",
+      value: String(qualityCheckLots),
+      subtext: qualityCheckLots > 0 ? "Needs final clearance" : "No pending QC",
+      subtextClass: qualityCheckLots > 0 ? "text-[#FB3748] font-semibold" : "text-[#1CB061] font-semibold",
       valClass: "text-[#171717]",
     },
   ];
@@ -177,9 +178,9 @@ export default function SupervisorStockPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {mounted ? processedData.length > 0 ? (processedData.map((row, idx) => (
+                {processedData.length > 0 ? processedData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] font-medium text-[#00B6E2] whitespace-nowrap">{row.stockId}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stockId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.linkedWoId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
@@ -194,20 +195,18 @@ export default function SupervisorStockPage() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
                         onEdit={() => alert(`Edit ${row.stockId}`)}
-                        onDelete={() => alert(`Delete ${row.stockId}`)}
+                        onDelete={() => {
+                          if (confirm(`Delete ${row.stockId}?`)) {
+                            setData(prev => prev.filter(r => r.stockId !== row.stockId));
+                          }
+                        }}
                       />
                     </td>
                   </tr>
-                ))) : (
+                )) : (
                   <tr>
                     <td colSpan={9} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
                       No stock available.
-                    </td>
-                  </tr>
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
-                      Loading stock data...
                     </td>
                   </tr>
                 )}
@@ -219,3 +218,5 @@ export default function SupervisorStockPage() {
     </div>
   );
 }
+
+

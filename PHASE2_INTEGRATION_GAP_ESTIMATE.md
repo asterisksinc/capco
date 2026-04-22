@@ -20,7 +20,8 @@ Observed implementation:
 4. Supervisor creates work orders in UI without backend persistence.
 5. Operator submits stage data through modal steps and local addFlowRow calls.
 6. No frontend consumption of backend work-order APIs yet.
-
+(supervisor= production head)
+operator = person-a , person-b 
 Primary files:
 - hooks/useStore.ts
 - lib/data.ts

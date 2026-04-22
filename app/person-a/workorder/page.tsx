@@ -2,7 +2,25 @@
 
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { useStore } from "@/hooks/useStore";
+import { useStore, type ComputedWorkOrderSummary } from "@/hooks/useStore";
+import type { TableConfig } from "@/hooks/useTableControls";
+import { useTableControls } from "@/hooks/useTableControls";
+import { SortableHeader } from "@/components/table/SortableHeader";
+import { TableToolbar } from "@/components/table/TableToolbar";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+
+const workOrderConfig: TableConfig<ComputedWorkOrderSummary> = {
+  columns: [
+    { key: "id", label: "Work Orders ID", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "qty", label: "Quantity", type: "number", sortable: true },
+    { key: "stage", label: "Stage", type: "text", sortable: true },
+    { key: "date", label: "Date", type: "date", sortable: true },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "options", label: "Action", type: "text", sortable: false }
+  ]
+};
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "Yet to Start") {
@@ -18,7 +36,17 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function OperatorWorkOrderPage() {
-  const { workOrders: rows, mounted } = useStore();
+  const { workOrders: rows, mounted, deleteWorkOrder } = useStore();
+
+  const {
+    processedData,
+    sortConfig,
+    handleSort,
+    filters,
+    handleFilterChange,
+    dateRange,
+    setDateRange
+  } = useTableControls({ data: rows, config: workOrderConfig });
 
   const totalWorkOrders = rows.length;
   const rawMaterialCount = rows.filter((row) => row.stage.toLowerCase().includes("raw material")).length;
@@ -102,26 +130,39 @@ export default function OperatorWorkOrderPage() {
           ))}
         </section>
 
+        {/* Filters Row Component */}
+        <section className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="relative max-w-[400px] w-full">
+            <h2 className="text-[16px] font-semibold text-[#171717] leading-tight">Work Orders</h2>
+          </div>
+          <TableToolbar
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            onExport={() => alert("Exporting data...")}
+          />
+        </section>
+
         {/* Data Table (Frame 71) */}
         <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-6 flex flex-col gap-4 overflow-hidden">
-          <h2 className="text-[16px] font-semibold text-[#171717] leading-tight">Work Orders</h2>
-          
-          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[300px]">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[15%]">Work Orders ID</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Micron</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Width</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Quantity</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[15%]">Stage</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[15%]">Date</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[15%]">Status</th>
-                  <th className="px-4 py-[11px] text-[14px] font-medium text-[#171717] w-[10%]">Action</th>
+                  {workOrderConfig.columns.map((col) => (
+                    <th key={String(col.key)} className="px-4 py-[11px]">
+                      <SortableHeader
+                        column={col}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                      />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {rows.map((row, idx) => (
+                {processedData.length > 0 ? processedData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.id}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
@@ -133,15 +174,24 @@ export default function OperatorWorkOrderPage() {
                       <StatusBadge status={row.status} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Link 
-                        href={`/person-a/workorder/${row.id}`} 
-                        className="inline-flex items-center justify-center px-4 py-[6px] bg-[#00B6E2] hover:bg-[#0092b5] text-white text-[12px] font-medium rounded-[4px] transition-colors"
-                      >
-                        View
-                      </Link>
+                      <OptionsDropdown 
+                        viewHref={`/person-a/workorder/${row.id}`}
+                        onEdit={() => alert(`Edit ${row.id}`)}
+                        onDelete={() => {
+                          if (confirm(`Are you sure you want to delete ${row.id}?`)) {
+                            deleteWorkOrder(row.id);
+                          }
+                        }}
+                      />
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
+                      No work orders found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
