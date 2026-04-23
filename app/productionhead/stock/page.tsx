@@ -12,6 +12,7 @@ import { TableToolbar } from "@/components/table/TableToolbar";
 import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 import { FilterPopover, FilterChips, type FilterConfig, type FilterState, type EnumFilter, type TextFilter, type NumberRangeFilter } from "@/components/table/FilterPopover";
 import { exportToExcel } from "@/lib/exportExcel";
+import { MobileHeader, MobileSpacer } from "@/components/MobileHeader";
 
 type StockRow = {
   stockId: string;
@@ -186,14 +187,16 @@ export default function SupervisorStockPage() {
   ];
 
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
-      {/* Header section (Frame 66 style) */}
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col w-full max-w-full">
+      <MobileHeader title="Stock" />
+
+      {/* Header section */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
-        <div className="w-full px-6 py-6 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 h-auto">
+        <div className="w-full px-4 md:px-6 pt-[72px] pb-4 md:pt-6 md:pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 h-auto">
           <div className="flex flex-col gap-1">
-            <h1 className="text-[16px] font-medium text-[#171717] leading-tight">Stock Management</h1>
-            <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight">
-              Manage and view current inventory levels
+            <h1 className="text-[16px] font-medium text-[#171717] leading-tight">Stock</h1>
+            <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight hidden md:block">
+              Manage inventory
             </p>
           </div>
           <button className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0">
@@ -204,9 +207,23 @@ export default function SupervisorStockPage() {
       </section>
 
       {/* Main Content */}
-      <div className="w-full px-6 py-6 flex flex-col gap-6">
-        {/* Stats Cards (Frame 70) */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5">
+      <div className="w-full px-4 md:px-6 flex flex-col gap-4 mt-6 md:gap-6">
+        
+        {/* Stats Cards - Mobile 2x2 grid */}
+        <section className="grid grid-cols-2 gap-0 md:hidden bg-white border border-[#EBEBEB] rounded-[12px]">
+          {overviewStats.map((stat, i) => (
+            <div key={i} className={`p-3 ${i % 2 === 0 ? 'border-r border-b border-[#EBEBEB]' : 'border-b border-[#EBEBEB]'}`}>
+              <div className="flex flex-col gap-1">
+                <p className="text-[11px] font-medium text-[#5C5C5C]">{stat.title}</p>
+                <span className={`text-[16px] font-semibold ${stat.valClass}`}>{stat.value}</span>
+                <span className={`text-[10px] ${stat.subtextClass}`}>{stat.subtext}</span>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Desktop Stats */}
+        <section className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5">
           {overviewStats.map((stat, i) => (
             <div key={i} className="flex items-center justify-between px-6 py-2 sm:py-0">
               <div className="flex flex-col gap-[6px]">

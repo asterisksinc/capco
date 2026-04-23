@@ -10,6 +10,7 @@ import { TableToolbar } from "@/components/table/TableToolbar";
 import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 import { FilterPopover, FilterChips, type FilterConfig, type FilterState, type EnumFilter, type TextFilter, type NumberRangeFilter } from "@/components/table/FilterPopover";
 import { exportToExcel, convertDataToExportFormat } from "@/lib/exportExcel";
+import { MobileHeader, MobileSpacer } from "@/components/MobileHeader";
 
 const STATUS_OPTIONS = ["Yet to Start", "In-progress", "Completed"];
 const STAGE_OPTIONS = ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"];
@@ -263,7 +264,9 @@ export default function SupervisorProductOrdersPage() {
   );
 
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative w-full max-w-full">
+      <MobileHeader title="Product Orders" />
+
       {/* Modal Overlay */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
@@ -509,11 +512,11 @@ export default function SupervisorProductOrdersPage() {
 
       {/* Header section */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
-        <div className="w-full px-6 py-6 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 h-auto">
+        <div className="w-full px-4 md:px-6 pt-[72px] pb-4 md:pt-6 md:pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 h-auto">
           <div className="flex flex-col gap-1">
             <h1 className="text-[18px] font-semibold text-[#171717] leading-tight">Product Orders</h1>
-            <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight">
-              Manage your product orders and specifications
+            <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight hidden md:block">
+              Manage orders
             </p>
           </div>
           <button 
@@ -527,10 +530,27 @@ export default function SupervisorProductOrdersPage() {
       </section>
 
       {/* Main Content */}
-      <div className="w-full px-6 flex flex-col gap-6 mt-6 mb-6">
+      <div className="w-full px-4 md:px-6 flex flex-col mt-6 gap-4 md:gap-6 mb-6">
         
-        {/* Stats Section */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5">
+        {/* Stats Section - Mobile 2x2 grid */}
+        <section className="grid grid-cols-2 gap-0 md:hidden bg-white border border-[#EBEBEB] rounded-[12px]">
+          {[
+            { title: "Total Orders", value: "148", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "Units Planned", value: "24,500", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "In Progress", value: "32", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "Completed", value: "116", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+          ].map((stat, i) => (
+            <div key={i} className={`p-3 ${i % 2 === 0 ? 'border-r border-b border-[#EBEBEB]' : 'border-b border-[#EBEBEB]'}`}>
+              <div className="flex flex-col gap-1">
+                <p className="text-[11px] font-medium text-[#5C5C5C]">{stat.title}</p>
+                <span className={`text-[16px] font-semibold ${stat.valClass}`}>{stat.value}</span>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Desktop Stats */}
+        <section className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5">
           <div className="flex items-center justify-between px-6 py-2 sm:py-0">
             <div className="flex flex-col gap-[8px]">
               <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Total Product Orders</p>

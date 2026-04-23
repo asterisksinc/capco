@@ -275,7 +275,7 @@ export default function OverviewPage() {
         <button className="p-2 -ml-2" onClick={() => setIsMobileMenuOpen(true)}>
           <Menu className="w-5 h-5 text-[#171717]" />
         </button>
-        <h1 className="text-[16px] font-medium text-[#171717]">Overview</h1>
+        <h1 className="text-[16px]   font-medium text-[#171717]">Overview</h1>
         <div className="flex items-center gap-3">
           <button className="p-2">
             <Bell className="w-5 h-5 text-[#171717]" />
@@ -328,13 +328,13 @@ export default function OverviewPage() {
       </section>
 
       {/* MOBILE SPACER FOR FIXED HEADER */}
-      <div className="hidden sm:block h-14"></div>
+      {/* <div className="hidden sm:block h-14"></div> */}
 
       {/* MOBILE: PAGE HEADER */}
-      <section className="px-4 mt-4 sm:hidden">
+      <section className="px-4 pt-4 sm:hidden">
         <h1 className="text-[16px] font-medium text-[#171717]">Overview</h1>
         <p className="text-[12px] text-[#5C5C5C] mt-1">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit
+          Lorem ipsum dolor sit amet
         </p>
       </section>
 
@@ -392,27 +392,21 @@ export default function OverviewPage() {
       </section>
 
       {/* MOBILE: KPI CARDS (2x2 grid) */}
-      <section className="px-4 mt-4 sm:hidden">
-        <div className="bg-white rounded-2xl p-4">
-          <div className="grid grid-cols-2">
-            {[
-              { label: "Product Orders Open", value: "124", change: "5%" },
-              { label: "Work Orders Open", value: "42", change: "+0.2%" },
-              { label: "Orders Delayed", value: "15", change: "+0.2%" },
-              { label: "Dispatch Ready Orders", value: "15", change: "+0.2%" },
-            ].map((item, i) => (
-              <div key={i} className={`py-3 ${i % 2 === 0 ? 'border-r border-[#EBEBEB]' : ''} ${i < 2 ? 'border-b border-[#EBEBEB]' : ''}`}>
-                <p className="text-[11px] text-[#5C5C5C]">{item.label}</p>
-                <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-[16px] font-semibold text-[#171717]">{item.value}</span>
-                  <span className="text-[10px] text-[#1CB061] font-semibold">
-                    {item.change}
-                  </span>
-                </div>
-              </div>
-            ))}
+      <section className="grid grid-cols-2 gap-0 md:hidden bg-white border border-[#EBEBEB] rounded-[12px]">
+        {[
+          { title: "Product Orders Open", value: "124", valClass: "text-[#171717]", subtextClass: "text-[#1CB061] font-semibold", subtext: "+5%" },
+          { title: "Work Orders Open", value: "42", valClass: "text-[#171717]", subtextClass: "text-[#1CB061] font-semibold", subtext: "+0.2%" },
+          { title: "Orders Delayed", value: "15", valClass: "text-[#171717]", subtextClass: "text-[#1CB061] font-semibold", subtext: "+0.2%" },
+          { title: "Dispatch Ready Orders", value: "15", valClass: "text-[#171717]", subtextClass: "text-[#1CB061] font-semibold", subtext: "+0.2%" },
+        ].map((stat, i) => (
+          <div key={i} className={`p-3 ${i % 2 === 0 ? 'border-r border-b border-[#EBEBEB]' : 'border-b border-[#EBEBEB]'}`}>
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px] font-medium text-[#5C5C5C]">{stat.title}</p>
+              <span className={`text-[16px] font-semibold ${stat.valClass}`}>{stat.value}</span>
+              <span className={`text-[10px] ${stat.subtextClass}`}>{stat.subtext}</span>
+            </div>
           </div>
-        </div>
+        ))}
       </section>
 
       {/* DESKTOP: STATS */}
