@@ -10,6 +10,7 @@ import { TableToolbar } from "@/components/table/TableToolbar";
 import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 import { FilterPopover, FilterChips, type FilterConfig, type FilterState, type EnumFilter, type TextFilter, type NumberRangeFilter } from "@/components/table/FilterPopover";
 import { exportToExcel, convertDataToExportFormat } from "@/lib/exportExcel";
+import { MobileHeader, MobileSpacer } from "@/components/MobileHeader";
 
 const STATUS_OPTIONS = ["Yet to Start", "In-progress", "Completed"];
 const STAGE_OPTIONS = ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"];
@@ -263,11 +264,13 @@ export default function SupervisorProductOrdersPage() {
   );
 
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col relative">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative w-full max-w-full">
+      <MobileHeader title="Product Orders" />
+
       {/* Modal Overlay */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-[12px] w-full max-w-[700px] shadow-lg flex flex-col overflow-hidden max-h-[90vh]">
+          <div className="bg-white rounded-[12px] w-full max-w-[700px]  flex flex-col overflow-hidden max-h-[90vh]">
             <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
               <div className="flex flex-col gap-1">
                 <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">Add New Product Order</h2>
@@ -509,11 +512,11 @@ export default function SupervisorProductOrdersPage() {
 
       {/* Header section */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
-        <div className="w-full px-6 py-6 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 h-auto">
+        <div className="w-full px-4 md:px-6 pt-[72px] pb-4 md:pt-6 md:pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 h-auto">
           <div className="flex flex-col gap-1">
             <h1 className="text-[18px] font-semibold text-[#171717] leading-tight">Product Orders</h1>
-            <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight">
-              Manage your product orders and specifications
+            <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight hidden md:block">
+              Manage orders
             </p>
           </div>
           <button 
@@ -527,10 +530,27 @@ export default function SupervisorProductOrdersPage() {
       </section>
 
       {/* Main Content */}
-      <div className="w-full px-6 flex flex-col gap-6 mt-6 mb-6">
+      <div className="w-full px-4 md:px-6 flex flex-col mt-6 gap-4 md:gap-6 mb-6">
         
-        {/* Stats Section */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5 shadow-sm">
+        {/* Stats Section - Mobile 2x2 grid */}
+        <section className="grid grid-cols-2 gap-0 md:hidden bg-white border border-[#EBEBEB] rounded-[12px]">
+          {[
+            { title: "Total Orders", value: "148", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "Units Planned", value: "24,500", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "In Progress", value: "32", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "Completed", value: "116", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+          ].map((stat, i) => (
+            <div key={i} className={`p-3 ${i % 2 === 0 ? 'border-r border-b border-[#EBEBEB]' : 'border-b border-[#EBEBEB]'}`}>
+              <div className="flex flex-col gap-1">
+                <p className="text-[11px] font-medium text-[#5C5C5C]">{stat.title}</p>
+                <span className={`text-[16px] font-semibold ${stat.valClass}`}>{stat.value}</span>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Desktop Stats */}
+        <section className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5">
           <div className="flex items-center justify-between px-6 py-2 sm:py-0">
             <div className="flex flex-col gap-[8px]">
               <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Total Product Orders</p>
@@ -590,7 +610,7 @@ export default function SupervisorProductOrdersPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by Product Order ID..." 
-              className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] shadow-sm" 
+              className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] " 
             />
           </div>
           
@@ -620,13 +640,13 @@ export default function SupervisorProductOrdersPage() {
         <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table */}
-        <section className="bg-white border border-[#EBEBEB] rounded-[12px] px-6 py-4 flex flex-col gap-4 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto min-h-[400px]">
+        <section className="bg-white border border-[#EBEBEB] rounded-[12px] flex flex-col gap-4 overflow-hidden shadow-sm">
+          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
-                <tr className="border-b border-[#EBEBEB]">
+                <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                   {productOrderConfig.columns.map((col) => (
-                    <th key={String(col.key)} className="px-1 py-[12px]">
+                    <th key={String(col.key)} className="px-4 py-[11px]">
                       <SortableHeader
                         column={col}
                         sortConfig={sortConfig}
@@ -641,23 +661,23 @@ export default function SupervisorProductOrdersPage() {
               <tbody className="divide-y divide-[#EAECF0]">
                 {searchedData.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
                       <Link href={`/productionhead/productorders/${row.id.replace('#', '')}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
                         {row.id}
                       </Link>
                     </td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
-                    <td className="px-1 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.status} />
                     </td>
-                    <td className="px-1 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.stage} />
                     </td>
-                    <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                    <td className="px-1 py-3 whitespace-nowrap">
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
                         viewHref={`/productionhead/productorders/${row.id.replace('#', '')}`}
                         status={row.status}

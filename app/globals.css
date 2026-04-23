@@ -1,15 +1,30 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f5f7fa;
-  --foreground: #171717;
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-dm-sans);
-  --font-dm-sans: var(--font-dm-sans);
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 639px) {
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
 }
 
 * {
@@ -19,13 +34,14 @@
 html,
 body {
   height: 100%;
+  margin: 0;
 }
 
 body {
-  margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-dm-sans), "DM Sans", "Segoe UI", sans-serif;
+  overflow-x: hidden;
 }
 
 a {
@@ -44,4 +60,16 @@ select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+:root {
+  --background: #f5f7fa;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-dm-sans);
+  --font-dm-sans: var(--font-dm-sans);
 }

@@ -42,7 +42,8 @@ export function SortableHeader<T>({
       {column.sortable ? (
         <button
           onClick={() => onSort(column.key as keyof T)}
-          className="flex items-center gap-1.5 text-[14px] font-semibold text-[#171717] hover:text-[#00B6E2] transition-colors"
+          className="flex items-center gap-1.5 text-[13px] font-medium text-[#171717] hover:text-[#00B6E2] transition-colors"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500, lineHeight: '120%', letterSpacing: '0%' }}
         >
           {column.label}
           <span className="text-[#A1A1AA]">
@@ -54,7 +55,12 @@ export function SortableHeader<T>({
           </span>
         </button>
       ) : (
-        <span className="text-[14px] font-semibold text-[#171717]">{column.label}</span>
+        <span 
+          className="text-[13px] font-medium text-[#171717]"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500, lineHeight: '120%', letterSpacing: '0%' }}
+        >
+          {column.label}
+        </span>
       )}
 
       {hasFilter && (

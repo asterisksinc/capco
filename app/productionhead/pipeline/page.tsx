@@ -15,6 +15,7 @@ import { useTableControls } from "@/hooks/useTableControls";
 import { SortableHeader } from "@/components/table/SortableHeader";
 import { TableToolbar } from "@/components/table/TableToolbar";
 import { FilterPopover, FilterChips, type FilterConfig, type FilterState, type EnumFilter } from "@/components/table/FilterPopover";
+import { MobileHeader, MobileSpacer } from "@/components/MobileHeader";
 
 // Reusing StatusBadge exactly as established in your design system
 function StatusBadge({ status }: { status: string }) {
@@ -287,23 +288,41 @@ export default function PipelinePage() {
   }, [workOrders, productOrders]);
 
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col relative">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative w-full max-w-full">
+      <MobileHeader title="Pipeline" />
       
       {/* Header section */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
-        <div className="w-full px-6 py-6 pb-4 flex flex-col gap-1">
+        <div className="w-full px-4 md:px-6 pt-[72px] pb-4 md:pt-6 md:pb-4 flex flex-col gap-1">
           <div className="text-[16px] font-medium text-[#171717] leading-tight">Pipeline</div>
-          <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit
+          <p className="text-[14px] font-normal text-[#5C5C5C] leading-tight hidden md:block">
+            Lorem ipsum dolor sit amet
           </p>
         </div>
       </section>
 
       {/* Main Content */}
-      <div className="w-full px-6 py-6 flex flex-col gap-6">
+      <div className="w-full px-4 md:px-6 flex flex-col gap-4 pt-5 md:gap-6">
         
-        {/* Stats Section */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5 shadow-sm">
+        {/* Stats Section - Mobile 2x2 grid */}
+        <section className="grid grid-cols-2 gap-0 md:hidden bg-white border border-[#EBEBEB]  rounded-[12px]">
+          {[
+            { title: "Total Orders", value: "124", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]" },
+            { title: "In Progress", value: "42", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]" },
+            { title: "Completed", value: "15", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]" },
+            { title: "Delayed", value: "8", valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]" },
+          ].map((stat, i) => (
+            <div key={i} className={`p-3 ${i % 2 === 0 ? 'border-r border-b border-[#EBEBEB]' : 'border-b border-[#EBEBEB]'}`}>
+              <div className="flex flex-col gap-1">
+                <p className="text-[11px] font-medium text-[#5C5C5C]">{stat.title}</p>
+                <span className={`text-[16px] font-semibold ${stat.valClass}`}>{stat.value}</span>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Desktop Stats */}
+        <section className="hidden md:grid grid-cols-1 sm:grid-cols-3 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5">
           <div className="flex items-center justify-between px-6 py-2 sm:py-0">
             <div className="flex flex-col gap-[6px]">
               <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Lorem ipsum dolor</p>
@@ -368,46 +387,39 @@ export default function PipelinePage() {
         </section>
 
         {/* Toolbar */}
-        <section className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          {/* Search - full width on mobile, smaller on desktop */}
+          <div className="relative w-full md:w-[280px] shrink-0">
+            <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search..." 
+              className="h-10 md:h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-lg md:rounded-[8px] text-[14px]" 
+            />
+          </div>
           
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-            <div className="relative w-full sm:w-[320px]">
-              <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by Product Order ID..." 
-                className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors" 
-              />
-            </div>
-
+          {/* Controls - right aligned, wraps on mobile */}
+          <div className="flex flex-wrap items-center gap-2">
             {viewMode === "list" && (
-              <div className="relative w-full sm:w-auto min-w-[140px]">
-                <select
-                  value={listType}
-                  onChange={(e) => setListType(e.target.value as ListType)}
-                  className="h-[40px] w-full bg-white border border-[#EBEBEB] rounded-[8px] pl-3 pr-8 text-[14px] font-medium text-[#171717] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors cursor-pointer"
-                >
-                  <option value="Work Orders">Work Orders</option>
-                  <option value="Product Orders">Product Orders</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+              <select
+                value={listType}
+                onChange={(e) => setListType(e.target.value as ListType)}
+                className="h-10 md:h-[40px] bg-white border border-[#EBEBEB] rounded-lg md:rounded-[8px] pl-3 pr-8 text-[14px] appearance-none cursor-pointer"
+              >
+                <option value="Work Orders">Work Orders</option>
+                <option value="Product Orders">Product Orders</option>
+              </select>
             )}
 
-            <div className="relative w-full sm:w-auto min-w-[140px]">
-              <select className="h-[40px] w-full bg-white border border-[#EBEBEB] rounded-[8px] pl-3 pr-8 text-[14px] font-medium text-[#171717] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors cursor-pointer">
+            <div className="relative">
+              <select className="h-10 md:h-[40px] bg-white border border-[#EBEBEB] rounded-lg md:rounded-[8px] pl-3 pr-8 text-[14px] appearance-none cursor-pointer">
                 <option value="recent">Sort by</option>
                 <option value="oldest">Oldest First</option>
               </select>
               <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
-
-            <button className="h-[40px] w-full sm:w-auto px-4 flex items-center justify-center gap-2 bg-white border border-[#00B6E2] text-[#00B6E2] text-[14px] font-medium rounded-[6px] hover:bg-[#F0FAFD] transition-colors whitespace-nowrap">
-              <Download className="w-4 h-4" />
-              Export
-            </button>
 
             <FilterPopover
               config={listType === "Work Orders" ? workFilterConfig : productFilterConfig}
@@ -416,6 +428,11 @@ export default function PipelinePage() {
                 setActiveFilters((prev) => ({ ...prev, ...filters }));
               }}
             />
+
+            <button className="h-10 md:h-[40px] px-4 flex items-center gap-2 bg-white border border-[#00B6E2] text-[#00B6E2] text-[14px] font-medium rounded-[6px] hover:bg-[#F0FAFD] transition-colors">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
           </div>
         </section>
 
@@ -438,14 +455,14 @@ export default function PipelinePage() {
         />
 
         {viewMode === "list" ? (
-          <section className="bg-white border border-[#EBEBEB] rounded-[12px] px-6 py-4 flex flex-col gap-4 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto min-h-[420px]">
+          <section className="bg-white border border-[#EBEBEB] rounded-[12px] flex flex-col gap-4 overflow-hidden ">
+            <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[420px]">
               {listType === "Work Orders" ? (
                 <table className="w-full text-left border-collapse min-w-[900px]">
                   <thead>
-                    <tr className="border-b border-[#EBEBEB]">
+                    <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                       {workOrderConfig.columns.map((col) => (
-                        <th key={String(col.key)} className="px-1 py-[12px]">
+                        <th key={String(col.key)} className="px-4 py-[11px]">
                           <SortableHeader
                             column={col}
                             sortConfig={workSortConfig}
@@ -460,16 +477,16 @@ export default function PipelinePage() {
                   <tbody className="divide-y divide-[#EAECF0]">
                     {searchedWorkOrders.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.quantity}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
-                      <td className="px-1 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.quantity}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={row.status} />
                       </td>
-                      <td className="px-1 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <button className="h-[34px] min-w-[72px] px-3 rounded-[8px] bg-[#00B6E2] text-white text-[14px] font-medium hover:bg-[#0092b5] transition-colors">
                           View
                         </button>
@@ -489,9 +506,9 @@ export default function PipelinePage() {
               ) : (
                 <table className="w-full text-left border-collapse min-w-[1080px]">
                   <thead>
-                    <tr className="border-b border-[#EBEBEB]">
+                    <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                       {productOrderConfig.columns.map((col) => (
-                        <th key={String(col.key)} className="px-1 py-[12px]">
+                        <th key={String(col.key)} className="px-4 py-[11px]">
                           <SortableHeader
                             column={col}
                             sortConfig={productSortConfig}
@@ -506,19 +523,19 @@ export default function PipelinePage() {
                   <tbody className="divide-y divide-[#EAECF0]">
                     {searchedProductOrders.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
-                      <td className="px-1 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={row.status} />
                       </td>
-                      <td className="px-1 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={row.stage} />
                       </td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                      <td className="px-1 py-3 whitespace-nowrap">
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <button className="h-[34px] min-w-[72px] px-3 rounded-[8px] bg-[#00B6E2] text-white text-[14px] font-medium hover:bg-[#0092b5] transition-colors">
                           View
                         </button>
