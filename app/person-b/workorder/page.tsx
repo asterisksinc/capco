@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useStore, type ComputedWorkOrderSummary } from "@/hooks/useStore";
@@ -60,6 +60,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function PersonBWorkOrderPage() {
   const { workOrders: rows, mounted, deleteWorkOrder } = useStore();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const {
     processedData,
@@ -200,7 +201,14 @@ export default function PersonBWorkOrderPage() {
         {/* Filters Row Component */}
         <section className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative max-w-[400px] w-full">
-            <h2 className="text-[16px] font-semibold text-[#171717] leading-tight">Work Orders</h2>
+            <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by Work Order ID..." 
+              className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] " 
+            />
           </div>
           <TableToolbar
             dateRange={dateRange}
@@ -227,7 +235,7 @@ export default function PersonBWorkOrderPage() {
         <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table (Frame 71) */}
-        <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-6 flex flex-col gap-4 overflow-hidden">
+        <section className="bg-white rounded-[12px] flex flex-col gap-4 overflow-hidden">
           <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[300px]">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>

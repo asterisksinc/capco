@@ -245,7 +245,7 @@ export default function OperatorProductOrdersPage() {
   };
 
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col relative">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white  flex flex-col relative">
       {/* Modal Overlay */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
@@ -579,12 +579,11 @@ export default function OperatorProductOrdersPage() {
             <input 
               type="text" 
               value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by Product Order ID..." 
-              className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] shadow-sm" 
+              className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] " 
             />
           </div>
-          
           <TableToolbar
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
@@ -611,13 +610,13 @@ export default function OperatorProductOrdersPage() {
         <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table */}
-        <section className="bg-white border border-[#EBEBEB] rounded-[12px] p-0 flex flex-col gap-0 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto min-h-[400px]">
-            <table className="w-full min-w-[1000px] border-collapse text-left">
+        <section className="bg-white rounded-[12px] flex flex-col gap-4 overflow-hidden">
+          <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[400px]">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
-                <tr className="border-b border-[#EBEBEB] bg-[#F5F7FA]">
+                <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                   {productOrderConfig.columns.map((col) => (
-                    <th key={String(col.key)} className="px-5 py-[12px]">
+                    <th key={String(col.key)} className="px-4 py-[11px]">
                       <SortableHeader
                         column={col}
                         sortConfig={sortConfig}
@@ -629,26 +628,26 @@ export default function OperatorProductOrdersPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[#EAECF0]">
                 {paginatedProductOrders.map((row, idx) => (
-                  <tr key={idx} className="border-b border-[#EBEBEB] last:border-b-0 hover:bg-gray-50 transition-colors group">
-                    <td className="px-5 py-4 text-[14px] font-medium text-[#00B6E2] whitespace-nowrap">
+                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+                    <td className="px-4 py-4 text-[14px] font-medium text-[#00B6E2] whitespace-nowrap">
                       <Link href={`/person-a/product-orders/${row.id.replace('#', '')}`} className="hover:underline cursor-pointer">
                         {row.id}
                       </Link>
                     </td>
-                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
-                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
-                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
-                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
-                    <td className="px-5 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.status} />
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.stage} />
                     </td>
-                    <td className="px-5 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                    <td className="px-5 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
                         viewHref={`/person-a/product-orders/${row.id.replace('#', '')}`}
                         status={row.status}

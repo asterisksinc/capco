@@ -287,7 +287,7 @@ export default function PipelinePage() {
   }, [workOrders, productOrders]);
 
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col relative">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative">
       
       {/* Header section */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
@@ -303,7 +303,7 @@ export default function PipelinePage() {
       <div className="w-full px-6 py-6 flex flex-col gap-6">
         
         {/* Stats Section */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5 shadow-sm">
+        <section className="grid grid-cols-1 sm:grid-cols-3 bg-white border border-[#EBEBEB] rounded-[12px] items-center p-5 ">
           <div className="flex items-center justify-between px-6 py-2 sm:py-0">
             <div className="flex flex-col gap-[6px]">
               <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Lorem ipsum dolor</p>
@@ -438,14 +438,14 @@ export default function PipelinePage() {
         />
 
         {viewMode === "list" ? (
-          <section className="bg-white border border-[#EBEBEB] rounded-[12px] px-6 py-4 flex flex-col gap-4 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto min-h-[420px]">
+          <section className="bg-white border border-[#EBEBEB] rounded-[12px] flex flex-col gap-4 overflow-hidden ">
+            <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[420px]">
               {listType === "Work Orders" ? (
                 <table className="w-full text-left border-collapse min-w-[900px]">
                   <thead>
-                    <tr className="border-b border-[#EBEBEB]">
+                    <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                       {workOrderConfig.columns.map((col) => (
-                        <th key={String(col.key)} className="px-1 py-[12px]">
+                        <th key={String(col.key)} className="px-4 py-[11px]">
                           <SortableHeader
                             column={col}
                             sortConfig={workSortConfig}
@@ -460,16 +460,16 @@ export default function PipelinePage() {
                   <tbody className="divide-y divide-[#EAECF0]">
                     {searchedWorkOrders.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.quantity}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
-                      <td className="px-1 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.quantity}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={row.status} />
                       </td>
-                      <td className="px-1 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <button className="h-[34px] min-w-[72px] px-3 rounded-[8px] bg-[#00B6E2] text-white text-[14px] font-medium hover:bg-[#0092b5] transition-colors">
                           View
                         </button>
@@ -489,9 +489,9 @@ export default function PipelinePage() {
               ) : (
                 <table className="w-full text-left border-collapse min-w-[1080px]">
                   <thead>
-                    <tr className="border-b border-[#EBEBEB]">
+                    <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                       {productOrderConfig.columns.map((col) => (
-                        <th key={String(col.key)} className="px-1 py-[12px]">
+                        <th key={String(col.key)} className="px-4 py-[11px]">
                           <SortableHeader
                             column={col}
                             sortConfig={productSortConfig}
@@ -506,19 +506,19 @@ export default function PipelinePage() {
                   <tbody className="divide-y divide-[#EAECF0]">
                     {searchedProductOrders.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
-                      <td className="px-1 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">{row.id}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={row.status} />
                       </td>
-                      <td className="px-1 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={row.stage} />
                       </td>
-                      <td className="px-1 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                      <td className="px-1 py-3 whitespace-nowrap">
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <button className="h-[34px] min-w-[72px] px-3 rounded-[8px] bg-[#00B6E2] text-white text-[14px] font-medium hover:bg-[#0092b5] transition-colors">
                           View
                         </button>

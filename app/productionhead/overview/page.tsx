@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
-import { Search, ChevronDown, Download, Filter, Calendar, Plus } from "lucide-react";
+import { Search, ChevronDown, Download, Filter, Calendar, Plus, ChevronRight, ArrowLeft, Bell, User } from "lucide-react";
+import Link from "next/link";
 import { exportToExcel } from "@/lib/exportExcel";
 import type { EnumFilter, FilterConfig, FilterState } from "@/components/table/FilterPopover";
 
@@ -152,6 +153,7 @@ type PersonColumn = {
 export default function OverviewPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   
   const SORT_OPTIONS = [
     { value: "name-asc", label: "Name (A-Z)" },
@@ -212,7 +214,6 @@ export default function OverviewPage() {
   const filteredColumns = useMemo(() => {
     let result = [...data];
     
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.map(col => ({
@@ -224,19 +225,16 @@ export default function OverviewPage() {
       })).filter(col => col.cards.length > 0);
     }
     
-    // Filter by stage
     result = result.map(col => ({
       ...col,
       cards: col.cards.filter(card => stageFilter.includes(card.stage))
     })).filter(col => col.cards.length > 0);
     
-    // Filter by status
     result = result.map(col => ({
       ...col,
       cards: col.cards.filter(card => statusFilter.includes(card.status))
     })).filter(col => col.cards.length > 0);
     
-    // Sort
     result.sort((a, b) => {
       switch (sortBy) {
         case "name-asc":
@@ -267,20 +265,27 @@ export default function OverviewPage() {
     exportToExcel(exportData, "overview-data", "Overview");
   };
 
-  const stats = useMemo(() => [
-    { label: "Product Orders Open", value: "124", change: "5%" },
-    { label: "Work Orders Open", value: "42", change: "+0.2%" },
-    { label: "Orders Delayed", value: "15", change: "+0.2%" },
-    { label: "Dispatch Ready Orders", value: "15", change: "+0.2%" },
-  ], []);
-  
-  const totalCards = filteredColumns.reduce((sum, col) => sum + col.cards.length, 0);
-  
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-[#FAFAFA] flex flex-col">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
 
-      {/* HEADER */}
-      <section className="bg-white border-b border-[#EBEBEB]">
+      {/* MOBILE TOP NAVIGATION BAR */}
+      <section className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#EBEBEB] px-4 flex items-center justify-between z-50 sm:hidden">
+        <button className="p-2 -ml-2">
+          <ArrowLeft className="w-5 h-5 text-[#171717]" />
+        </button>
+        <h1 className="text-[16px] font-medium text-[#171717]">Overview</h1>
+        <div className="flex items-center gap-3">
+          <button className="p-2">
+            <Bell className="w-5 h-5 text-[#171717]" />
+          </button>
+          <div className="w-8 h-8 rounded-full bg-[#F5F7FA] flex items-center justify-center">
+            <User className="w-4 h-4 text-[#5C5C5C]" />
+          </div>
+        </div>
+      </section>
+
+      {/* DESKTOP HEADER */}
+      <section className="bg-white border-b border-[#EBEBEB] hidden sm:block">
         <div className="px-6 py-6 flex items-center justify-between">
           <div>
             <h1 className="text-[16px] font-medium text-[#171717]">Overview</h1>
@@ -289,16 +294,106 @@ export default function OverviewPage() {
             </p>
           </div>
 
-          <button className="h-[40px] px-4 flex items-center gap-2 bg-[#00B6E2] text-white rounded-[6px] text-[14px] font-medium">
+          <button 
+            onClick={() => setIsCreateOrderOpen(!isCreateOrderOpen)}
+            className="relative h-[40px] px-4 flex items-center gap-2 bg-[#00B6E2] text-white rounded-[6px] text-[14px] font-medium"
+          >
             <Plus className="w-4 h-4" />
             Create Order
+            <ChevronDown className={`w-4 h-4 transition-transform ${isCreateOrderOpen ? 'rotate-180' : ''}`} />
           </button>
+          {isCreateOrderOpen && (
+            <div className="absolute right-6 top-full mt-1 w-[200px] bg-white border border-[#EBEBEB] rounded-[8px] shadow-lg z-50 overflow-hidden">
+              <Link 
+                href="/productionhead/workorder"
+                onClick={() => setIsCreateOrderOpen(false)}
+                className="flex items-center justify-between px-4 py-3 text-[14px] text-[#171717] hover:bg-[#F5F7FA] transition-colors"
+              >
+                Work Order
+                <ChevronRight className="w-4 h-4 text-[#5C5C5C]" />
+              </Link>
+              <Link 
+                href="/productionhead/productorders"
+                onClick={() => setIsCreateOrderOpen(false)}
+                className="flex items-center justify-between px-4 py-3 text-[14px] text-[#171717] hover:bg-[#F5F7FA] transition-colors border-t border-[#EBEBEB]"
+              >
+                Product Order
+                <ChevronRight className="w-4 h-4 text-[#5C5C5C]" />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* STATS */}
-      <section className="px-6 py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-4 bg-white border border-[#EBEBEB] rounded-[12px] p-5 shadow-sm">
+      {/* MOBILE SPACER */}
+      <div className="h-14 sm:hidden"></div>
+
+      {/* MOBILE: CREATE ORDER BUTTON */}
+      <section className="px-4 mt-4 sm:hidden">
+        <button 
+          onClick={() => setIsCreateOrderOpen(!isCreateOrderOpen)}
+          className="w-full h-12 bg-[#00B6E2] text-white rounded-xl flex items-center justify-center gap-2 text-[14px] font-medium"
+        >
+          <Plus className="w-5 h-5" />
+          Create Order
+        </button>
+        {isCreateOrderOpen && (
+          <div className="mt-2 w-full bg-white border border-[#EBEBEB] rounded-xl shadow-lg overflow-hidden">
+            <Link 
+              href="/productionhead/workorder"
+              onClick={() => setIsCreateOrderOpen(false)}
+              className="flex items-center justify-between px-4 py-3 text-[14px] text-[#171717] hover:bg-[#F5F7FA] transition-colors"
+            >
+              Work Order
+              <ChevronRight className="w-4 h-4 text-[#5C5C5C]" />
+            </Link>
+            <Link 
+              href="/productionhead/productorders"
+              onClick={() => setIsCreateOrderOpen(false)}
+              className="flex items-center justify-between px-4 py-3 text-[14px] text-[#171717] hover:bg-[#F5F7FA] transition-colors border-t border-[#EBEBEB]"
+            >
+              Product Order
+              <ChevronRight className="w-4 h-4 text-[#5C5C5C]" />
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* MOBILE: PAGE HEADER */}
+      <section className="px-4 mt-4 sm:hidden">
+        <h1 className="text-[16px] font-medium text-[#171717]">Overview</h1>
+        <p className="text-[12px] text-[#5C5C5C] mt-1">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit
+        </p>
+      </section>
+
+      {/* MOBILE: KPI CARDS (2x2 grid) */}
+      <section className="px-4 mt-4 sm:hidden">
+        <div className="bg-white rounded-2xl p-4">
+          <div className="grid grid-cols-2 divide-x divide-y">
+            {[
+              { label: "Product Orders Open", value: "124", change: "5%" },
+              { label: "Work Orders Open", value: "42", change: "+0.2%" },
+              { label: "Orders Delayed", value: "15", change: "+0.2%" },
+              { label: "Dispatch Ready Orders", value: "15", change: "+0.2%" },
+            ].map((item, i) => (
+              <div key={i} className="py-3">
+                <p className="text-[11px] text-[#5C5C5C]">{item.label}</p>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-[16px] font-semibold text-[#171717]">{item.value}</span>
+                  <span className="text-[10px] text-[#1CB061] font-semibold">
+                    {item.change}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* DESKTOP: STATS */}
+      <section className="px-6 py-6 hidden sm:block">
+        <div className="bg-white border border-[#EBEBEB] rounded-[12px] p-6 flex items-center gap-4">
           
           {[
             { label: "Product Orders Open", value: "124", change: "5%" },
@@ -306,8 +401,8 @@ export default function OverviewPage() {
             { label: "Orders Delayed", value: "15", change: "+0.2%" },
             { label: "Dispatch Ready Orders", value: "15", change: "+0.2%" },
           ].map((item, i) => (
-            <div key={i} className="flex items-center justify-between px-6 py-2 sm:py-0">
-              <div className="flex flex-col gap-[6px]">
+            <div key={i} className="flex-1 flex items-center justify-between">
+              <div className="flex flex-col gap-1.5">
                 <p className="text-[12px] text-[#5C5C5C]">{item.label}</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-[14px] font-semibold text-[#171717]">{item.value}</span>
@@ -325,13 +420,54 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      {/* TOOLBAR */}
-      <section className="px-6">
+      {/* MOBILE: SEARCH BAR */}
+      <section className="px-4 mt-4 sm:hidden">
+        <div className="relative">
+          <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-11 w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-xl text-[14px]"
+          />
+        </div>
+      </section>
+
+      {/* MOBILE: ACTION BUTTONS ROW */}
+      <section className="px-4 mt-3 flex gap-2 sm:hidden">
+        <div className="relative flex-1">
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="h-10 w-full border border-[#EBEBEB] rounded-lg px-3 pr-8 text-[13px]"
+          >
+            {SORT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+        <button 
+          onClick={handleExport}
+          className="h-10 px-4 border border-[#00B6E2] text-[#00B6E2] rounded-lg flex items-center gap-2 text-[13px]"
+        >
+          <Download className="w-4 h-4" />
+          Export
+        </button>
+        <FilterPopover
+          config={filterConfig}
+          filters={tableFilters}
+          onApply={setTableFilters}
+        />
+      </section>
+
+      {/* DESKTOP: TOOLBAR */}
+      <section className="px-6 hidden sm:block">
         <div className="border-t border-[#EBEBEB]"></div>
       </section>
 
-      {/* TOOLBAR */}
-      <section className="px-6 py-4 flex items-center justify-between">
+      {/* DESKTOP: TOOLBAR */}
+      <section className="px-6 py-4 hidden sm:flex items-center justify-between">
 
         <div className="relative w-[320px]">
           <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -375,54 +511,124 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      {/* ✅ KANBAN STYLE SCROLL */}
-      <section className="px-6 py-6 overflow-x-auto">
-        <div className="flex gap-4 min-w-max">
+      {/* MOBILE: KANBAN COLUMNS (VERTICAL STACK) */}
+      <section className="px-4 mt-4 mb-6 sm:hidden">
+        <div className="flex flex-col gap-4">
 
           {filteredColumns.map((col) => (
             <div
               key={col.name}
-              className="w-[320px] flex-shrink-0 bg-white border border-[#EBEBEB] rounded-[12px] overflow-hidden"
+              className="bg-[#F5F7FA] rounded-2xl p-3"
             >
 
               {/* COLUMN HEADER */}
-              <div className="px-5 py-3.5 bg-[#F5F7FA] border-b border-[#EBEBEB] flex items-center gap-2">
-                <span className="text-[14px] font-semibold text-[#171717]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[15px] font-semibold text-[#1C1C1D]">
                   {col.name}
                 </span>
-                <span className="w-[22px] h-[22px] flex items-center justify-center rounded-full bg-[#EBEBEB] text-[12px]">
+                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-[#DAE1EC] text-[11px]">
                   {col.cards.length}
                 </span>
               </div>
 
               {/* CARDS */}
-              <div className="p-4 flex flex-col gap-4 min-h-[360px]">
+              <div className="flex flex-col gap-3">
                 {col.cards.map((card) => (
                   <div
                     key={card.id}
-                    className="border border-[#EBEBEB] rounded-[8px] p-4 flex flex-col gap-3"
+                    className="bg-white rounded-xl p-3 shadow-sm"
                   >
-                    <div className="flex justify-between">
-                      <span className="text-[14px] font-semibold text-[#171717]">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[14px] font-medium text-[#171717]">
                         {card.id}
                       </span>
                       <StatusBadge status={card.status} />
                     </div>
 
-                    <div className="border-t border-[#EBEBEB] pt-3 flex items-center justify-between text-[12px] text-[#5C5C5C]">
+                    <div className="border-t border-[#E7E7E9] my-2"></div>
+
+                    <div className="flex items-center justify-between text-[13px] text-[#5C5C5C]">
                       <span>{card.stage}</span>
 
                       <div className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-[#A1A1AA]" />
+                        <Calendar className="w-3.5 h-3.5 text-[#5C5C5C]" />
                         <span className="text-[#171717] font-medium">
                           {card.date}
                         </span>
                       </div>
                     </div>
 
-                    <button className="h-[34px] rounded-[8px] border border-[#00B6E2] text-[#00B6E2] text-[14px] font-medium">
+                    <Link 
+                      href={card.id.startsWith("WO") || card.id.includes("WO") 
+                        ? `/productionhead/workorder/${card.id}` 
+                        : `/productionhead/productorders/${card.id}`}
+                      className="w-full h-10 border border-[#00B6E2] text-[#00B6E2] text-[14px] font-medium rounded-lg flex items-center justify-center mt-3"
+                    >
                       View
-                    </button>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+          ))}
+
+        </div>
+      </section>
+
+      {/* DESKTOP: KANBAN STYLE SCROLL */}
+      <section className="px-6 py-6 hidden sm:block">
+        <div className="flex gap-4 overflow-x-auto">
+
+          {filteredColumns.map((col) => (
+            <div
+              key={col.name}
+              className="w-[340px] flex-shrink-0 bg-white border border-[#E7E7E9] rounded-[12px] overflow-hidden"
+            >
+
+              {/* COLUMN HEADER */}
+              <div className="px-5 py-3 bg-[#F5F7FA] border-b border-[#E7E7E9] flex items-center justify-between shrink-0">
+                <span className="text-[16px] font-semibold text-[#1C1C1D]">
+                  {col.name}
+                </span>
+                <span className="w-5 h-5 flex items-center justify-center rounded-full bg-[#DAE1EC] text-[12px]">
+                  {col.cards.length}
+                </span>
+              </div>
+
+              {/* CARDS */}
+              <div className="p-5 flex flex-col gap-3.5 min-h-[430px]">
+                {col.cards.map((card) => (
+                  <div
+                    key={card.id}
+                    className="border border-[#E7E7E9] rounded-[12px] p-3.5 flex flex-col gap-3"
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-[14px] font-medium text-[#171717]">
+                        {card.id}
+                      </span>
+                      <StatusBadge status={card.status} />
+                    </div>
+
+                    <div className="border-t border-[#E7E7E9] pt-3 flex items-center justify-between text-[14px] text-[#5C5C5C]">
+                      <span>{card.stage}</span>
+
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-[#5C5C5C]" />
+                        <span className="text-[#171717] font-medium">
+                          {card.date}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Link 
+                      href={card.id.startsWith("WO") || card.id.includes("WO") 
+                        ? `/productionhead/workorder/${card.id}` 
+                        : `/productionhead/productorders/${card.id}`}
+                      className="h-8 px-3.5 border border-[#00B6E2] text-[#00B6E2] text-[14px] font-medium rounded-[6px] flex items-center justify-center"
+                    >
+                      View
+                    </Link>
                   </div>
                 ))}
               </div>
