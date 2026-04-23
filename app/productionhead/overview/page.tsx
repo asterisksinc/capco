@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
-import { Search, ChevronDown, Download, Filter, Calendar, Plus, ChevronRight, ArrowLeft, Bell, User } from "lucide-react";
+import { Search, ChevronDown, Download, Filter, Calendar, Plus, ChevronRight, Menu, Bell, User } from "lucide-react";
 import Link from "next/link";
 import { exportToExcel } from "@/lib/exportExcel";
 import type { EnumFilter, FilterConfig, FilterState } from "@/components/table/FilterPopover";
+import { useMobileMenu } from "@/components/MobileMenuContext";
 
 function FilterPopover({
   config,
@@ -151,6 +152,7 @@ type PersonColumn = {
 };
 
 export default function OverviewPage() {
+  const { setIsMobileMenuOpen } = useMobileMenu();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
@@ -266,12 +268,12 @@ export default function OverviewPage() {
   };
 
   return (
-    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col">
+    <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col w-full max-w-full">
 
       {/* MOBILE TOP NAVIGATION BAR */}
-      <section className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#EBEBEB] px-4 flex items-center justify-between z-50 sm:hidden">
-        <button className="p-2 -ml-2">
-          <ArrowLeft className="w-5 h-5 text-[#171717]" />
+      <section className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#EBEBEB] px-4 flex items-center justify-between z-40 md:hidden">
+        <button className="p-2 -ml-2" onClick={() => setIsMobileMenuOpen(true)}>
+          <Menu className="w-5 h-5 text-[#171717]" />
         </button>
         <h1 className="text-[16px] font-medium text-[#171717]">Overview</h1>
         <div className="flex items-center gap-3">
@@ -285,7 +287,7 @@ export default function OverviewPage() {
       </section>
 
       {/* DESKTOP HEADER */}
-      <section className="bg-white border-b border-[#EBEBEB] hidden sm:block">
+      <section className="bg-white border-b border-[#EBEBEB] hidden md:block">
         <div className="px-6 py-6 flex items-center justify-between">
           <div>
             <h1 className="text-[16px] font-medium text-[#171717]">Overview</h1>
@@ -303,7 +305,7 @@ export default function OverviewPage() {
             <ChevronDown className={`w-4 h-4 transition-transform ${isCreateOrderOpen ? 'rotate-180' : ''}`} />
           </button>
           {isCreateOrderOpen && (
-            <div className="absolute right-6 top-full mt-1 w-[200px] bg-white border border-[#EBEBEB] rounded-[8px] shadow-lg z-50 overflow-hidden">
+            <div className="absolute right-0 top-full mt-1 w-[200px] bg-white border border-[#EBEBEB] rounded-[8px] shadow-lg z-50 overflow-hidden">
               <Link 
                 href="/productionhead/workorder"
                 onClick={() => setIsCreateOrderOpen(false)}
@@ -325,39 +327,8 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      {/* MOBILE SPACER */}
-      <div className="h-14 sm:hidden"></div>
-
-      {/* MOBILE: CREATE ORDER BUTTON */}
-      <section className="px-4 mt-4 sm:hidden">
-        <button 
-          onClick={() => setIsCreateOrderOpen(!isCreateOrderOpen)}
-          className="w-full h-12 bg-[#00B6E2] text-white rounded-xl flex items-center justify-center gap-2 text-[14px] font-medium"
-        >
-          <Plus className="w-5 h-5" />
-          Create Order
-        </button>
-        {isCreateOrderOpen && (
-          <div className="mt-2 w-full bg-white border border-[#EBEBEB] rounded-xl shadow-lg overflow-hidden">
-            <Link 
-              href="/productionhead/workorder"
-              onClick={() => setIsCreateOrderOpen(false)}
-              className="flex items-center justify-between px-4 py-3 text-[14px] text-[#171717] hover:bg-[#F5F7FA] transition-colors"
-            >
-              Work Order
-              <ChevronRight className="w-4 h-4 text-[#5C5C5C]" />
-            </Link>
-            <Link 
-              href="/productionhead/productorders"
-              onClick={() => setIsCreateOrderOpen(false)}
-              className="flex items-center justify-between px-4 py-3 text-[14px] text-[#171717] hover:bg-[#F5F7FA] transition-colors border-t border-[#EBEBEB]"
-            >
-              Product Order
-              <ChevronRight className="w-4 h-4 text-[#5C5C5C]" />
-            </Link>
-          </div>
-        )}
-      </section>
+      {/* MOBILE SPACER FOR FIXED HEADER */}
+      <div className="hidden sm:block h-14"></div>
 
       {/* MOBILE: PAGE HEADER */}
       <section className="px-4 mt-4 sm:hidden">
@@ -367,17 +338,70 @@ export default function OverviewPage() {
         </p>
       </section>
 
+      {/* MOBILE: CREATE ORDER BUTTON */}
+      <section className="px-4 mt-4 sm:hidden">
+        <button 
+          onClick={() => setIsCreateOrderOpen(true)}
+          className="w-full h-12 bg-[#00B6E2] text-white rounded-xl flex items-center justify-center gap-2 text-[14px] font-medium"
+        >
+          <Plus className="w-5 h-5" />
+          Create Order
+        </button>
+
+        {/* MOBILE: CREATE ORDER BOTTOM SHEET */}
+        {isCreateOrderOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 z-50 bg-[#171717]/40 backdrop-blur-sm"
+              onClick={() => setIsCreateOrderOpen(false)}
+            />
+            
+            {/* Bottom Sheet */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[20px] shadow-lg animate-slide-up">
+              <div className="flex flex-col">
+                <div className="w-10 h-1.5 bg-[#E5E5E5] rounded-full mx-auto mt-3 mb-2"></div>
+                
+                <Link 
+                  href="/productionhead/workorder"
+                  onClick={() => setIsCreateOrderOpen(false)}
+                  className="flex items-center justify-between px-5 py-4 text-[15px] text-[#171717] hover:bg-[#F5F7FA] border-b border-[#EBEBEB]"
+                >
+                  Work Order
+                  <ChevronRight className="w-5 h-5 text-[#5C5C5C]" />
+                </Link>
+                <Link 
+                  href="/productionhead/productorders"
+                  onClick={() => setIsCreateOrderOpen(false)}
+                  className="flex items-center justify-between px-5 py-4 text-[15px] text-[#171717] hover:bg-[#F5F7FA] border-b border-[#EBEBEB]"
+                >
+                  Product Order
+                  <ChevronRight className="w-5 h-5 text-[#5C5C5C]" />
+                </Link>
+                
+                <button 
+                  onClick={() => setIsCreateOrderOpen(false)}
+                  className="h-14 text-[15px] text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
       {/* MOBILE: KPI CARDS (2x2 grid) */}
       <section className="px-4 mt-4 sm:hidden">
         <div className="bg-white rounded-2xl p-4">
-          <div className="grid grid-cols-2 divide-x divide-y">
+          <div className="grid grid-cols-2">
             {[
               { label: "Product Orders Open", value: "124", change: "5%" },
               { label: "Work Orders Open", value: "42", change: "+0.2%" },
               { label: "Orders Delayed", value: "15", change: "+0.2%" },
               { label: "Dispatch Ready Orders", value: "15", change: "+0.2%" },
             ].map((item, i) => (
-              <div key={i} className="py-3">
+              <div key={i} className={`py-3 ${i % 2 === 0 ? 'border-r border-[#EBEBEB]' : ''} ${i < 2 ? 'border-b border-[#EBEBEB]' : ''}`}>
                 <p className="text-[11px] text-[#5C5C5C]">{item.label}</p>
                 <div className="flex items-baseline gap-1 mt-1">
                   <span className="text-[16px] font-semibold text-[#171717]">{item.value}</span>
