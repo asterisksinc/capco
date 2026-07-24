@@ -272,7 +272,7 @@ export default function OperatorWorkOrderPage() {
                 {paginatedData.length > 0 ? paginatedData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
-                      <Link href={`/person-a-slitting/workorder/${row.id}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
+                      <Link href={`/slitting-operator/workorder/${row.id}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
                         {row.id}
                       </Link>
                     </td>
@@ -295,7 +295,7 @@ export default function OperatorWorkOrderPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
-                        viewHref={`/person-a-slitting/workorder/${row.id}`}
+                        viewHref={`/slitting-operator/workorder/${row.id}`}
                         status={row.status}
                         onEdit={() => {}}
                         onDelete={async () => {

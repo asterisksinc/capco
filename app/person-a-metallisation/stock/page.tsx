@@ -287,7 +287,7 @@ export default function OperatorMetallisationStockPage() {
                       <StatusBadge status={row.status} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={() => setQrData({ id: row.coilNo, type: "MC", details: { "Coil No": row.coilNo, "RM ID": row.rmId, "Weight": row.weight, "Status": row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                      <button onClick={() => setQrData({ id: row.coilNo, type: "MC", data: { coilNo: row.coilNo, rmId: row.rmId, weight: row.weight, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                         <QrCode className="w-4 h-4" />
                       </button>
                     </td>
@@ -312,7 +312,7 @@ export default function OperatorMetallisationStockPage() {
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </section>
       </div>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

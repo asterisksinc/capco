@@ -36,7 +36,13 @@ export async function supabaseAdminRequest<T>(path: string, init: RequestInit = 
 
 export function getBearerToken(request: Request) {
   const header = request.headers.get("authorization") || "";
-  return header.toLowerCase().startsWith("bearer ") ? header.slice(7) : "";
+  if (header.toLowerCase().startsWith("bearer ")) {
+    return header.slice(7);
+  }
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token");
+  if (token) return token;
+  return "";
 }
 
 export async function getProfileFromBearer(request: Request) {

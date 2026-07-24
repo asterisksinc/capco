@@ -1,4 +1,4 @@
-import { supabaseRest, type Json, type ListParams } from "./supabaseClient";
+import { supabaseRest, type Json, type ListParams, getAccessToken } from "./supabaseClient";
 
 export type SlittingCoilScanResult = {
   metallisation_id: string;
@@ -99,15 +99,19 @@ export const slittingService = {
     });
   },
   stickerDownloadUrl(documentId: string) {
-    return `/api/documents/generated_documents/${encodeURIComponent(documentId)}?intent=download`;
+    const token = getAccessToken() || "";
+    return `/api/documents/generated_documents/${encodeURIComponent(documentId)}?intent=download&token=${encodeURIComponent(token)}`;
   },
   stickerPrintUrl(documentId: string) {
-    return `/api/documents/generated_documents/${encodeURIComponent(documentId)}?intent=print`;
+    const token = getAccessToken() || "";
+    return `/api/documents/generated_documents/${encodeURIComponent(documentId)}?intent=print&token=${encodeURIComponent(token)}`;
   },
   batchStickerDownloadUrl(batchId: string) {
-    return `/api/documents/slitting_batches/${encodeURIComponent(batchId)}?kind=stickers&intent=download`;
+    const token = getAccessToken() || "";
+    return `/api/documents/slitting_batches/${encodeURIComponent(batchId)}?kind=stickers&intent=download&token=${encodeURIComponent(token)}`;
   },
   batchStickerPrintUrl(batchId: string) {
-    return `/api/documents/slitting_batches/${encodeURIComponent(batchId)}?kind=stickers&intent=print`;
+    const token = getAccessToken() || "";
+    return `/api/documents/slitting_batches/${encodeURIComponent(batchId)}?kind=stickers&intent=print&token=${encodeURIComponent(token)}`;
   },
 };

@@ -474,7 +474,7 @@ export default function OperatorStockPage() {
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.nextStage}</td>
                         <td className="px-4 py-4 whitespace-nowrap"><StatusBadge status={row.status} /></td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <button onClick={() => setQrData({ id: row.coilNo, type: "MC", details: { "Coil No": row.coilNo, "RM ID": row.rmId, "Weight": row.weight, "Status": row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                          <button onClick={() => setQrData({ id: row.coilNo, type: "MC", data: { coilNo: row.coilNo, rmId: row.rmId, weight: row.weight, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                             <QrCode className="w-4 h-4" />
                           </button>
                         </td>
@@ -506,7 +506,7 @@ export default function OperatorStockPage() {
                         </td>
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <button onClick={() => setQrData({ id: row.stockId, type: "RM", details: { "Stock ID": row.stockId, "Linked WO": row.linkedWoId, "Weight": row.weight, "Width": row.width, "Micron": row.micron, "Grade": row.grade, "Stage": row.stage } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                          <button onClick={() => setQrData({ id: row.stockId, type: "RM", data: { rollNo: row.stockId, linkedWoId: row.linkedWoId, weight: row.weight, width: row.width, micron: row.micron, grade: row.grade, stage: row.stage } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                             <QrCode className="w-4 h-4" />
                           </button>
                         </td>
@@ -533,7 +533,7 @@ export default function OperatorStockPage() {
           </div>
         </section>
       </div>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

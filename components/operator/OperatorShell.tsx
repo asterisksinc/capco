@@ -28,15 +28,21 @@ function OperatorShellContent({ children }: { children: ReactNode }) {
     activeMobileNav = [
       { name: "Work Orders", href: "/person-a-metallisation/workorder", icon: Calendar },
       { name: "Stock", href: "/person-a-metallisation/stock", icon: BarChart2 },
-      { name: "Material Requests", href: "/person-a-metallisation/material-requests", icon: ClipboardList },
+
       { name: "Material Returns", href: "/person-a-metallisation/material-returns", icon: Undo2 },
     ];
   } else if (pathname.startsWith("/person-a-slitting")) {
     activeMobileNav = [
       { name: "Work Orders", href: "/person-a-slitting/workorder", icon: Calendar },
       { name: "Stock", href: "/person-a-slitting/stock", icon: BarChart2 },
-      { name: "Material Requests", href: "/person-a-slitting/material-requests", icon: ClipboardList },
+
       { name: "Material Returns", href: "/person-a-slitting/material-returns", icon: Undo2 },
+    ];
+  } else if (pathname.startsWith("/slitting-operator")) {
+    activeMobileNav = [
+      { name: "Work Orders", href: "/slitting-operator/workorder", icon: Calendar },
+      // { name: "Stock", href: "/slitting-operator/stock", icon: BarChart2 },
+      // { name: "Material Returns", href: "/slitting-operator/material-returns", icon: Undo2 },
     ];
   }
 

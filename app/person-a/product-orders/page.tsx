@@ -187,7 +187,7 @@ export default function PersonAProductOrdersPage() {
                     <td className="px-4 py-4"><StatusBadge status={row.stage} /></td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C]">{row.timestamp}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => setQrData({ id: row.id, type: "PO", details: { "Product Code": row.code, "Type": row.type, "Grade": row.grade, "Batch Size": row.batchSize, "Status": row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                      <button onClick={() => setQrData({ id: row.id, type: "PO", data: { productCode: row.code, type: row.type, grade: row.grade, batchSize: row.batchSize, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                         <QrCode className="w-4 h-4" />
                       </button>
                     </td>
@@ -205,7 +205,7 @@ export default function PersonAProductOrdersPage() {
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </section>
       </div>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

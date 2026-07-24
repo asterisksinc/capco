@@ -240,7 +240,7 @@ export default function WorkOrdersPage() {
                         if (String(col.key) === "qr") {
                           return (
                             <td key={String(col.key)} className="px-6 py-4">
-                              <button onClick={() => setQrData({ id: row.id, type: "WO", details: { Micron: row.micron, Width: row.width, Quantity: row.qty, Date: row.date, Status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
+                              <button onClick={() => setQrData({ id: row.id, type: "WO", data: { workOrderId: row.id, micron: row.micron, width: row.width, quantity: row.qty, date: row.date, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
                                 <QrCode className="w-4 h-4" />
                               </button>
                             </td>
@@ -269,7 +269,7 @@ export default function WorkOrdersPage() {
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       </section>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

@@ -13,9 +13,11 @@ import {
   Undo2,
 } from "lucide-react";
 import Image from "next/image";
+import { useLogout } from "@/hooks/useLogout";
 
 export function OperatorSidebar() {
   const pathname = usePathname();
+  const { handleLogout } = useLogout();
 
   let navItems = [
     { name: "Overview", href: "/person-a/overview", icon: LayoutDashboard },
@@ -31,15 +33,21 @@ export function OperatorSidebar() {
     navItems = [
       { name: "Work Orders", href: "/person-a-metallisation/workorder", icon: Calendar },
       { name: "Stock", href: "/person-a-metallisation/stock", icon: BarChart2 },
-      { name: "Material Requests", href: "/person-a-metallisation/material-requests", icon: ClipboardList },
+
       { name: "Material Returns", href: "/person-a-metallisation/material-returns", icon: Undo2 },
     ];
   } else if (pathname.startsWith("/person-a-slitting")) {
     navItems = [
       { name: "Work Orders", href: "/person-a-slitting/workorder", icon: Calendar },
       { name: "Stock", href: "/person-a-slitting/stock", icon: BarChart2 },
-      { name: "Material Requests", href: "/person-a-slitting/material-requests", icon: ClipboardList },
+
       { name: "Material Returns", href: "/person-a-slitting/material-returns", icon: Undo2 },
+    ];
+  } else if (pathname.startsWith("/slitting-operator")) {
+    navItems = [
+      { name: "Work Orders", href: "/slitting-operator/workorder", icon: Calendar },
+      // { name: "Stock", href: "/slitting-operator/stock", icon: BarChart2 },
+      // { name: "Material Returns", href: "/slitting-operator/material-returns", icon: Undo2 },
     ];
   }
 
@@ -81,6 +89,7 @@ export function OperatorSidebar() {
             <span className="text-[12px] font-normal text-[#5C5C5C] leading-tight truncate mt-1">example@gmail.com</span>
           </div>
           <button
+            onClick={handleLogout}
             className="text-[#FB3748] hover:bg-[#FEF2F2] p-2 flex items-center justify-center rounded-[6px] transition-colors flex-shrink-0 border border-[#EBEBEB] bg-white shadow-sm"
             aria-label="Sign out"
           >

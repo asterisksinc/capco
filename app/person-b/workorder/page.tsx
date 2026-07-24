@@ -272,7 +272,7 @@ export default function PersonBWorkOrderPage() {
                       />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <button onClick={() => setQrData({ id: row.id, type: "WO", details: { Micron: row.micron, Width: row.width, Quantity: row.qty, Date: row.date, Status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                      <button onClick={() => setQrData({ id: row.id, type: "WO", data: { workOrderId: row.id, micron: row.micron, width: row.width, quantity: row.qty, date: row.date, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                         <QrCode className="w-4 h-4" />
                       </button>
                     </td>
@@ -290,7 +290,7 @@ export default function PersonBWorkOrderPage() {
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </section>
       </div>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

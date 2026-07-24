@@ -367,7 +367,7 @@ export default function AdminProductOrderDetailPage({ params }: DetailPageProps)
                         return (
                           <td key={String(col.key)} className="px-5 py-3 whitespace-nowrap">
                             <button
-                              onClick={() => setQrData({ id: qrId, type: "STAGE", details: row as any })}
+                              onClick={() => setQrData({ id: qrId, type: "STAGE", data: row as any })}
                               className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#F5F7FA] transition-colors text-[#5C5C5C] hover:text-[#00B6E2]"
                               title="Show QR Code"
                             >

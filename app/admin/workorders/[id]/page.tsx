@@ -101,14 +101,14 @@ export default function AdminWorkOrderDetailPage({ params }: DetailPageProps) {
 
   const rawMaterialRows = useMemo(() => {
     return ((woData?.work_order_materials as any[]) || []).map((wom) => {
-          console.log(wom);
+      console.log(wom);
       const inv = wom.inventory || {};
       const actual = wom.quantity_kg ?? 0;
-      
+
       const wastage = (woData?.metallisation as any[])
         ?.filter(m => m.raw_material_id === inv.id)
         .reduce((sum, m) => sum + (m.factory_wastage_kg || 0), 0) || 0;
-        
+
       return {
         rollNo: inv.roll_no || "-",
         netWeight: inv.net_weight_kg != null ? `${inv.net_weight_kg}kgs` : "-",
@@ -402,15 +402,15 @@ export default function AdminWorkOrderDetailPage({ params }: DetailPageProps) {
                         const isMC = activeTab === "Metallisation";
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
-                        const qrDetails: Record<string, string> = isRM
-                          ? { "Roll No": (row as any).rollNo ?? "", "Net Weight": (row as any).netWeight ?? "", "Micron": (row as any).thickness ?? "", "Width (m)": (row as any).width ?? "", "Supplier": (row as any).supplier ?? "", "Status": (row as any).status ?? "" }
+                        const qrDetails: any = isRM
+                          ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                            ? { "Coil No": (row as any).coilNo ?? "", "RM ID": (row as any).rmId ?? "", "Machine No": (row as any).machineNo ?? "", "Weight": (row as any).weight ?? "", "Status": (row as any).status ?? "" }
-                            : { "Product No": (row as any).productNo ?? "", "Coil ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
+                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
+                            : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={key} className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <button onClick={() => setQrData({ id: rowId, type: qrType, details: qrDetails })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="Show QR Code">
+                              <button onClick={() => setQrData({ id: rowId, type: qrType, data: qrDetails })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="Show QR Code">
                                 <QrCode className="w-4 h-4" />
                               </button>
                               {isMC && (
@@ -451,7 +451,7 @@ export default function AdminWorkOrderDetailPage({ params }: DetailPageProps) {
         </div>
       </section>
 
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
 
       <DocsUploadedModal
         isOpen={isDocModalOpen}

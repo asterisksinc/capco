@@ -43,7 +43,7 @@ const defaultForm = {
   rawMaterialId: "",
   rollId: "",
   micron: "4.5",
-  width: "1.0",
+  width: "30",
   weight: "",
   netWeight: "",
   grossWeight: "",
@@ -58,7 +58,7 @@ export default function AdminInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -78,33 +78,33 @@ export default function AdminInventoryPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   const fetchInventory = async () => {
-  try {
-    const data = await inventoryService.list();
+    try {
+      const data = await inventoryService.list();
 
-    const formatted = (data as any[]).map((item) => ({
-      id: item.id,
-      rawMaterialId: item.raw_material_code || "-",
-      rollId: item.roll_no || "-",
-      micron: item.micron != null ? String(item.micron) : "-",
-      width: item.width_m != null ? String(item.width_m) : "-",
-      weight: item.net_weight_kg != null ? `${item.net_weight_kg}kgs` : "-",
-      netWeight: item.net_weight_kg != null ? `${item.net_weight_kg}kgs` : "-",
-      grossWeight: item.gross_weight_kg != null ? `${item.gross_weight_kg}kgs` : "-",
-      usedWeight: item.used_weight_kg != null ? `${item.used_weight_kg}kgs` : "-",
-      wastageWeight: item.wastage_weight_kg != null ? `${item.wastage_weight_kg}kgs` : "-",
-      damagedWeight: "-",
-      temperature: item.temperature_c != null ? `${item.temperature_c}°C` : "-",
-      supplier: item.supplier || "-",
-      date: item.date_received ? new Date(item.date_received).toLocaleDateString("en-GB") : "-",
-      status: item.status || "In Inventory"
-    }));
-    setInventoryItems(formatted);
-  } catch (err) {
-    console.error("Failed to load inventory:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+      const formatted = (data as any[]).map((item) => ({
+        id: item.id,
+        rawMaterialId: item.raw_material_code || "-",
+        rollId: item.roll_no || "-",
+        micron: item.micron != null ? String(item.micron) : "-",
+        width: item.width_m != null ? String(item.width_m) : "-",
+        weight: item.net_weight_kg != null ? `${item.net_weight_kg}kgs` : "-",
+        netWeight: item.net_weight_kg != null ? `${item.net_weight_kg}kgs` : "-",
+        grossWeight: item.gross_weight_kg != null ? `${item.gross_weight_kg}kgs` : "-",
+        usedWeight: item.used_weight_kg != null ? `${item.used_weight_kg}kgs` : "-",
+        wastageWeight: item.wastage_weight_kg != null ? `${item.wastage_weight_kg}kgs` : "-",
+        damagedWeight: "-",
+        temperature: item.temperature_c != null ? `${item.temperature_c}°C` : "-",
+        supplier: item.supplier || "-",
+        date: item.date_received ? new Date(item.date_received).toLocaleDateString("en-GB") : "-",
+        status: item.status || "In Inventory"
+      }));
+      setInventoryItems(formatted);
+    } catch (err) {
+      console.error("Failed to load inventory:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchInventory();
@@ -129,7 +129,7 @@ export default function AdminInventoryPage() {
   const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
   const validPage = Math.min(currentPage, totalPages);
   const paginatedData = filteredData.slice((validPage - 1) * pageSize, validPage * pageSize);
-  
+
   const totalItems = inventoryItems.length;
   const inInventory = inventoryItems.filter((r) => r.status === "In Inventory").length;
   const beingUsed = inventoryItems.filter((r) => r.status === "Being Used").length;
@@ -158,11 +158,35 @@ export default function AdminInventoryPage() {
     );
   };
 
+  function getNextSequentialIds(inventoryItems: any[]) {
+    let maxRmId = 0;
+    for (const row of inventoryItems) {
+      const match = row.rawMaterialId?.match(/RM-(\d+)/);
+      if (match) {
+        maxRmId = Math.max(maxRmId, parseInt(match[1], 10));
+      }
+    }
+    const nextRmId = `RM-${String(maxRmId + 1).padStart(4, "0")}`;
+
+    const currentYear = new Date().getFullYear();
+    let maxRollSeq = 0;
+    for (const row of inventoryItems) {
+      const match = row.rollId?.match(new RegExp(`RL-${currentYear}-(\\d+)`));
+      if (match) {
+        maxRollSeq = Math.max(maxRollSeq, parseInt(match[1], 10));
+      }
+    }
+    const nextRollId = `RL-${currentYear}-${String(maxRollSeq + 1).padStart(3, "0")}`;
+
+    return { nextRmId, nextRollId, nextRmIdNum: maxRmId + 1, nextRollSeqNum: maxRollSeq + 1 };
+  }
+
   const openAddModal = () => {
+    const { nextRmId, nextRollId } = getNextSequentialIds(inventoryItems);
     setForm({
       ...defaultForm,
-      rawMaterialId: generateId("RM"),
-      rollId: `RL-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(100 + Math.random() * 900)}`,
+      rawMaterialId: nextRmId,
+      rollId: nextRollId,
     });
     setAddStep(1);
     setShowAddHint(false);
@@ -175,26 +199,55 @@ export default function AdminInventoryPage() {
       return;
     }
     setIsSubmitting(true);
-    try {
-      await inventoryService.create({
-        raw_material_code: form.rawMaterialId.trim().toUpperCase(),
-        roll_no: form.rollId.trim(),
-        micron: Number(form.micron),
-        width_m: Number(form.width),
-        net_weight_kg: Number(form.netWeight),
-        gross_weight_kg: Number(form.grossWeight),
-        temperature_c: parseFloat(form.temperature) || 25,
-        supplier: form.supplier,
-        status: "In Inventory",
-      });
+    let success = false;
+    let retries = 0;
+
+    const { nextRmIdNum, nextRollSeqNum } = getNextSequentialIds(inventoryItems);
+    let nextIdNum = nextRmIdNum;
+    let rollSeqNum = nextRollSeqNum;
+    const currentYear = new Date().getFullYear();
+    let finalId = "";
+    let finalRollId = "";
+
+    while (!success && retries < 3) {
+      finalId = `RM-${String(nextIdNum).padStart(4, "0")}`;
+      finalRollId = `RL-${currentYear}-${String(rollSeqNum).padStart(3, "0")}`;
+      try {
+        await inventoryService.create({
+          raw_material_code: finalId,
+          roll_no: finalRollId,
+          micron: Number(form.micron),
+          width_m: Number(form.width),
+          net_weight_kg: Number(form.netWeight),
+          gross_weight_kg: Number(form.grossWeight),
+          temperature_c: parseFloat(form.temperature) || 25,
+          supplier: form.supplier,
+          status: "In Inventory",
+        });
+        success = true;
+      } catch (err: any) {
+        // If it's a unique constraint violation on raw_material_code or roll_no, retry
+        if (err?.message?.toLowerCase().includes("duplicate") || err?.code === "23505") {
+          nextIdNum++;
+          rollSeqNum++;
+          retries++;
+        } else {
+          console.error(err);
+          alert("Failed to add inventory item");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
+    if (success) {
+      setForm(prev => ({ ...prev, rawMaterialId: finalId, rollId: finalRollId })); // update form with the actual IDs used
       await fetchInventory();
       setAddStep(3);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to add inventory item");
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      alert("Failed to generate unique RM ID / Roll ID after multiple attempts.");
     }
+    setIsSubmitting(false);
   };
 
   const deleteInventoryItem = async (id: string, rawMaterialCode: string) => {
@@ -327,7 +380,7 @@ export default function AdminInventoryPage() {
     // E-mail Automation via API Route
     if (sendEmail && recipientEmail.trim()) {
       const base64Data = XLSX.write(workbook, { bookType: exportFormat, type: "base64" });
-      
+
       try {
         const res = await fetch("/api/send-email", {
           method: "POST",
@@ -504,7 +557,7 @@ export default function AdminInventoryPage() {
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.supplier}</td>
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <button onClick={() => setQrData({ id: row.rawMaterialId, type: "RM", details: { "Roll ID": row.rollId, "Micron": row.micron, "Width (m)": row.width, "Net Weight": row.netWeight ?? row.weight, "Gross Weight": row.grossWeight ?? "-", "Temperature": row.temperature ?? "-", "Supplier": row.supplier, "Status": row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="View QR Code">
+                        <button onClick={() => setQrData({ id: row.rawMaterialId, type: "RM", data: { rollNo: row.rollId, micron: row.micron, width: row.width, netWeight: row.netWeight ?? row.weight, grossWeight: row.grossWeight ?? "-", temperature: row.temperature ?? "-", supplier: row.supplier, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="View QR Code">
                           <QrCode className="w-4 h-4" />
                         </button>
                       </td>
@@ -537,7 +590,7 @@ export default function AdminInventoryPage() {
               </div>
               <button onClick={() => setIsAddModalOpen(false)} className="text-[#5C5C5C] hover:text-[#171717] transition-colors p-1"><X className="w-5 h-5" /></button>
             </div>
-            
+
             <div className="max-h-[58vh] overflow-y-auto">
               {addStep === 1 && (
                 <div className="px-6 py-6 flex flex-col gap-5">
@@ -664,7 +717,7 @@ export default function AdminInventoryPage() {
                 <X className="w-5 h-5 text-[#5C5C5C]" />
               </button>
             </div>
-            
+
             <div className="p-6 flex flex-col gap-5">
               <div className="border-2 border-dashed border-[#00B6E2] bg-[#F0FDFF] rounded-[12px] flex flex-col items-center justify-center py-10 px-4 cursor-pointer hover:bg-[#E6F8FC] transition-colors relative">
                 <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
@@ -748,7 +801,7 @@ export default function AdminInventoryPage() {
         </div>
       )}
 
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

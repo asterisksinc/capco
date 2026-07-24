@@ -11,11 +11,14 @@ import {
   PackagePlus,
   LogOut,
   Warehouse,
+  Network,
 } from "lucide-react";
 import Image from "next/image";
+import { useLogout } from "@/hooks/useLogout";
 
 export function SupervisorSidebar() {
   const pathname = usePathname();
+  const { handleLogout } = useLogout();
 
   const navItems = [
     { name: "Overview", href: "/productionhead/overview", icon: LayoutDashboard },
@@ -64,6 +67,7 @@ export function SupervisorSidebar() {
             <span className="text-[12px] font-normal text-[#5C5C5C] leading-tight truncate mt-1">example@gmail.com</span>
           </div>
           <button
+            onClick={handleLogout}
             className="text-[#FB3748] hover:bg-[#FEF2F2] p-2 flex items-center justify-center rounded-[6px] transition-colors flex-shrink-0 border border-[#EBEBEB] bg-white shadow-sm"
             aria-label="Sign out"
           >

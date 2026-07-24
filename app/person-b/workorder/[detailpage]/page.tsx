@@ -777,15 +777,15 @@ export default function PersonBWorkOrderDetailPage({ params }: DetailPageProps) 
                         const isWD = activeTab === "Winding";
                         const rowId = isWD ? (row as any).wdId : (row as any).spId;
                         const qrType = isWD ? "WD" : "SP";
-                        const qrDetails: Record<string, string> = isWD
-                          ? { "WD ID": (row as any).wdId ?? "", "Linked PM ID": (row as any).linkedPmId ?? "", "Film Width": (row as any).filmWidth ?? "", "Quantity Wound": (row as any).quantityWound ?? "", "Status": (row as any).status ?? "" }
-                          : { "SP ID": (row as any).spId ?? "", "Linked WD ID": (row as any).linkedWdId ?? "", "Spray Type": (row as any).sprayType ?? "", "Status": (row as any).status ?? "" };
+                        const qrDetails: any = isWD
+                          ? { wdId: (row as any).wdId ?? "", linkedPmId: (row as any).linkedPmId ?? "", filmWidth: (row as any).filmWidth ?? "", quantityWound: (row as any).quantityWound ?? "", status: (row as any).status ?? "" }
+                          : { spId: (row as any).spId ?? "", linkedWdId: (row as any).linkedWdId ?? "", sprayType: (row as any).sprayType ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
                             <OptionsDropdown
                               onEdit={() => alert(`Edit ${activeTab} Row ${idx}`)}
                               onDelete={() => alert(`Delete ${activeTab} Row ${idx}`)}
-                              onQrCode={() => setQrData({ id: rowId, type: qrType, details: qrDetails })}
+                              onQrCode={() => setQrData({ id: rowId, type: qrType, data: qrDetails })}
                             />
                           </td>
                         );
@@ -818,7 +818,7 @@ export default function PersonBWorkOrderDetailPage({ params }: DetailPageProps) 
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       </section>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

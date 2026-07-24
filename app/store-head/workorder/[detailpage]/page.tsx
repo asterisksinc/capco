@@ -16,14 +16,34 @@ import { ScannerInput } from "@/components/ScannerInput";
 import { exportToExcel } from "@/lib/exportExcel";
 import { workOrderService } from "@/src/services/workOrderService";
 import { inventoryService } from "@/src/services/inventoryService";
-import { supabaseStorage } from "@/src/services/supabaseClient";
+import { getAccessToken, supabaseConfig, supabaseStorage } from "@/src/services/supabaseClient";
 
 type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
 };
 
+async function uploadRawMaterialImage(entityId: string, file: File): Promise<string> {
+  const token = getAccessToken();
+  const bucket = "production-stage-images";
+  const path = `raw-material/${entityId}/${file.name}`;
+  const res = await fetch(`${supabaseConfig.url}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token ?? supabaseConfig.anonKey}`,
+      "apikey": supabaseConfig.anonKey,
+      "Content-Type": file.type,
+      "x-upsert": "true"
+    },
+    body: file
+  });
 
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.message || "Failed to upload image");
+  }
 
+  return `${supabaseConfig.url}/storage/v1/object/public/${bucket}/${path}`;
+}
 
 type ModalStep = 1 | 2 | 3;
 
@@ -205,8 +225,7 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
             const inv = availableInventory.find((i: any) => i.id === id);
             const code = inv?.raw_material_code || inv?.roll_no || id;
             try {
-              const uploadRes = await inventoryService.uploadRawMaterialImage(code, capturedImage.file);
-              imageUrl = supabaseStorage.publicUrl(uploadRes.path);
+              imageUrl = await uploadRawMaterialImage(code, capturedImage.file);
             } catch (err) {
               console.error(`Failed to upload image for ${code}`, err);
               throw err;
@@ -619,7 +638,7 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
                       if (String(col.key) === "options") {
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
-                            <button onClick={() => setQrData({ id: (row as any).rollNo, type: "RM", details: { "Roll No": (row as any).rollNo ?? "", "Net Weight": (row as any).netWeight ?? (row as any).weight ?? "", "Micron": (row as any).thickness ?? "", "Width (m)": (row as any).width ?? "", "Temperature": (row as any).temperature ?? "-", "Supplier": (row as any).supplier ?? "", "Status": (row as any).status ?? "" } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                            <button onClick={() => setQrData({ id: (row as any).rollNo, type: "RM", data: { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split('k')[0] ?? (row as any).weight.split('k')[0] ?? "", grossWeight: (row as any).usedWeight.split('k')[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                               <QrCode className="w-4 h-4" />
                             </button>
                           </td>
@@ -655,7 +674,7 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       </section>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

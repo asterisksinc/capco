@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Bell, ChevronRight } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
@@ -15,27 +16,34 @@ export function OperatorTopbar() {
     const paths = [];
     const segments = pathname.split("/").filter(Boolean);
     
-    // Check if we are inside Operator
-    const personAIndex = segments.indexOf("person-a");
-    if (personAIndex !== -1) {
-      const relevantSegments = segments.slice(personAIndex + 1);
+    // Find the base path index (person-a, person-a-slitting, person-a-metallisation, slitting-operator)
+    const basePaths = ["person-a", "person-a-slitting", "person-a-metallisation", "slitting-operator"];
+    const baseIndex = segments.findIndex(seg => basePaths.includes(seg));
+    
+    if (baseIndex !== -1) {
+      const basePath = segments[baseIndex];
+      const relevantSegments = segments.slice(baseIndex + 1);
       
       for (let i = 0; i < relevantSegments.length; i++) {
         const segment = relevantSegments[i];
         let name = "Overview";
-        let href = `/person-a/${relevantSegments.slice(0, i + 1).join("/")}`;
+        let href = `/${basePath}/${relevantSegments.slice(0, i + 1).join("/")}`;
         
         if (segment === "workorder") name = "Work Orders";
         else if (segment === "stock") name = "Stock";
         else if (segment === "pipeline") name = "Pipeline";
         else if (segment === "overview") name = "Overview";
+        else if (segment === "material-returns") name = "Material Returns";
+        else if (segment === "material-requests") name = "Material Requests";
         else name = segment.toUpperCase(); // For IDs like WO-0001
         
         paths.push({ name, href });
       }
-    }
-    
-    if (paths.length === 0) {
+      
+      if (paths.length === 0) {
+        paths.push({ name: "Overview", href: `/${basePath}/overview` });
+      }
+    } else {
       paths.push({ name: "Overview", href: "/person-a/overview" });
     }
     
@@ -43,11 +51,18 @@ export function OperatorTopbar() {
   };
 
   const breadcrumbs = getBreadcrumbs();
+  const homeHref = breadcrumbs.length > 0 && breadcrumbs[0].href.includes("/slitting-operator") 
+    ? "/slitting-operator/workorder" 
+    : breadcrumbs.length > 0 && breadcrumbs[0].href.includes("/person-a-metallisation")
+    ? "/person-a-metallisation/workorder"
+    : breadcrumbs.length > 0 && breadcrumbs[0].href.includes("/person-a-slitting")
+    ? "/person-a-slitting/workorder"
+    : "/person-a/overview";
 
   return (
     <header className="h-[72px] shrink-0 bg-white border-b border-[#EBEBEB] hidden md:flex items-center justify-between px-4 md:px-6 font-dm-sans sticky top-0 z-10 w-full">
       <div className="flex items-center gap-1 text-[12px] font-dm-sans">
-        <Link href="/person-a/overview" className="text-[#5C5C5C] hover:text-[#171717] transition-colors">
+        <Link href={homeHref} className="text-[#5C5C5C] hover:text-[#171717] transition-colors">
           Home
         </Link>
         {breadcrumbs.map((bc, index) => (
@@ -79,10 +94,7 @@ export function OperatorTopbar() {
         <TraceButton />
         {/* Notifications */}
         <UserSwitcher />
-        <button className="w-[40px] h-[40px] flex items-center justify-center border border-[#EBEBEB] rounded-[6px] relative bg-white transition-colors hover:bg-gray-50">
-          <Bell className="w-5 h-5 text-[#171717]" />
-          <span className="absolute top-[8px] right-[10px] w-[6px] h-[6px] bg-[#FB3748] rounded-full border-[1px] border-white"></span>
-        </button>
+        <NotificationBell className="w-5 h-5 text-[#171717]" />
       </div>
     </header>
   );

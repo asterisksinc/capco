@@ -83,6 +83,7 @@ export default function ProductionHeadInventoryPage() {
   useEffect(() => {
     async function loadData() {
       try {
+
         const data = await inventoryService.list();
 
         const formatted = (data as any[]).map((item) => ({
@@ -268,7 +269,7 @@ export default function ProductionHeadInventoryPage() {
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.supplier}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date_received ?? "-"}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <button onClick={() => setQrData({ id: row.raw_material_code, type: "RM", details: { "Roll ID": row.roll_no, "Micron": row.micron, "Width (m)": row.width_m, "Net Weight": row.net_weight_kg, "Gross Weight": row.gross_weight_kg ?? "-", "Temperature": row.temperature_c ?? "-", "Supplier": row.supplier, "Status": row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                      <button onClick={() => setQrData({ id: row.raw_material_code, type: "RM", data: { rollNo: row.roll_no, micron: row.micron, width: row.width_m, netWeight: row.net_weight_kg, grossWeight: row.gross_weight_kg ?? "-", temperature: row.temperature_c ?? "-", supplier: row.supplier, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                         <QrCode className="w-4 h-4" />
                       </button>
                     </td>
@@ -283,7 +284,7 @@ export default function ProductionHeadInventoryPage() {
           </div>
         </section>
       </div>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

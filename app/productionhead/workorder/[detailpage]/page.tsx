@@ -107,11 +107,11 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
     return ((woData?.work_order_materials as any[]) || []).map((wom) => {
       const inv = wom.inventory || {};
       const actual = wom.quantity_kg ?? 0;
-      
+
       const wastage = (woData?.metallisation as any[])
         ?.filter(m => m.raw_material_id === inv.id)
         .reduce((sum, m) => sum + (m.factory_wastage_kg || 0), 0) || 0;
-        
+
       return {
         rollNo: inv.roll_no || "-",
         netWeight: inv.net_weight_kg != null ? `${inv.net_weight_kg}kgs` : "-",
@@ -141,9 +141,9 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
       // resistance: m.resistance_ohms != null ? `${m.resistance_ohms} Ohms` : "-",
       timestamp: m.created_at
         ? new Date(m.created_at).toLocaleString("en-GB", {
-            day: "2-digit", month: "short", year: "numeric",
-            hour: "2-digit", minute: "2-digit",
-          })
+          day: "2-digit", month: "short", year: "numeric",
+          hour: "2-digit", minute: "2-digit",
+        })
         : "-",
       nextStage: m.next_stage || "Slitting",
       status: m.status || "-",
@@ -227,22 +227,22 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
     const exportData = currentData.map((row: any) => ({
       ...(activeTab === "Raw Material"
         ? {
-            "Roll No": row.rollNo ?? "",
-            "Net Weight": row.netWeight ?? "",
-            "Gross Weight": row.grossWeight ?? "",
-            "Micron": row.thickness ?? "",
-            "Width (m)": row.width ?? "",
-            "Temperature": row.temperature ?? "",
-            "Actual Weight": row.actualWeight ?? "",
-            "Damaged Weight": row.damagedWeight ?? "",
-            "Used Weight": row.usedWeight ?? "",
-            "Wastage Weight": row.wastageWeight ?? "",
-            "Supplier": row.supplier ?? "",
-            "Stage": row.stage ?? "",
-            "Status": row.status ?? "",
-          }
+          "Roll No": row.rollNo ?? "",
+          "Net Weight": row.netWeight ?? "",
+          "Gross Weight": row.grossWeight ?? "",
+          "Micron": row.thickness ?? "",
+          "Width (m)": row.width ?? "",
+          "Temperature": row.temperature ?? "",
+          "Actual Weight": row.actualWeight ?? "",
+          "Damaged Weight": row.damagedWeight ?? "",
+          "Used Weight": row.usedWeight ?? "",
+          "Wastage Weight": row.wastageWeight ?? "",
+          "Supplier": row.supplier ?? "",
+          "Stage": row.stage ?? "",
+          "Status": row.status ?? "",
+        }
         : activeTab === "Metallisation"
-        ? {
+          ? {
             "Coil No": row.coilNo ?? "",
             "RM ID": row.rmId ?? "",
             "Machine No": row.machineNo ?? "",
@@ -253,7 +253,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
             "Next Stage": row.nextStage ?? "",
             "Status": row.status ?? "",
           }
-        : {
+          : {
             "Product No": row.productNo ?? "",
             "Coil ID": row.rmId ?? "",
             "Weight": row.weight ?? "",
@@ -358,14 +358,13 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
         {/* Tab bar */}
         <div className="flex items-center gap-2 border-b border-[#EBEBEB] pb-4 overflow-x-auto overflow-y-hidden scrollbar-none">
           {(["Raw Material", "Metallisation", "Slitting"] as TabType[]).map((tab) => (
-              <button
-                key={tab}
+            <button
+              key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3 md:px-4 py-2 text-[13px] md:text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap shrink-0 ${
-                activeTab === tab
+              className={`px-3 md:px-4 py-2 text-[13px] md:text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap shrink-0 ${activeTab === tab
                   ? "bg-[#00B6E2] text-white"
                   : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -413,15 +412,15 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                         const isMC = activeTab === "Metallisation";
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
-                        const qrDetails: Record<string, string> = isRM
-                          ? { "Roll No": (row as any).rollNo ?? "", "Net Weight": (row as any).netWeight ?? "", "Micron": (row as any).thickness ?? "", "Width (m)": (row as any).width ?? "", "Supplier": (row as any).supplier ?? "", "Status": (row as any).status ?? "" }
+                        const qrDetails: any = isRM
+                          ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                          ? { "Coil No": (row as any).coilNo ?? "", "RM ID": (row as any).rmId ?? "", "Machine No": (row as any).machineNo ?? "", "Weight": (row as any).weight ?? "", "Status": (row as any).status ?? "" }
-                          : { "Product No": (row as any).productNo ?? "", "Coil ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
+                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
+                            : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={key} className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <button onClick={() => setQrData({ id: rowId, type: qrType, details: qrDetails })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="Show QR Code">
+                              <button onClick={() => setQrData({ id: rowId, type: qrType, data: qrDetails })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="Show QR Code">
                                 <QrCode className="w-4 h-4" />
                               </button>
                               {isMC && (
@@ -463,14 +462,14 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
       </section>
 
       {qrData && (
-        <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />
+        <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />
       )}
 
-      <DocsUploadedModal 
-        isOpen={isDocModalOpen} 
-        onClose={() => setIsDocModalOpen(false)} 
-        activeTab={activeTab} 
-        woData={woData} 
+      <DocsUploadedModal
+        isOpen={isDocModalOpen}
+        onClose={() => setIsDocModalOpen(false)}
+        activeTab={activeTab}
+        woData={woData}
       />
 
       <RowImagesModal

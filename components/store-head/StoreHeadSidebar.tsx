@@ -10,17 +10,20 @@ import {
   LogOut,
   ArrowDownToLine,
   ArrowUpFromLine,
+  Undo2,
 } from "lucide-react";
 import Image from "next/image";
+import { useLogout } from "@/hooks/useLogout";
 
 export function StoreHeadSidebar() {
   const pathname = usePathname();
+  const { handleLogout } = useLogout();
 
   const navItems = [
     { name: "Overview", href: "/store-head/overview", icon: LayoutDashboard },
     { name: "Work Orders", href: "/store-head/workorder", icon: Calendar },
     { name: "Inventory", href: "/store-head/inventory", icon: Warehouse },
-    { name: "Material Requests", href: "/store-head/material-requests", icon: ArrowDownToLine },
+
     { name: "Material Returns", href: "/store-head/material-returns", icon: ArrowUpFromLine },
   ];
 
@@ -62,6 +65,7 @@ export function StoreHeadSidebar() {
             <span className="text-[12px] font-normal text-[#5C5C5C] leading-tight truncate mt-1">example@gmail.com</span>
           </div>
           <button
+            onClick={handleLogout}
             className="text-[#FB3748] hover:bg-[#FEF2F2] p-2 flex items-center justify-center rounded-[6px] transition-colors flex-shrink-0 border border-[#EBEBEB] bg-white shadow-sm"
             aria-label="Sign out"
           >

@@ -679,14 +679,14 @@ export default function PersonBProductOrderDetail({ params }: DetailPageProps) {
                     {currentConfig.columns.map((col) => {
                       if (String(col.key) === "qr") {
                         const qrRowData: QRModalData = activeTab === "Product Material"
-                          ? { id: (row as any).stockId, type: "PM", details: { "PM-ID": (row as any).stockId, "Weight": (row as any).weight, "Width": (row as any).width, "Micron": (row as any).micron, "Grade": (row as any).grade } }
+                          ? { id: (row as any).stockId, type: "PM", data: { productNo: (row as any).stockId, weight: (row as any).weight, width: (row as any).width, micron: (row as any).micron, grade: (row as any).grade } }
                           : activeTab === "Metallisation"
-                          ? { id: (row as any).coilNo, type: "MC", details: { "MC-ID": (row as any).coilNo, "RM ID": (row as any).rmId, "Machine No.": (row as any).machineNo, "Weight": (row as any).weight, "Status": (row as any).status } }
+                          ? { id: (row as any).coilNo, type: "MC", data: { coilNo: (row as any).coilNo, rmId: (row as any).rmId, machineNo: (row as any).machineNo, weight: (row as any).weight, status: (row as any).status } }
                           : activeTab === "Slitting"
-                          ? { id: (row as any).productNo, type: "PM", details: { "PM-ID": (row as any).productNo, "Parent MC-ID": (row as any).parentMcId, "RM ID": (row as any).rmId, "Weight": (row as any).weight, "Grade": (row as any).grade, "Status": (row as any).status } }
+                          ? { id: (row as any).productNo, type: "PM", data: { productNo: (row as any).productNo, parentMcId: (row as any).parentMcId, rmId: (row as any).rmId, weight: (row as any).weight, grade: (row as any).grade, status: (row as any).status } }
                           : activeTab === "Winding"
-                          ? { id: (row as any).wdId, type: "WD", details: { "WD-ID": (row as any).wdId, "Linked PM-ID": (row as any).linkedPmId, "Film Width": (row as any).filmWidth, "Winding Tension": (row as any).windingTension, "Stage": (row as any).stage } }
-                          : { id: (row as any).spId, type: "SP", details: { "SP-ID": (row as any).spId, "Linked WD-ID": (row as any).linkedWdId, "Spray Type": (row as any).sprayType, "Stage": (row as any).stage } };
+                          ? { id: (row as any).wdId, type: "WD", data: { windingId: (row as any).wdId, linkedPmId: (row as any).linkedPmId, filmWidth: (row as any).filmWidth, windingTension: (row as any).windingTension, stage: (row as any).stage } }
+                          : { id: (row as any).spId, type: "SP", data: { sprayId: (row as any).spId, linkedWdId: (row as any).linkedWdId, sprayType: (row as any).sprayType, stage: (row as any).stage } };
                         return (
                           <td key={String(col.key)} className="px-5 py-3 whitespace-nowrap">
                             <button

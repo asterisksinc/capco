@@ -17,9 +17,11 @@ import {
   CreditCard,
 } from "lucide-react";
 import Image from "next/image";
+import { useLogout } from "@/hooks/useLogout";
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { handleLogout } = useLogout();
 
   const navItems = [
     { name: "Overview", href: "/admin/overview", icon: Home },
@@ -72,6 +74,7 @@ export function AdminSidebar() {
             <span className="text-[12px] font-normal text-[#5C5C5C] leading-tight truncate mt-1">example@gmail.com</span>
           </div>
           <button
+            onClick={handleLogout}
             className="text-[#FB3748] hover:bg-[#FEF2F2] p-2 flex items-center justify-center rounded-[6px] transition-colors flex-shrink-0 border border-[#EBEBEB] bg-white shadow-sm"
             aria-label="Sign out"
           >

@@ -3,6 +3,7 @@
 import { Menu, Bell, Fingerprint } from "lucide-react";
 import { useState } from "react";
 import { useMobileMenu } from "@/components/MobileMenuContext";
+import { NotificationBell } from "@/components/NotificationBell";
 import { UserSwitcher } from "@/components/UserSwitcher";
 import { useStore } from "@/hooks/useStore";
 import { UniversalTraceModal } from "@/components/UniversalTraceModal";
@@ -26,9 +27,7 @@ export function MobileHeader({ title, showMenu = true }: { title: string; showMe
         <button className="p-2" onClick={() => setTraceOpen(true)}>
           <Fingerprint className="w-5 h-5 text-[#171717]" />
         </button>
-        <button className="p-2">
-          <Bell className="w-5 h-5 text-[#171717]" />
-        </button>
+        <NotificationBell />
         <UserSwitcher />
       </div>
       {traceOpen && (

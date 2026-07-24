@@ -9,11 +9,14 @@ import {
   ClipboardList,
   ReceiptText,
   LogOut,
+  CheckSquare,
 } from "lucide-react";
 import Image from "next/image";
+import { useLogout } from "@/hooks/useLogout";
 
 export function SalesSidebar() {
   const pathname = usePathname();
+  const { handleLogout } = useLogout();
 
   const navItems = [
     { name: "Overview", href: "/sales/overview", icon: Home },
@@ -63,6 +66,7 @@ export function SalesSidebar() {
             <span className="text-[12px] font-normal text-[#5C5C5C] leading-tight truncate mt-1">example@gmail.com</span>
           </div>
           <button
+            onClick={handleLogout}
             className="text-[#FB3748] hover:bg-[#FEF2F2] p-2 flex items-center justify-center rounded-[8px] transition-colors flex-shrink-0 border border-[#FB3748]/20 bg-white shadow-sm"
             aria-label="Sign out"
           >

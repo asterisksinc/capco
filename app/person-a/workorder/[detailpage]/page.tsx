@@ -176,11 +176,11 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
     return (woData?.work_order_materials || []).map((rm: any) => {
       const inv = rm.inventory || {};
       const actual = rm.quantity_kg ?? 0;
-      
+
       const wastage = (woData?.metallisation as any[])
         ?.filter(m => m.raw_material_id === inv.id)
         .reduce((sum, m) => sum + (m.factory_wastage_kg || 0), 0) || 0;
-        
+
       return {
         rollNo: inv.raw_material_code || inv.roll_no || "-",
         raw_material_id: inv.id || rm.raw_material_id, // we need this for submission
@@ -211,9 +211,9 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
       // resistance: m.resistance_ohms != null ? `${m.resistance_ohms} Ohms` : "-",
       timestamp: m.created_at
         ? new Date(m.created_at).toLocaleString("en-GB", {
-            day: "2-digit", month: "short", year: "numeric",
-            hour: "2-digit", minute: "2-digit",
-          })
+          day: "2-digit", month: "short", year: "numeric",
+          hour: "2-digit", minute: "2-digit",
+        })
         : "-",
       nextStage: m.next_stage || "Slitting",
       status: m.status || "-",
@@ -414,38 +414,90 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
       const user = await authService.getCurrentProfile();
 
       if (activeTab === "Metallisation") {
+        const existingData = await productionStageService.listMetallisation();
+        let maxMcId = 0;
+        for (const row of existingData as any[]) {
+          const match = row.metallisation_no?.match(/MC-(\d+)/);
+          if (match) maxMcId = Math.max(maxMcId, parseInt(match[1], 10));
+        }
+
         for (const item of metallisationRowsInput) {
           const rawMaterialId = rmIdByRollNo.get(item.rmId) ?? "";
-          await productionStageService.addMetallisation({
-            metallisation_no: item.coilNo || generateId("MC"),
-            work_order_id: woData.id,
-            raw_material_id: rawMaterialId,
-            operator_id: user?.id,
-            coil_no: item.coilNo,
-            machine_no: item.machineNo || undefined,
-            weight_kg: parseFloat(item.weight) || 0,
-            optical_density: parseFloat(item.opticalDensity) || undefined,
-            resistance_ohms: parseFloat(item.resistance) || undefined,
-          });
+          let success = false;
+          let retries = 0;
+          let currentMaxId = maxMcId;
+
+          while (!success && retries < 3) {
+            currentMaxId++;
+            const finalId = `MC-${String(currentMaxId).padStart(4, "0")}`;
+            try {
+              await productionStageService.addMetallisation({
+                metallisation_no: finalId,
+                work_order_id: woData.id,
+                raw_material_id: rawMaterialId,
+                operator_id: user?.id,
+                coil_no: finalId,
+                machine_no: item.machineNo || undefined,
+                weight_kg: parseFloat(item.weight) || 0,
+                optical_density: parseFloat(item.opticalDensity) || undefined,
+                resistance_ohms: parseFloat(item.resistance) || undefined,
+              });
+              success = true;
+              maxMcId = currentMaxId;
+            } catch (err: any) {
+              if (err?.message?.toLowerCase().includes("duplicate") || err?.code === "23505") {
+                retries++;
+              } else {
+                throw err;
+              }
+            }
+          }
+          if (!success) throw new Error("Failed to generate unique MC ID after multiple attempts.");
         }
       }
 
       if (activeTab === "Slitting") {
+        const existingData = await productionStageService.listSlitting();
+        let maxPmId = 0;
+        for (const row of existingData as any[]) {
+          const match = row.product_no?.match(/PM-(\d+)/);
+          if (match) maxPmId = Math.max(maxPmId, parseInt(match[1], 10));
+        }
+
         for (const item of slittingRowsInput) {
           const metallisationId = metallisationIdByNo.get(item.associatedRmId) ?? undefined;
-          await productionStageService.addSlitting({
-            slitting_no: generateId("SL"),
-            work_order_id: woData.id,
-            metallisation_id: metallisationId,
-            raw_material_id: metallisationId ? undefined : "",
-            operator_id: user?.id,
-            product_no: item.productNo || generateId("PM"),
-            weight_kg: parseFloat(item.weight) || 0,
-            thickness_micron: parseFloat(item.micron) || 0,
-            width_m: parseFloat(item.width) || undefined,
-            grade: item.grade,
-            remarks: slittingReviewRemarks || undefined,
-          });
+          let success = false;
+          let retries = 0;
+          let currentMaxId = maxPmId;
+
+          while (!success && retries < 3) {
+            currentMaxId++;
+            const finalId = `PM-${String(currentMaxId).padStart(4, "0")}`;
+            try {
+              await productionStageService.addSlitting({
+                slitting_no: generateId("SL"),
+                work_order_id: woData.id,
+                metallisation_id: metallisationId,
+                raw_material_id: metallisationId ? undefined : "",
+                operator_id: user?.id,
+                product_no: finalId,
+                weight_kg: parseFloat(item.weight) || 0,
+                thickness_micron: parseFloat(item.micron) || 0,
+                width_m: parseFloat(item.width) || undefined,
+                grade: item.grade,
+                remarks: slittingReviewRemarks || undefined,
+              });
+              success = true;
+              maxPmId = currentMaxId;
+            } catch (err: any) {
+              if (err?.message?.toLowerCase().includes("duplicate") || err?.code === "23505") {
+                retries++;
+              } else {
+                throw err;
+              }
+            }
+          }
+          if (!success) throw new Error("Failed to generate unique PM ID after multiple attempts.");
         }
       }
 
@@ -885,8 +937,8 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                 ...(activeTab === "Raw Material"
                   ? { "Roll No": row.rollNo ?? "", "Net Weight": row.netWeight ?? "", "Gross Weight": row.grossWeight ?? "", "Micron": row.thickness ?? "", "Width (m)": row.width ?? "", "Temperature": row.temperature ?? "", "Supplier": row.supplier ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }
                   : activeTab === "Metallisation"
-                  ? { "Coil No": row.coilNo ?? "", "RM ID": row.rmId ?? "", "Machine No": row.machineNo ?? "", "Weight": row.weight ?? "", "Optical Density": row.opticalDensity ?? "", "Resistance": row.resistance ?? "", "Timestamp": row.timestamp ?? "", "Next Stage": row.nextStage ?? "", "Status": row.status ?? "" }
-                  : { "Product No": row.productNo ?? "", "RM ID": row.rmId ?? "", "Weight": row.weight ?? "", "Thickness": row.thickness ?? "", "Grade": row.grade ?? "", "Timestamp": row.timestampAdded ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }),
+                    ? { "Coil No": row.coilNo ?? "", "RM ID": row.rmId ?? "", "Machine No": row.machineNo ?? "", "Weight": row.weight ?? "", "Optical Density": row.opticalDensity ?? "", "Resistance": row.resistance ?? "", "Timestamp": row.timestamp ?? "", "Next Stage": row.nextStage ?? "", "Status": row.status ?? "" }
+                    : { "Product No": row.productNo ?? "", "RM ID": row.rmId ?? "", "Weight": row.weight ?? "", "Thickness": row.thickness ?? "", "Grade": row.grade ?? "", "Timestamp": row.timestampAdded ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }),
               }));
               exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);
             }}
@@ -907,9 +959,8 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as TabType)}
-                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${
-                  activeTab === tab ? "bg-[#00B6E2] text-white" : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                }`}
+                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab ? "bg-[#00B6E2] text-white" : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                  }`}
               >
                 {tab}
               </button>
@@ -939,15 +990,15 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                         const isMC = activeTab === "Metallisation";
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
-                        const qrDetails: Record<string, string> = isRM
-                          ? { "Roll No": (row as any).rollNo ?? "", "Net Weight": (row as any).netWeight ?? "", "Micron": (row as any).thickness ?? "", "Supplier": (row as any).supplier ?? "", "Status": (row as any).status ?? "" }
+                        const qrDetails: any = isRM
+                          ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                          ? { "Coil No": (row as any).coilNo ?? "", "RM ID": (row as any).rmId ?? "", "Machine No": (row as any).machineNo ?? "", "Weight": (row as any).weight ?? "", "Status": (row as any).status ?? "" }
-                          : { "Product No": (row as any).productNo ?? "", "RM ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
+                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
+                            : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={key} className="px-4 py-3 whitespace-nowrap">
                             <button
-                              onClick={() => setQrData({ id: rowId, type: qrType, details: qrDetails })}
+                              onClick={() => setQrData({ id: rowId, type: qrType, data: qrDetails })}
                               className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#F5F7FA] transition-colors text-[#5C5C5C] hover:text-[#00B6E2]"
                               title="Show QR Code"
                             >
@@ -985,7 +1036,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
         </div>
       </section>
 
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

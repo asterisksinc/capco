@@ -2,9 +2,9 @@
 
 import { WO_STATUS_OPTIONS, WO_STAGE_OPTIONS } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
-import { use, useState, useMemo } from "react";
+import { use, useState, useMemo, useRef } from "react";
 import Link from "next/link";
-import { Plus, X, ChevronRight, Check, QrCode, Loader2 } from "lucide-react";
+import { Plus, X, ChevronRight, Check, QrCode, Loader2, Printer } from "lucide-react";
 import { FileText, Ruler, Maximize2, Package } from "lucide-react";
 import { useStore } from "@/hooks/useStore";
 import { ScannerInput } from "@/components/ScannerInput";
@@ -22,7 +22,8 @@ import { workOrderService } from "@/src/services/workOrderService";
 import { productionStageService } from "@/src/services/productionStageService";
 import { authService } from "@/src/services/authService";
 import { stockService } from "@/src/services/stockService";
-import { supabaseStorage } from "@/src/services/supabaseClient";
+import { slittingService } from "@/src/services/slittingService";
+import { supabaseStorage, getAccessToken, supabaseConfig } from "@/src/services/supabaseClient";
 import { useEffect } from "react";
 
 type DetailPageProps = {
@@ -31,6 +32,39 @@ type DetailPageProps = {
 
 type TabType = "Raw Material" | "Metallisation" | "Slitting";
 type ModalStep = 1 | 2 | 3;
+
+async function uploadSlittingImage(entityId: string, file: File): Promise<string> {
+  const token = getAccessToken();
+  const bucket = "production-stage-images";
+  const path = `slitting/${entityId}/${file.name}`;
+  const res = await fetch(`${supabaseConfig.url}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token ?? supabaseConfig.anonKey}`,
+      "apikey": supabaseConfig.anonKey,
+      "Content-Type": file.type,
+      "x-upsert": "true"
+    },
+    body: file
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.message || "Failed to upload image");
+  }
+
+  return `${supabaseConfig.url}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+// EDIT: shared helper — finds the highest existing PM-#### number and returns the next one
+function getNextProductId(existingSlitting: any[]) {
+  let maxId = 0;
+  for (const row of existingSlitting) {
+    const match = row.product_no?.match(/PM-(\d+)/);
+    if (match) maxId = Math.max(maxId, parseInt(match[1], 10));
+  }
+  return maxId + 1;
+}
 
 type MetallisationForm = {
   coilNo: string;
@@ -55,6 +89,7 @@ type SlittingForm = {
   bags: BagData[];
   qcImage: { url: string; name: string; id: string; file: File } | null;
   remarks: string;
+  idempotencyKey: string;
 };
 
 const micronOptions = ["2", "2.5", "3", "3.5", "4", "4.5", "4.5HT", "5", "5.5", "6", "6.5", "7", "7.5"];
@@ -128,9 +163,8 @@ const defaultSlittingForm: SlittingForm = {
   bags: [{ id: "temp", productNo: "", grade: "AA", weight: "" }],
   qcImage: null,
   remarks: "",
+  idempotencyKey: "",
 };
-
-
 
 function getDateString() {
   const today = new Date();
@@ -164,17 +198,21 @@ function createMetallisationRow(defaultRmId: string): MetallisationForm {
   };
 }
 
-function createSlittingRow(defaultCoilId: string): SlittingForm {
+function createSlittingRow(defaultCoilId: string, productNo: string = ""): SlittingForm {
   return {
     ...defaultSlittingForm,
     coilId: defaultCoilId,
-    bags: [{ id: generateId("BAG"), productNo: generateId("PM"), grade: "AA", weight: "" }],
+    bags: [{ id: generateId("BAG"), productNo, grade: "AA", weight: "" }],
+    idempotencyKey: generateId("IDEMP"),
   };
 }
 
 export default function OperatorSlittingDetailPage({ params }: DetailPageProps) {
   const { detailpage } = use(params);
   const orderId = detailpage.toUpperCase();
+
+  // Track the base PM number from DB to generate sequential UI IDs
+  const basePmIdRef = useRef<number>(0);
 
   const [loading, setLoading] = useState(true);
   const [woData, setWoData] = useState<any>(null);
@@ -209,11 +247,11 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       rawMaterialRows: (woData.work_order_materials || []).map((rm: any) => {
         const inv = rm.inventory || {};
         const actual = rm.quantity_kg ?? 0;
-        
+
         const wastage = (woData?.metallisation as any[])
           ?.filter(m => m.raw_material_id === inv.id)
           .reduce((sum, m) => sum + (m.factory_wastage_kg || 0), 0) || 0;
-          
+
         return {
           rollNo: inv.raw_material_code || inv.roll_no || "-",
           raw_material_id: inv.id || rm.raw_material_id, // we need this for submission
@@ -279,6 +317,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   }, [workOrderFlowData]);
 
   const availableCoilIds: string[] = Array.from(new Set(workOrderFlowData?.metallisationRows
+    .filter((row: any) => row.status === "Issued")
     .map((row: any) => row.coilNo) ?? [])) as string[];
   const coilLookup = useMemo(() => {
     const map = new Map<string, { weight: string; opticalDensity: string; resistance: string, metallisation_id: string }>();
@@ -333,17 +372,34 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   if (loading) return <div className="p-6 text-center text-[#5C5C5C]">Loading details...</div>;
   if (!workOrderFlowData) return <div className="p-6 text-center text-[#5C5C5C]">Work Order not found</div>;
 
-  const resetModalState = () => {
+  const recalculateProductNos = (rows: SlittingForm[], basePmId: number) => {
+    let currentId = basePmId + 1;
+    return rows.map(row => ({
+      ...row,
+      bags: row.bags.map(bag => ({
+        ...bag,
+        productNo: `PM-${String(currentId++).padStart(4, "0")}`
+      }))
+    }));
+  };
+
+  const resetModalState = async () => {
     setModalStep(1);
     setShowValidationHint(false);
     setSlittingReviewRemarks("");
     setCapturedImage(null);
     setMetallisationRowsInput([createMetallisationRow(availableRollIds[0] ?? "")]);
-    setSlittingRowsInput([createSlittingRow(availableCoilIds[0] ?? "")]);
+
+    // get max existing PM number to calculate sequentially for UI
+    const existingSlitting = await productionStageService.listSlitting();
+    const nextNum = getNextProductId(existingSlitting as any[]) - 1; // base is max ID
+    basePmIdRef.current = nextNum;
+
+    setSlittingRowsInput(recalculateProductNos([createSlittingRow(availableCoilIds[0] ?? "")], nextNum));
   };
 
-  const openModal = () => {
-    resetModalState();
+  const openModal = async () => {
+    await resetModalState();
     setIsModalOpen(true);
   };
 
@@ -392,7 +448,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       setMetallisationRowsInput((prev) => [...prev, createMetallisationRow(availableRollIds[0] ?? "")]);
       return;
     }
-    setSlittingRowsInput((prev) => [...prev, createSlittingRow(availableCoilIds[0] ?? "")]);
+    setSlittingRowsInput((prev) => recalculateProductNos([...prev, createSlittingRow(availableCoilIds[0] ?? "")], basePmIdRef.current));
   };
 
   const updateMetallisationRow = (index: number, patch: Partial<MetallisationForm>) => {
@@ -400,25 +456,29 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   };
 
   const updateSlittingRow = (index: number, patch: Partial<SlittingForm>) => {
-    setSlittingRowsInput((prev) => prev.map((row, idx) => {
-      if (idx === index) {
-        const newRow = { ...row, ...patch };
-        if (patch.noOfBags !== undefined) {
-          const bagsCount = Math.max(1, Math.min(10, patch.noOfBags));
-          const currentBags = [...newRow.bags];
-          if (bagsCount > currentBags.length) {
-            for (let i = currentBags.length; i < bagsCount; i++) {
-              currentBags.push({ id: generateId("BAG"), productNo: generateId("PM"), grade: "AA", weight: "" });
+    setSlittingRowsInput((prev) => {
+      const nextRows = prev.map((row, idx) => {
+        if (idx === index) {
+          const newRow = { ...row, ...patch };
+          if (patch.noOfBags !== undefined) {
+            const bagsCount = Math.max(1, Math.min(10, patch.noOfBags));
+            const currentBags = [...newRow.bags];
+            if (bagsCount > currentBags.length) {
+              for (let i = currentBags.length; i < bagsCount; i++) {
+                currentBags.push({ id: generateId("BAG"), productNo: generateId("PM"), grade: "AA", weight: "" });
+              }
+            } else if (bagsCount < currentBags.length) {
+              currentBags.length = bagsCount;
             }
-          } else if (bagsCount < currentBags.length) {
-            currentBags.length = bagsCount;
+            newRow.bags = currentBags;
           }
-          newRow.bags = currentBags;
+          return newRow;
         }
-        return newRow;
-      }
-      return row;
-    }));
+        return row;
+      });
+      if (patch.noOfBags !== undefined) return recalculateProductNos(nextRows, basePmIdRef.current);
+      return nextRows;
+    });
   };
 
   const updateBagField = (rowIndex: number, bagId: string, field: keyof BagData, value: string) => {
@@ -436,10 +496,10 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       return;
     }
     if (slittingRowsInput.length === 1) return;
-    setSlittingRowsInput((prev) => prev.filter((_, idx) => idx !== index));
+    setSlittingRowsInput((prev) => recalculateProductNos(prev.filter((_, idx) => idx !== index), basePmIdRef.current));
   };
 
-  const submitCurrentStage = async () => {
+  const submitCurrentStage = async (isPrint = false) => {
     if (!isCurrentStepOneValid || !isStepTwoValid) {
       setShowValidationHint(true);
       return;
@@ -448,7 +508,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
     try {
       setIsSubmitting(true);
       const user = await authService.getCurrentProfile();
-      
+
       if (activeTab === "Metallisation") {
         const payload = metallisationRowsInput;
         for (const item of payload) {
@@ -472,52 +532,79 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
 
       if (activeTab === "Slitting") {
         const payload = slittingRowsInput;
-        
+
         let slittingImageUrl = undefined;
         if (capturedImage?.file) {
-          const firstItem = payload[0];
           try {
-            const uploadRes = await productionStageService.uploadSlittingImage(woData.work_order_no, capturedImage.file);
-            slittingImageUrl = supabaseStorage.publicUrl(uploadRes.path);
+            slittingImageUrl = await uploadSlittingImage(woData.work_order_no, capturedImage.file);
           } catch (err) {
-             console.error("Failed to upload slitting QC image", err);
-             throw err;
+            console.error("Failed to upload slitting QC image", err);
+            throw err;
           }
         }
 
-        let isFirstBag = true;
         for (const item of payload) {
           const coilData = coilLookup.get(item.coilId);
-          
-          for (const bag of item.bags) {
-            const slittingRecord = await productionStageService.addSlitting({
-              slitting_no: bag.productNo,
-              work_order_id: woData.id,
-              metallisation_id: coilData?.metallisation_id || undefined,
-              product_no: bag.productNo,
-              weight_kg: parseFloat(bag.weight) || 0,
-              thickness_micron: parseFloat(woData.micron) || 0,
-              width_m: parseFloat(woData.width_m || woData.width) || 0,
-              number_of_bags: 1, // one row per bag
-              grade: bag.grade,
-              grade_each_bag: [bag.grade], // technically single element
-              weight_each_bag: [parseFloat(bag.weight) || 0],
-              remarks: slittingReviewRemarks,
-              operator_id: user?.id,
-              slitting_review_image_url: isFirstBag ? slittingImageUrl : undefined,
-            });
-            isFirstBag = false;
+          const slittingRecords: any[] = [];
 
-            await stockService.create({
-              stock_no: generateId("STK"),
-              slitting_id: (slittingRecord as any).id,
-              work_order_id: woData.id,
-              weight_kg: parseFloat(bag.weight) || 0,
-              width_m: parseFloat(woData.width_m || woData.width) || 0,
-              micron: parseFloat(woData.micron) || 0,
-              grade: bag.grade,
-              stage: "Ready for Winding"
+          // 1. Create an individual Slitting record for each bag
+          for (const [bagIdx, bag] of item.bags.entries()) {
+            try {
+              const slittingRecord = await productionStageService.addSlitting({
+                slitting_no: bag.productNo,
+                work_order_id: woData.id,
+                metallisation_id: coilData?.metallisation_id || undefined,
+                product_no: bag.productNo,
+                weight_kg: parseFloat(bag.weight || "0"),
+                thickness_micron: parseFloat(woData.micron) || 0,
+                width_m: parseFloat(woData.width_m || woData.width) || 0,
+                number_of_bags: 1,
+                grade: bag.grade,
+                grade_each_bag: [bag.grade],
+                weight_each_bag: [parseFloat(bag.weight || "0")],
+                remarks: slittingReviewRemarks,
+                operator_id: user?.id,
+                slitting_review_image_url: bagIdx === 0 ? slittingImageUrl : undefined,
+              });
+              slittingRecords.push(slittingRecord);
+            } catch (err: any) {
+              throw err;
+            }
+          }
+
+          // 2. Create one packet batch for the entire batch
+          if (slittingRecords.length > 0) {
+            const batchResult = await slittingService.createPacketBatch({
+              slitting_id: slittingRecords[0].id,
+              packet_type: "Bag",
+              quantity: item.noOfBags,
+              product_order_id: undefined,
+              item_weights: item.bags.map(b => parseFloat(b.weight || "0")),
+              item_grades: item.bags.map(b => b.grade),
+              idempotency_key: item.idempotencyKey,
             });
+
+            // Process the response so that every created packet is reflected in the UI
+            if (batchResult && batchResult.items) {
+              setSlittingRowsInput((prev) => {
+                const next = [...prev];
+                const rowIndex = next.findIndex(r => r.coilId === item.coilId);
+                if (rowIndex > -1) {
+                  next[rowIndex] = {
+                    ...next[rowIndex],
+                    bags: next[rowIndex].bags.map((bag, bagIdx) => ({
+                      ...bag,
+                      productNo: (batchResult.items as any[])[bagIdx]?.item_no || bag.productNo
+                    }))
+                  };
+                }
+                return next;
+              });
+            }
+
+            if (isPrint) {
+              window.open(slittingService.batchStickerPrintUrl(String(batchResult.batch.id)), "_blank");
+            }
           }
         }
         await workOrderService.update(woData.id, {
@@ -611,8 +698,8 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">RM ID</label>
-                  <ScannerInput 
-                    value={row.rmId} 
+                  <ScannerInput
+                    value={row.rmId}
                     onChange={(e) => {
                       const id = e.target.value;
                       const rm = rmLookup.get(id);
@@ -620,7 +707,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         rmId: id,
                         weight: rm?.weight ?? row.weight,
                       });
-                    }} 
+                    }}
                     onScanData={(data) => {
                       const rm = rmLookup.get(data);
                       updateMetallisationRow(idx, {
@@ -689,9 +776,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">Coil ID (from Metallisation)</label>
                   <div className="relative flex flex-col gap-1">
-                    <ScannerInput 
+                    <ScannerInput
                       isSelect
-                      value={row.coilId} 
+                      value={row.coilId}
                       onChange={(e) => updateSlittingRow(idx, { coilId: e.target.value })}
                       onScanData={(data) => updateSlittingRow(idx, { coilId: data })}
                       className="h-[42px] rounded-[8px] border border-[#DDE1E8] pl-3 text-[14px]"
@@ -705,8 +792,8 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-medium text-[#171717]">No. of Bags</label>
-                  <select 
-                    value={row.noOfBags} 
+                  <select
+                    value={row.noOfBags}
                     onChange={(e) => updateSlittingRow(idx, { noOfBags: parseInt(e.target.value) })}
                     className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]"
                   >
@@ -732,16 +819,16 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                   <div key={bag.id} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center bg-white p-3 border border-[#EBEBEB] rounded-[6px]">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[12px] font-medium text-[#5C5C5C]">Bag {bagIdx + 1} - Product ID</label>
-                      <input 
-                        value={bag.productNo} 
-                        disabled 
+                      <input
+                        value={bag.productNo}
+                        disabled
                         className="h-[38px] rounded-[6px] border border-[#DDE1E8] bg-gray-50 px-3 text-[13px] text-[#8B8BA2]"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[12px] font-medium text-[#5C5C5C]">Grade</label>
-                      <select 
-                        value={bag.grade} 
+                      <select
+                        value={bag.grade}
                         onChange={(e) => updateBagField(idx, bag.id, 'grade', e.target.value)}
                         className="h-[38px] rounded-[6px] border border-[#DDE1E8] px-3 text-[13px]"
                       >
@@ -750,9 +837,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[12px] font-medium text-[#5C5C5C]">Bag {bagIdx + 1} - Weight (kg)</label>
-                      <input 
+                      <input
                         type="number" step="0.1"
-                        value={bag.weight} 
+                        value={bag.weight}
                         onChange={(e) => updateBagField(idx, bag.id, 'weight', e.target.value)}
                         placeholder="e.g. 50"
                         className="h-[38px] rounded-[6px] border border-[#DDE1E8] px-3 text-[13px]"
@@ -817,7 +904,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm md:px-4">
           <div className="bg-white rounded-[16px] w-full max-w-[95%] sm:max-w-[80%] shadow-lg flex flex-col overflow-hidden">
             {renderStepHeader()}
-            
+
             <div className="max-h-[58vh] overflow-y-auto px-6 py-5">
               {modalStep === 1 && renderStepOneForm()}
               {modalStep === 2 && (
@@ -839,9 +926,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         <label className="text-[13px] font-medium text-[#171717]">Attach Image</label>
                         <div className="flex items-center gap-2">
                           <div className="relative">
-                            <input 
-                              type="file" 
-                              accept="image/*" 
+                            <input
+                              type="file"
+                              accept="image/*"
                               capture="environment"
                               id="cameraInput"
                               className="hidden"
@@ -861,9 +948,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                                   };
                                   reader.readAsDataURL(file);
                                 }
-                              }} 
+                              }}
                             />
-                            <label 
+                            <label
                               htmlFor="cameraInput"
                               className="flex items-center justify-center gap-2 bg-[#F5F7FA] border border-[#DDE1E8] text-[#5C5C5C] text-[13px] font-medium rounded-[6px] h-[36px] px-3 hover:bg-[#EBEBEB] transition-colors cursor-pointer"
                             >
@@ -917,7 +1004,14 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
               {modalStep === 2 && (
                 <>
                   <button onClick={() => setModalStep(1)} disabled={isSubmitting} className="h-[40px] px-2 md:px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[10px] md:text-[14px] font-medium rounded-[6px] hover:bg-gray-50">Back</button>
-                  <button onClick={submitCurrentStage} disabled={isSubmitting || !isStepTwoValid} className={`h-[40px] px-2 md:px-5 text-[10px] md:text-[14px] font-medium rounded-[6px] flex items-center justify-center gap-2 ${isStepTwoValid && !isSubmitting ? "bg-[#00B6E2] text-white hover:bg-[#0092b5]" : "bg-[#A7DDEB] text-white cursor-not-allowed"}`}>
+                  {activeTab === "Slitting" && (
+                    <button onClick={() => submitCurrentStage(true)} disabled={isSubmitting || !isStepTwoValid} className={`h-[40px] px-2 md:px-4 text-[10px] md:text-[14px] font-medium rounded-[6px] flex items-center justify-center gap-2 border border-[#EBEBEB] bg-white text-[#171717] hover:bg-gray-50`}>
+                      {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {!isSubmitting && <Printer className="w-4 h-4" />}
+                      Print
+                    </button>
+                  )}
+                  <button onClick={() => submitCurrentStage(false)} disabled={isSubmitting || !isStepTwoValid} className={`h-[40px] px-2 md:px-5 text-[10px] md:text-[14px] font-medium rounded-[6px] flex items-center justify-center gap-2 ${isStepTwoValid && !isSubmitting ? "bg-[#00B6E2] text-white hover:bg-[#0092b5]" : "bg-[#A7DDEB] text-white cursor-not-allowed"}`}>
                     {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                     {isSubmitting ? "Submitting..." : "Submit Logs"}
                   </button>
@@ -1048,11 +1142,10 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as TabType)}
-                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${
-                  activeTab === tab
-                    ? "bg-[#00B6E2] text-white"
-                    : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                }`}
+                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab
+                  ? "bg-[#00B6E2] text-white"
+                  : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                  }`}
               >
                 {tab}
               </button>
@@ -1087,15 +1180,15 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         const isMC = activeTab === "Metallisation";
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
-                        const qrDetails: Record<string, string> = isRM
-                          ? { "Roll No": (row as any).rollNo ?? "", "Net Weight": (row as any).netWeight ?? (row as any).weight ?? "", "Gross Weight": (row as any).grossWeight ?? "-", "Micron": (row as any).thickness ?? "", "Width (m)": (row as any).width ?? "", "Temperature": (row as any).temperature ?? "-", "Supplier": (row as any).supplier ?? "", "Status": (row as any).status ?? "" }
+                        const qrDetails: any = isRM
+                          ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                          ? { "Coil No": (row as any).coilNo ?? "", "RM ID": (row as any).rmId ?? "", "Machine No": (row as any).machineNo ?? "", "Weight": (row as any).weight ?? "", "Status": (row as any).status ?? "" }
-                          : { "Product No": (row as any).productNo ?? "", "RM ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
+                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", weight: (row as any).weight ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
+                            : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
                             <button
-                              onClick={() => setQrData({ id: rowId, type: qrType, details: qrDetails })}
+                              onClick={() => setQrData({ id: rowId, type: qrType, data: qrDetails })}
                               className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#F5F7FA] transition-colors text-[#5C5C5C] hover:text-[#00B6E2]"
                               title="Show QR Code"
                             >
@@ -1109,22 +1202,22 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         const isMC = activeTab === "Metallisation";
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
-                        const qrDetails: Record<string, string> = isRM
-                          ? { "Roll No": (row as any).rollNo ?? "", "Net Weight": (row as any).netWeight ?? (row as any).weight ?? "", "Gross Weight": (row as any).grossWeight ?? "-", "Micron": (row as any).thickness ?? "", "Width (m)": (row as any).width ?? "", "Temperature": (row as any).temperature ?? "-", "Supplier": (row as any).supplier ?? "", "Status": (row as any).status ?? "" }
+                        const qrDetails: any = isRM
+                          ? { rollNo: (row as any).rollNo ?? "", netWeight: (row as any).netWeight ?? (row as any).weight ?? "", grossWeight: (row as any).grossWeight ?? "-", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", temperature: (row as any).temperature ?? "-", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                          ? { "Coil No": (row as any).coilNo ?? "", "RM ID": (row as any).rmId ?? "", "Machine No": (row as any).machineNo ?? "", "Weight": (row as any).weight ?? "", "Status": (row as any).status ?? "" }
-                          : { "Product No": (row as any).productNo ?? "", "RM ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
+                            ? { "Coil No": (row as any).coilNo ?? "", "RM ID": (row as any).rmId ?? "", "Machine No": (row as any).machineNo ?? "", "Weight": (row as any).weight ?? "", "Status": (row as any).status ?? "" }
+                            : { "Product No": (row as any).productNo ?? "", "RM ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
                             {activeTab !== "Raw Material" ? (
                               <OptionsDropdown
                                 onEdit={() => alert(`Edit ${activeTab} Row ${idx}`)}
                                 onDelete={() => alert(`Delete ${activeTab} Row ${idx}`)}
-                                onQrCode={() => setQrData({ id: rowId, type: qrType, details: qrDetails })}
+                                onQrCode={() => setQrData({ id: rowId, type: qrType, data: qrDetails })}
                                 status={row.status}
                               />
                             ) : (
-                              <button onClick={() => setQrData({ id: rowId, type: qrType, details: qrDetails })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                              <button onClick={() => setQrData({ id: rowId, type: qrType, data: qrDetails })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                                 <QrCode className="w-4 h-4" />
                               </button>
                             )}
@@ -1162,7 +1255,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       </section>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Bell, ChevronRight } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
@@ -74,10 +75,7 @@ export function SalesTopbar() {
 
         <TraceButton />
         <UserSwitcher />
-        <button className="w-[40px] h-[40px] flex items-center justify-center border border-[#EBEBEB] rounded-[8px] relative bg-white shadow-sm transition-colors hover:bg-gray-50">
-          <Bell className="w-5 h-5 text-[#171717]" />
-          <span className="absolute top-[10px] right-[12px] w-[6px] h-[6px] bg-[#FB3748] rounded-full"></span>
-        </button>
+        <NotificationBell className="w-5 h-5 text-[#171717]" />
       </div>
     </header>
   );

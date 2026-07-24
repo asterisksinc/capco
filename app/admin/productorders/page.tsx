@@ -251,7 +251,7 @@ export default function ProductOrdersPage() {
                           const cleanId = row.id.replace('#', '');
                           return (
                             <td key={String(col.key)} className="px-6 py-4">
-                              <button onClick={() => setQrData({ id: cleanId, type: "PO", details: { "Product Code": row.code, "Type": row.type, "Grade": row.grade, "Batch Size": row.batchSize, "Status": row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
+                              <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { productCode: row.code, type: row.type, grade: row.grade, batchSize: row.batchSize, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
                                 <QrCode className="w-4 h-4" />
                               </button>
                             </td>
@@ -281,7 +281,7 @@ export default function ProductOrdersPage() {
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       </section>
-      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} details={qrData.details} onClose={() => setQrData(null)} />}
+      {qrData && <QRCodeModal id={qrData.id} type={qrData.type} data={qrData.data} onClose={() => setQrData(null)} />}
     </div>
   );
 }

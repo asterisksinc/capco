@@ -8,6 +8,7 @@ const userRoles = [
   { label: "Admin", href: "/admin", icon: Shield },
   { label: "Person A ", href: "/person-a", icon: UserCircle },
   { label: "Person A - Metallisation", href: "/person-a-metallisation", icon: UserCircle },
+  { label: "Slitting Operator", href: "/slitting-operator", icon: UserCircle },
   { label: "Person A - Slitting", href: "/person-a-slitting", icon: UserCircle },
   { label: "Person B", href: "/person-b", icon: UserCheck },
   { label: "Production Head", href: "/productionhead", icon: Factory },

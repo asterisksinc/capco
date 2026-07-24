@@ -18,6 +18,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+import { NotificationProvider } from "@/contexts/NotificationContext";
+import { NotificationOverlay } from "@/components/NotificationOverlay";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,7 +28,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <NotificationProvider>
+          {children}
+          <NotificationOverlay />
+        </NotificationProvider>
+      </body>
     </html>
   );
 }
+
