@@ -25,7 +25,14 @@ export const authService = {
   logout() {
     return supabaseAuth.signOut();
   },
-  getCurrentProfile() {
-    return supabaseRest.list<CurrentUser>("profiles", { select: profileSelect, limit: 1 }).then((rows) => rows[0] ?? null);
+  async getCurrentProfile() {
+    const authUser = await supabaseAuth.getUser();
+    return supabaseRest
+      .list<CurrentUser>("profiles", {
+        select: profileSelect,
+        filters: { auth_user_id: authUser.id },
+        limit: 1,
+      })
+      .then((rows) => rows[0] ?? null);
   },
 };

@@ -64,7 +64,13 @@ export type SupabaseSession = {
   refresh_token?: string;
   token_type?: string;
   expires_in?: number;
-  user?: unknown;
+  user?: SupabaseAuthUser;
+};
+
+export type SupabaseAuthUser = {
+  id: string;
+  email?: string;
+  phone?: string;
 };
 
 export type ProductionImageStage = "raw-material" | "metallisation" | "slitting";
@@ -287,6 +293,9 @@ export const supabaseStorage = {
 };
 
 export const supabaseAuth = {
+  getUser() {
+    return supabaseRequest<SupabaseAuthUser>("/auth/v1/user");
+  },
   sendOtp(phone: string) {
     return supabaseRequest<{ message_id?: string }>("/auth/v1/otp", {
       method: "POST",
