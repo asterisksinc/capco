@@ -82,7 +82,10 @@ create policy "roles_read_authenticated" on public.roles for select to authentic
 drop policy if exists "profiles_read_scoped" on public.profiles;
 create policy "profiles_read_scoped" on public.profiles for select to authenticated
 using (
-  public.is_admin_role()
+  -- Only the super admin may read every profile. Production Head remains an
+  -- admin role for workflow data, but profile reads must stay hierarchy-scoped;
+  -- otherwise an unfiltered current-profile lookup can return Super Admin.
+  public.has_any_role(array['super_admin'])
   or id = public.current_profile_id()
   or reports_to = public.current_profile_id()
   or id = public.current_manager_profile_id()

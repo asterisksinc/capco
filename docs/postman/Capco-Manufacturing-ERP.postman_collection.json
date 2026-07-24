@@ -9,6 +9,7 @@
     { "key": "NEXT_PUBLIC_BACKEND_URL", "value": "http://localhost:3000" },
     { "key": "anonKey", "value": "your_supabase_anon_key" },
     { "key": "accessToken", "value": "" },
+    { "key": "authUserId", "value": "" },
     { "key": "productionImageBucket", "value": "production-stage-images" },
     { "key": "productionImageObjectPath", "value": "raw-material/RM-9001/raw-material.jpg" },
     { "key": "rawMaterialImageUrl", "value": "https://YOUR-PROJECT-REF.supabase.co/storage/v1/object/public/production-stage-images/raw-material/RM-9001/raw-material.jpg" },
@@ -100,7 +101,20 @@
         "url": "{{supabaseUrl}}/auth/v1/verify",
         "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919900000001\",\n  \"token\": \"123456\",\n  \"type\": \"sms\"\n}" },
         "description": "Success response: { \"access_token\": \"...\", \"user\": {} }\nError response: { \"message\": \"Token has expired or is invalid\" }"
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "if (body.access_token) pm.collectionVariables.set('accessToken', body.access_token);",
+              "if (body.user?.id) pm.collectionVariables.set('authUserId', body.user.id);"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "Auth - Password Login",
@@ -112,7 +126,32 @@
         ],
         "url": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
         "body": { "mode": "raw", "raw": "{\n  \"email\": \"superadmin@capco.local\",\n  \"password\": \"Capco@123\"\n}" },
-        "description": "Success response: { \"access_token\": \"...\" }\nError response: { \"error_description\": \"Invalid login credentials\" }"
+        "description": "Success response: { \"access_token\": \"...\" }\nThe test script automatically replaces the collection accessToken.\nError response: { \"error_description\": \"Invalid login credentials\" }"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "if (body.access_token) pm.collectionVariables.set('accessToken', body.access_token);",
+              "if (body.user?.id) pm.collectionVariables.set('authUserId', body.user.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile - Current",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "apikey", "value": "{{anonKey}}" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{supabaseUrl}}/rest/v1/profiles?select=id,auth_user_id,full_name,email,phone,status,roles(code,name)&auth_user_id=eq.{{authUserId}}&limit=1",
+        "description": "Returns only the profile linked to the user from the most recent successful login."
       }
     },
     {
