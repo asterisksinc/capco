@@ -51,7 +51,7 @@ const STAGE_OPTIONS = ["Slitting", "Ready for Winding", "Completed"];
 
 const statusFilterSlitting: EnumFilter = { label: "Stage", key: "stage", options: STAGE_OPTIONS };
 const textFiltersSlitting: TextFilter[] = [
-  { label: "Stock ID", key: "stockId", placeholder: "Search..." },
+  { label: "Product No", key: "stockId", placeholder: "Search..." },
   { label: "Linked WO ID", key: "linkedWoId", placeholder: "Search..." },
   { label: "Grade", key: "grade" },
 ];
@@ -83,7 +83,7 @@ const filterConfigMet: FilterConfig = {
 
 const stockConfig: TableConfig<any> = {
   columns: [
-    { key: "stockId", label: "STOCK ID", type: "text", sortable: true },
+    { key: "stockId", label: "Product No", type: "text", sortable: true },
     { key: "weight", label: "Weight", type: "text", sortable: true },
     { key: "grossWeight", label: "Gross Weight", type: "text", sortable: true },
     { key: "usedWeight", label: "Used Weight", type: "text", sortable: true },
@@ -132,8 +132,8 @@ export default function PersonBStockPage() {
           stockId: row.stock_no || row.id,
           linkedWoId: row.work_orders?.work_order_no || "-",
           weight: row.weight_kg ? String(row.weight_kg) : "-",
-          grossWeight: row.gross_weight_kg ? String(row.gross_weight_kg) : "-",
-          usedWeight: row.used_weight_kg ? String(row.used_weight_kg) : "-",
+          grossWeight: row.gross_weight_kg || row.slitting?.gross_weight_kg ? String(row.gross_weight_kg || row.slitting?.gross_weight_kg) : "-",
+          usedWeight: row.used_weight_kg || row.slitting?.used_weight_kg ? String(row.used_weight_kg || row.slitting?.used_weight_kg) : "-",
           width: row.width_m ? String(row.width_m) : "-",
           micron: row.micron ? String(row.micron) : "-",
           grade: row.grade || "-",

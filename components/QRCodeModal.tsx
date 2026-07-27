@@ -76,6 +76,7 @@ export function QRCodeModal({
     } else if (type === 'MC') {
       fields.push({ label: 'Coil No', value: String(data.coilNo || id || '-') });
       fields.push({ label: 'RM ID', value: String(data.rmId || '-') });
+      fields.push({ label: 'Factory Wastage', value: data.factoryWastageWeight ? `${data.factoryWastageWeight} Kgs` : '-' });
       fields.push({ label: 'Weight', value: data.weight ? `${data.weight} Kgs` : '-' });
       fields.push({ label: 'Date', value: formatDate(data.date) });
       fields.push({ label: 'Status', value: String(data.status || '-') });

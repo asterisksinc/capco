@@ -2,7 +2,7 @@
 
 import { TablePagination } from "@/components/table/TablePagination";
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Search, X, Check, Package, Warehouse, Activity, Archive, QrCode, Download, Trash2, Mail, Loader2 } from "lucide-react";
+import { Plus, Search, X, Check, Package, Warehouse, Activity, Archive, QrCode, Download, Trash2, Mail, Loader2, Edit2 } from "lucide-react";
 import { inventoryService } from "@/src/services/inventoryService";
 import { MobileHeader } from "@/components/MobileHeader";
 import { QRCodeModal, type QRModalData } from "@/components/QRCodeModal";
@@ -11,7 +11,7 @@ import * as XLSX from "xlsx";
 
 import { productionStageService } from "@/src/services/productionStageService";
 
-const micronOptions = ["2", "2.5", "3", "3.5", "4", "4.5", "4.5HT", "5", "5.5", "6", "6.5", "7", "7.5"];
+const micronOptions = ["3", "3.5", "4", "4.5HT", "5", "5.5", "5.5HT", "6", "6HT", "6.5", "6.5HT", "7", "7.5", "8.0", "9.0", "10.0", "12.0"];
 const supplierOptions = ["VedaCap Industries", "ElectroForge Capacitors", "NextGen Metallic Pvt Ltd"];
 
 function StatusBadge({ status }: { status: string }) {
@@ -65,6 +65,18 @@ export default function AdminInventoryPage() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [qrData, setQrData] = useState<QRModalData | null>(null);
 
+  // Bulk Actions states
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkUpdateField, setBulkUpdateField] = useState<"Micron" | "Supplier" | "">("");
+  const [bulkUpdateValue, setBulkUpdateValue] = useState("");
+
+  // Upload Material states
+  const [uploadStep, setUploadStep] = useState<1 | 2>(1);
+  const [uploadMicron, setUploadMicron] = useState(micronOptions[0]);
+  const [uploadSupplier, setUploadSupplier] = useState(supplierOptions[0]);
+  const [parsedUploadRows, setParsedUploadRows] = useState<any[]>([]);
+
   // Manual Add Form states
   const [addStep, setAddStep] = useState<1 | 2 | 3>(1);
   const [form, setForm] = useState({ ...defaultForm });
@@ -94,6 +106,8 @@ export default function AdminInventoryPage() {
         wastageWeight: item.wastage_weight_kg != null ? `${item.wastage_weight_kg}kgs` : "-",
         damagedWeight: "-",
         temperature: item.temperature_c != null ? `${item.temperature_c}°C` : "-",
+        packageNo: item.package_no || "-",
+        coreInch: item.core_inch != null ? String(item.core_inch) : "-",
         supplier: item.supplier || "-",
         date: item.date_received ? new Date(item.date_received).toLocaleDateString("en-GB") : "-",
         status: item.status || "In Inventory"
@@ -266,30 +280,29 @@ export default function AdminInventoryPage() {
   const mapRowToInventoryItem = (row: any) => {
     const normalizedRow: Record<string, any> = {};
     for (const [key, val] of Object.entries(row)) {
-      const normKey = key.toLowerCase().trim().replace(/[\s_-]+/g, "");
+      const normKey = key.toLowerCase().trim().replace(/[\s_\.\(\)-]+/g, "");
       normalizedRow[normKey] = val;
     }
 
-    const rawMaterialId = normalizedRow["rawmaterialid"] || normalizedRow["materialid"] || normalizedRow["id"];
     const rollId = normalizedRow["rollid"] || normalizedRow["rollno"] || "";
-    const micron = parseFloat(normalizedRow["micron"] || "4.5");
     const width = parseFloat(normalizedRow["width"] || "1.0");
     let weight = parseFloat(normalizedRow["weight"] || "0");
     let netWeight = parseFloat(normalizedRow["netweight"] || weight);
     let grossWeight = parseFloat(normalizedRow["grossweight"] || weight);
+    const packageNo = normalizedRow["packageno"] || "";
+    const coreInch = parseFloat(normalizedRow["coreinch"] || "0");
+    
+    // Defaulting these since they are removed from CSV
     let usedWeight = parseFloat(normalizedRow["usedweight"] || "0");
     let wastageWeight = parseFloat(normalizedRow["wastageweight"] || "0");
     let damagedWeight = parseFloat(normalizedRow["damagedweight"] || "0");
-    const temperature = parseFloat(normalizedRow["temperature"] || "25");
-    const supplier = normalizedRow["supplier"] || supplierOptions[0];
-    let status = normalizedRow["status"] || "In Inventory";
+    const temperature = 25;
+    let status = "In Inventory";
 
-    if (!rawMaterialId || !rollId) return null;
+    if (!rollId) return null;
 
     return {
-      raw_material_code: String(rawMaterialId).trim().toUpperCase(),
       roll_no: String(rollId).trim(),
-      micron,
       width_m: width,
       net_weight_kg: netWeight,
       gross_weight_kg: grossWeight,
@@ -297,8 +310,9 @@ export default function AdminInventoryPage() {
       wastage_weight_kg: wastageWeight,
       damaged_weight_kg: damagedWeight,
       temperature_c: temperature,
-      supplier: String(supplier).trim(),
-      status: (status === "Being Used" || status === "Used Completely") ? status : "In Inventory"
+      package_no: String(packageNo).trim(),
+      core_inch: coreInch,
+      status: "In Inventory"
     };
   };
 
@@ -328,18 +342,48 @@ export default function AdminInventoryPage() {
         });
 
         if (validItems.length > 0) {
-          await inventoryService.importRows(validItems as any[]);
-          await fetchInventory();
+          setParsedUploadRows(validItems);
+          setUploadStep(2);
+        } else {
+          alert("No valid rows found in the uploaded file.");
         }
-
-        alert(`Successfully imported ${validItems.length} raw material items. ${skippedCount} invalid rows skipped.`);
-        setIsUploadModalOpen(false);
       } catch (err) {
         console.error(err);
         alert("Failed to parse file. Please verify that the Excel or CSV template is correct.");
       }
     };
     reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
+  const handleUploadSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const { nextRmIdNum } = getNextSequentialIds(inventoryItems);
+      let currentRmIdNum = nextRmIdNum;
+      
+      const finalRows = parsedUploadRows.map((row) => {
+        const rawMaterialCode = `RM-${String(currentRmIdNum).padStart(4, "0")}`;
+        currentRmIdNum++;
+        return {
+          ...row,
+          raw_material_code: rawMaterialCode,
+          micron: Number(uploadMicron),
+          supplier: uploadSupplier,
+        };
+      });
+
+      await inventoryService.importRows(finalRows);
+      await fetchInventory();
+      alert(`Successfully imported ${finalRows.length} raw material items.`);
+      setIsUploadModalOpen(false);
+      setUploadStep(1);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to import rows. There may be a conflict or network issue.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Export Flow
@@ -411,6 +455,73 @@ export default function AdminInventoryPage() {
     setIsExportModalOpen(false);
   };
 
+  // Bulk Actions
+  const toggleAllSelection = () => {
+    if (selectedIds.size === paginatedData.length && paginatedData.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      const newSelected = new Set(selectedIds);
+      paginatedData.forEach(row => {
+        if (row.id) newSelected.add(row.id);
+      });
+      setSelectedIds(newSelected);
+    }
+  };
+
+  const toggleRowSelection = (id: string) => {
+    if (!id) return;
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkUpdate = async () => {
+    if (!bulkUpdateField || !bulkUpdateValue || selectedIds.size === 0) return;
+    
+    // Optimistic UI Update
+    const updatedItems = inventoryItems.map(item => {
+      if (selectedIds.has(item.id)) {
+        return {
+          ...item,
+          micron: bulkUpdateField === "Micron" ? bulkUpdateValue : item.micron,
+          supplier: bulkUpdateField === "Supplier" ? bulkUpdateValue : item.supplier,
+        };
+      }
+      return item;
+    });
+    setInventoryItems(updatedItems);
+    
+    // TODO: call inventoryService.update(id, payload) here once bulk-edit backend is ready
+    // Array.from(selectedIds).forEach(id => {
+    //   inventoryService.update(id, { [bulkUpdateField.toLowerCase()]: bulkUpdateValue });
+    // });
+    
+    setSelectedIds(new Set());
+    setIsBulkModalOpen(false);
+    setBulkUpdateField("");
+    setBulkUpdateValue("");
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    
+    // Optimistic UI Update
+    const updatedItems = inventoryItems.filter(item => !selectedIds.has(item.id));
+    setInventoryItems(updatedItems);
+    
+    // TODO: call inventoryService.remove(id) here once bulk-delete backend is ready
+    // Array.from(selectedIds).forEach(id => {
+    //   inventoryService.remove(id);
+    // });
+    
+    setSelectedIds(new Set());
+    setIsBulkModalOpen(false);
+  };
+
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col overflow-x-hidden">
       <MobileHeader title="Inventory" />
@@ -429,7 +540,7 @@ export default function AdminInventoryPage() {
               <Download className="w-4.5 h-4.5" />
               Export Options
             </button>
-            <button onClick={() => setIsUploadModalOpen(true)} className="h-[40px] px-4 bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] flex items-center gap-2 text-[14px] font-medium transition-colors hover:bg-[#F5F7FA]">
+            <button onClick={() => { setUploadStep(1); setIsUploadModalOpen(true); }} className="h-[40px] px-4 bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] flex items-center gap-2 text-[14px] font-medium transition-colors hover:bg-[#F5F7FA]">
               Import CSV/Excel
             </button>
             <button onClick={openAddModal} className="h-[40px] px-4 bg-[#00B6E2] text-white rounded-[6px] flex items-center gap-2 text-[14px] font-medium hover:bg-[#0092b5] transition-colors">
@@ -447,7 +558,7 @@ export default function AdminInventoryPage() {
           <button onClick={openAddModal} className="h-[36px] bg-[#00B6E2] text-white rounded-[6px] text-[12px] font-medium flex items-center justify-center gap-1">
             <Plus className="w-3.5 h-3.5" /> Add
           </button>
-          <button onClick={() => setIsUploadModalOpen(true)} className="h-[36px] bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] text-[12px] font-medium flex items-center justify-center">
+          <button onClick={() => { setUploadStep(1); setIsUploadModalOpen(true); }} className="h-[36px] bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] text-[12px] font-medium flex items-center justify-center">
             Import
           </button>
           <button onClick={() => setIsExportModalOpen(true)} className="h-[36px] bg-white border border-[#00B6E2] text-[#00B6E2] rounded-[6px] text-[12px] font-medium flex items-center justify-center">
@@ -501,6 +612,30 @@ export default function AdminInventoryPage() {
           })}
         </section>
 
+        {/* SELECTION BANNER */}
+        {selectedIds.size > 0 && (
+          <section className="bg-[#f1fcff] border border-[#00B6E2] rounded-[8px] px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#1E40AF]">
+              <div className="w-5 h-5 rounded flex items-center justify-center bg-[#3B82F6] text-white">
+                <Check className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[14px] font-medium">
+                {selectedIds.size} Raw Material{selectedIds.size > 1 ? "s" : ""} selected
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsBulkModalOpen(true)} className="h-[32px] px-4 bg-[#00B6E2] text-white rounded-[6px] text-[13px] font-medium flex items-center gap-2 hover:bg-[#0092b5] transition-colors">
+                <Edit2 className="w-3.5 h-3.5" />
+                Bulk Update
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="h-[32px] px-3 bg-white border border-[#00B6E2] text-[#00B6E2] rounded-[6px] text-[13px] font-medium hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
+                <X className="w-3.5 h-3.5" />
+                Cancel
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* TOOLBAR */}
         <section className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-[400px]">
@@ -515,6 +650,14 @@ export default function AdminInventoryPage() {
             <table className="w-full text-left border-collapse min-w-[1200px]">
               <thead>
                 <tr className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
+                  <th className="px-4 py-[12px] w-[40px]">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-[#DDE1E8] text-[#00B6E2] focus:ring-[#00B6E2]"
+                      checked={selectedIds.size === paginatedData.length && paginatedData.length > 0}
+                      onChange={toggleAllSelection}
+                    />
+                  </th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Raw Material ID</th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Roll ID</th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Micron</th>
@@ -525,6 +668,8 @@ export default function AdminInventoryPage() {
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Wastage/Left Weight</th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Damaged Weight</th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Temperature</th>
+                  <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Package No</th>
+                  <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Core (Inch)</th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Supplier</th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">Date Received</th>
                   <th className="px-4 py-[12px] text-[13px] font-semibold text-[#667085]">QR Code</th>
@@ -544,6 +689,14 @@ export default function AdminInventoryPage() {
                 ) : paginatedData.length > 0 ? (
                   paginatedData.map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-4 w-[40px]">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-[#DDE1E8] text-[#00B6E2] focus:ring-[#00B6E2]"
+                          checked={row.id ? selectedIds.has(row.id) : false}
+                          onChange={() => row.id && toggleRowSelection(row.id)}
+                        />
+                      </td>
                       <td className="px-4 py-4 text-[14px] text-[#00B6E2] font-semibold whitespace-nowrap">{row.rawMaterialId}</td>
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.rollId}</td>
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
@@ -554,6 +707,8 @@ export default function AdminInventoryPage() {
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.wastageWeight ?? "-"}</td>
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.damagedWeight ?? "-"}</td>
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.temperature ?? "-"}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.packageNo ?? "-"}</td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.coreInch ?? "-"}</td>
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.supplier}</td>
                       <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
@@ -719,28 +874,65 @@ export default function AdminInventoryPage() {
             </div>
 
             <div className="p-6 flex flex-col gap-5">
-              <div className="border-2 border-dashed border-[#00B6E2] bg-[#F0FDFF] rounded-[12px] flex flex-col items-center justify-center py-10 px-4 cursor-pointer hover:bg-[#E6F8FC] transition-colors relative">
-                <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                <Package className="w-8 h-8 text-[#00B6E2] mb-2" />
-                <span className="text-[15px] font-medium text-[#171717]">Click to upload or drag file here</span>
-                <span className="text-[12px] text-[#5C5C5C] mt-1">Accepts CSV or Excel (.xlsx) files</span>
-              </div>
+              {uploadStep === 1 ? (
+                <>
+                  <div className="border-2 border-dashed border-[#00B6E2] bg-[#F0FDFF] rounded-[12px] flex flex-col items-center justify-center py-10 px-4 cursor-pointer hover:bg-[#E6F8FC] transition-colors relative">
+                    <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    <Package className="w-8 h-8 text-[#00B6E2] mb-2" />
+                    <span className="text-[15px] font-medium text-[#171717]">Click to upload or drag file here</span>
+                    <span className="text-[12px] text-[#5C5C5C] mt-1">Accepts CSV or Excel (.xlsx) files</span>
+                  </div>
 
-              <div className="rounded-[8px] bg-[#F9FAFB] border border-[#EBEBEB] p-4 flex flex-col gap-2">
-                <p className="text-[13px] font-semibold text-[#171717]">Template Setup</p>
-                <p className="text-[12px] text-[#5C5C5C] leading-normal">
-                  Make sure your file columns match the template: <span className="font-semibold text-black">Raw Material ID, Roll ID, Micron, Width, Net Weight, Gross Weight, Temperature, Supplier, Date, Status</span>.
-                </p>
-                <a href="/sample_inventory.csv" download className="text-[#00B6E2] hover:underline font-semibold text-[13px] mt-1 flex items-center gap-1.5 self-start">
-                  <Download className="w-3.5 h-3.5" /> Download Sample CSV Template
-                </a>
-              </div>
+                  <div className="rounded-[8px] bg-[#F9FAFB] border border-[#EBEBEB] p-4 flex flex-col gap-2">
+                    <p className="text-[13px] font-semibold text-[#171717]">Template Setup</p>
+                    <p className="text-[12px] text-[#5C5C5C] leading-normal">
+                      Make sure your file columns match the template: <span className="font-semibold text-black">S.No, Roll ID, Width, Net Weight, Gross Weight, Package No, Core(Inch)</span>.
+                    </p>
+                    <a href="/sample_inventory.csv" download className="text-[#00B6E2] hover:underline font-semibold text-[13px] mt-1 flex items-center gap-1.5 self-start">
+                      <Download className="w-3.5 h-3.5" /> Download Sample CSV Template
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-[10px] border border-[#DDE1E8] bg-[#FAFCFF] p-4">
+                    <p className="text-[15px] font-semibold text-[#1F2937] mb-1">Step 2: Batch Details</p>
+                    <p className="text-[13px] text-[#6B7280]">Select the Micron and Supplier to apply to all {parsedUploadRows.length} imported rows.</p>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[13px] font-medium text-[#171717]">Micron</label>
+                      <select value={uploadMicron} onChange={(e) => setUploadMicron(e.target.value)} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
+                        {micronOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[13px] font-medium text-[#171717]">Supplier</label>
+                      <select value={uploadSupplier} onChange={(e) => setUploadSupplier(e.target.value)} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
+                        {supplierOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#EBEBEB] bg-[#FAFAFA]">
-              <button onClick={() => setIsUploadModalOpen(false)} className="h-[38px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[13px] font-medium rounded-[6px] hover:bg-[#F5F7FA]">
-                Cancel
-              </button>
+              {uploadStep === 1 ? (
+                <button onClick={() => setIsUploadModalOpen(false)} className="h-[38px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[13px] font-medium rounded-[6px] hover:bg-[#F5F7FA]">
+                  Cancel
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => setUploadStep(1)} disabled={isSubmitting} className="h-[38px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[13px] font-medium rounded-[6px] hover:bg-[#F5F7FA]">
+                    Back
+                  </button>
+                  <button onClick={handleUploadSubmit} disabled={isSubmitting} className="h-[38px] px-5 bg-[#00B6E2] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {isSubmitting ? "Importing..." : "Import List"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -795,6 +987,108 @@ export default function AdminInventoryPage() {
               </button>
               <button onClick={handleExportSubmit} disabled={isExporting} className="h-[38px] px-5 bg-[#00B6E2] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors flex items-center gap-1.5 disabled:opacity-50">
                 {isExporting ? "Exporting..." : "Download & Export"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK ACTIONS MODAL */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#171717]/40 backdrop-blur-sm" onClick={() => setIsBulkModalOpen(false)} />
+          <div className="relative w-full max-w-[700px] bg-white rounded-[12px] shadow-lg flex flex-col overflow-hidden animate-slide-up">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#EBEBEB]">
+              <h2 className="text-[18px] font-semibold text-[#171717]">Bulk Actions - {selectedIds.size} raw material{selectedIds.size > 1 ? "s" : ""} selected</h2>
+              <button onClick={() => setIsBulkModalOpen(false)} className="p-2 hover:bg-[#F5F7FA] rounded-[8px] transition-colors">
+                <X className="w-5 h-5 text-[#5C5C5C]" />
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#F9FAFB]">
+              {/* Left Panel: Bulk Update */}
+              <div className="flex flex-col gap-4 bg-white p-5 rounded-[10px] border border-[#EBEBEB] shadow-sm">
+                <div className="flex items-center gap-2 text-[#00B6E2] font-medium text-[15px] mb-1">
+                  <Check className="w-4 h-4" />
+                  Bulk Update
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label className="text-[13px] font-medium text-[#171717]">Field to Update</label>
+                  <select 
+                    value={bulkUpdateField} 
+                    onChange={(e) => {
+                      const val = e.target.value as "Micron" | "Supplier" | "";
+                      setBulkUpdateField(val);
+                      if (val === "Micron") setBulkUpdateValue(micronOptions[0]);
+                      else if (val === "Supplier") setBulkUpdateValue(supplierOptions[0]);
+                      else setBulkUpdateValue("");
+                    }} 
+                    className="h-[40px] px-3 bg-white border border-[#DDE1E8] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] focus:ring-1 focus:ring-[#00B6E2]"
+                  >
+                    <option value="">Select Field</option>
+                    <option value="Micron">Micron</option>
+                    <option value="Supplier">Supplier</option>
+                  </select>
+                </div>
+
+                {bulkUpdateField && (
+                  <div className="flex flex-col gap-2 animate-fade-in">
+                    <label className="text-[13px] font-medium text-[#171717]">New Value</label>
+                    <select 
+                      value={bulkUpdateValue} 
+                      onChange={(e) => setBulkUpdateValue(e.target.value)} 
+                      className="h-[40px] px-3 bg-white border border-[#DDE1E8] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] focus:ring-1 focus:ring-[#00B6E2]"
+                    >
+                      {bulkUpdateField === "Micron" ? (
+                        micronOptions.map(o => <option key={o} value={o}>{o}</option>)
+                      ) : (
+                        supplierOptions.map(o => <option key={o} value={o}>{o}</option>)
+                      )}
+                    </select>
+                  </div>
+                )}
+
+                <button 
+                  onClick={handleBulkUpdate} 
+                  disabled={!bulkUpdateField || !bulkUpdateValue} 
+                  className="mt-2 h-[40px] w-full bg-[#00B6E2] text-white rounded-[6px] text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-[#0092b5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Check className="w-4 h-4" />
+                  Update {selectedIds.size} Item{selectedIds.size > 1 ? "s" : ""}
+                </button>
+              </div>
+
+              {/* Right Panel: Bulk Delete */}
+              <div className="flex flex-col gap-4 bg-[#FEF2F2] p-5 rounded-[10px] border border-[#FCA5A5] shadow-sm">
+                <div className="flex items-center gap-2 text-[#DC2626] font-medium text-[15px] mb-1">
+                  <Trash2 className="w-4 h-4" />
+                  Bulk Delete
+                </div>
+                
+                <p className="text-[13px] text-[#991B1B] leading-relaxed">
+                  Permanently delete all selected raw materials. This action cannot be undone.
+                </p>
+
+                <div className="mt-auto pt-4">
+                  <button 
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to permanently delete ${selectedIds.size} raw material(s)?`)) {
+                        handleBulkDelete();
+                      }
+                    }} 
+                    className="h-[40px] w-full bg-white border border-[#F87171] text-[#DC2626] rounded-[6px] text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-[#FEE2E2] transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedIds.size} Item{selectedIds.size > 1 ? "s" : ""}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center p-4 border-t border-[#EBEBEB] bg-white">
+              <button onClick={() => setIsBulkModalOpen(false)} className="h-[40px] w-full bg-[#F3F4F6] text-[#374151] font-medium rounded-[8px] text-[14px] hover:bg-[#E5E7EB] transition-colors">
+                Close
               </button>
             </div>
           </div>

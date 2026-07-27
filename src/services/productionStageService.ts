@@ -19,6 +19,7 @@ export type MetallisationPayload = {
   metallisation_image_url?: string;
   metallisation_review_image_url?: string;
   qc_details?: Json;
+  status?: WorkflowStatus;
 };
 
 export type SlittingPayload = {
@@ -121,7 +122,7 @@ export const productionStageService = {
       factory_wastage_kg: payload.factory_wastage_kg ?? 0,
       next_stage: "Slitting",
       stage: "Metallisation",
-      status: "Completed" satisfies WorkflowStatus,
+      status: payload.status ?? ("Completed" satisfies WorkflowStatus),
     });
     if (payload.metallisation_no) return createMetallisation(payload.metallisation_no);
     return supabaseRest.rpc<string>("capco_next_serial", { p_entity: "metallisation_coil" }).then(createMetallisation);

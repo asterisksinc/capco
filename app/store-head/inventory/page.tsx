@@ -208,6 +208,8 @@ const filteredData = inventoryItems.filter((row) => {
                 "Gross Weight": row.gross_weight_kg ?? "",
                 "Used Weight": row.used_weight_kg ?? "",
                 "Temperature": row.temperature_c ?? "",
+                "Package No": row.package_no ?? "",
+                "Core (Inch)": row.core_inch ?? "",
                 "Supplier": row.supplier ?? "",
                 "Date": row.date_received ?? "",
                 "Status": row.status ?? "",
@@ -236,6 +238,8 @@ const filteredData = inventoryItems.filter((row) => {
                   <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">Wastage/Left Weight</th>
                   <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">Damaged Weight</th>
                   <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">Temperature</th>
+                  <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">Package No</th>
+                  <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">Core (Inch)</th>
                   <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">Supplier</th>
                   <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">Date</th>
                   <th className="px-4 py-[11px] text-[13px] font-semibold text-[#667085]">QR</th>
@@ -255,6 +259,8 @@ const filteredData = inventoryItems.filter((row) => {
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.wastage_weight_kg != null ? `${row.wastage_weight_kg}kgs` : "-"}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.damaged_weight_kg != null ? `${row.damaged_weight_kg}kgs` : "-"}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.temperature_c ?? "-"}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.package_no ?? "-"}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.core_inch ?? "-"}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.supplier}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date_received ?? "-"}</td>
                     <td className="px-4 py-4 whitespace-nowrap">

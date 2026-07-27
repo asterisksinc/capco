@@ -90,6 +90,7 @@ type SlittingForm = {
   qcImage: { url: string; name: string; id: string; file: File } | null;
   remarks: string;
   idempotencyKey: string;
+  reason?: string;
 };
 
 const micronOptions = ["2", "2.5", "3", "3.5", "4", "4.5", "4.5HT", "5", "5.5", "6", "6.5", "7", "7.5"];
@@ -119,11 +120,9 @@ const metallisationConfig: TableConfig<any> = {
   columns: [
     { key: "coilNo", label: "Coil No.", type: "text", sortable: true },
     { key: "rmId", label: "RM ID", type: "text", sortable: true },
-    // { key: "machineNo", label: "Machine No.", type: "text", sortable: true },
-    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "rmWeight", label: "RM Weight", type: "text", sortable: true },
     { key: "factoryWastageWeight", label: "Factory Wastage Weight", type: "number", sortable: true },
-    // { key: "opticalDensity", label: "Optical Density (OD)", type: "text", sortable: true },
-    // { key: "resistance", label: "Resistance", type: "text", sortable: true },
+    { key: "weight", label: "Metallisation Weight", type: "text", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "nextStage", label: "Next Stage", type: "text", sortable: false },
     { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: WO_STATUS_OPTIONS },
@@ -272,12 +271,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       metallisationRows: (woData.metallisation || []).map((met: any) => ({
         coilNo: met.metallisation_no || met.id,
         metallisation_id: met.id,
-        rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
-        // machineNo: met.machine_no || "-",
-        weight: met.weight_kg || "0",
+        rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
         factoryWastageWeight: met.factory_wastage_kg || "0",
-        // opticalDensity: met.optical_density || "0",
-        // resistance: met.resistance_ohms || "0",
+        weight: met.weight_kg || "0",
         timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
         nextStage: "Slitting",
         status: met.status || "Completed",
@@ -567,6 +563,18 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                 slitting_review_image_url: bagIdx === 0 ? slittingImageUrl : undefined,
               });
               slittingRecords.push(slittingRecord);
+
+              await stockService.create({
+                stock_no: (slittingRecord as any).product_no || bag.productNo,
+                slitting_id: (slittingRecord as any).id,
+                work_order_id: woData.id,
+                weight_kg: parseFloat(bag.weight || "0"),
+                width_m: parseFloat(woData.width_m || woData.width) || 0,
+                micron: parseFloat(woData.micron) || 0,
+                grade: bag.grade,
+                quantity: 1,
+                stage: "Stock",
+              });
             } catch (err: any) {
               throw err;
             }
@@ -762,8 +770,13 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
           return (
             <div key={`slit-step1-${idx}`} className="rounded-[12px] border border-[#DDE1E8] p-4 bg-white relative">
               {coilData && (
-                <div className="absolute top-4 right-4 text-[13px] text-[#5C5C5C] font-medium bg-[#F4FBFF] border border-[#78CFFA] px-3 py-1 rounded-[6px]">
-                  Weight after Metallisation: <span className="font-semibold text-[#171717]">{coilData.weight || "0"} kgs</span>
+                <div className="absolute top-4 right-4 flex items-center gap-2">
+                  <div className="text-[13px] text-[#5C5C5C] font-medium bg-[#F4FBFF] border border-[#78CFFA] px-3 py-1 rounded-[6px]">
+                    Weight after Metallisation: <span className="font-semibold text-[#171717]">{coilData.weight || "0"} kgs</span>
+                  </div>
+                  <div className="text-[13px] text-[#5C5C5C] font-medium bg-[#F4FBFF] border border-[#78CFFA] px-3 py-1 rounded-[6px]">
+                    Added Weight: <span className="font-semibold text-[#171717]">{row.bags.reduce((acc, bag) => acc + (parseFloat(bag.weight) || 0), 0)} kgs</span>
+                  </div>
                 </div>
               )}
               <div className="flex items-center justify-between mb-4">
@@ -872,28 +885,52 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
     }
 
     const rows = slittingRowsInput;
-    return rows.map((item, idx) => (
-      <div key={`slit-${idx}`} className="flex flex-col gap-3 rounded-[12px] border border-[#78CFFA] bg-[#F4FBFF] p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-[14px] text-[#49526A]">
-          <p>Coil ID: {item.coilId || "-"}</p>
-          <p>No. of Bags: {item.noOfBags}</p>
-          <p>Total Weight: {item.bags.reduce((acc, bag) => acc + (parseFloat(bag.weight) || 0), 0)} kgs</p>
-        </div>
-        <div className="bg-white rounded-[8px] border border-[#78CFFA]/40 p-3 mt-1">
-          <p className="text-[13px] font-semibold text-[#171717] mb-2">Bags Details</p>
-          <div className="flex flex-col gap-2">
-            {item.bags.map((bag, bagIdx) => (
-              <div key={bag.id} className="text-[13px] bg-[#F4FBFF] border border-[#78CFFA]/60 rounded-[6px] px-3 py-2 text-[#49526A] flex flex-wrap gap-4 items-center">
-                <span className="font-medium text-[#00B6E2]">Bag {bagIdx + 1}</span>
-                <span><span className="text-[#8B8BA2]">ID:</span> {bag.productNo}</span>
-                <span><span className="text-[#8B8BA2]">Weight:</span> {bag.weight || "0"}kgs</span>
-                <span><span className="text-[#8B8BA2]">Grade:</span> {bag.grade}</span>
-              </div>
-            ))}
+    return rows.map((item, idx) => {
+      const coilData = coilLookup.get(item.coilId);
+      const metallisationWeight = parseFloat(coilData?.weight || "0");
+      const addedWeight = item.bags.reduce((acc, bag) => acc + (parseFloat(bag.weight) || 0), 0);
+      const remainingWeight = metallisationWeight - addedWeight;
+
+      return (
+        <div key={`slit-${idx}`} className="flex flex-col gap-3 rounded-[12px] border border-[#78CFFA] bg-[#F4FBFF] p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-[14px] text-[#49526A]">
+            <p>Coil ID: {item.coilId || "-"}</p>
+            <p>No. of Bags: {item.noOfBags}</p>
+            <p>Total Weight: {addedWeight} kgs</p>
           </div>
+          <div className="bg-white rounded-[8px] border border-[#78CFFA]/40 p-3 mt-1">
+            <p className="text-[13px] font-semibold text-[#171717] mb-2">Bags Details</p>
+            <div className="flex flex-col gap-2">
+              {item.bags.map((bag, bagIdx) => (
+                <div key={bag.id} className="text-[13px] bg-[#F4FBFF] border border-[#78CFFA]/60 rounded-[6px] px-3 py-2 text-[#49526A] flex flex-wrap gap-4 items-center">
+                  <span className="font-medium text-[#00B6E2]">Bag {bagIdx + 1}</span>
+                  <span><span className="text-[#8B8BA2]">ID:</span> {bag.productNo}</span>
+                  <span><span className="text-[#8B8BA2]">Weight:</span> {bag.weight || "0"}kgs</span>
+                  <span><span className="text-[#8B8BA2]">Grade:</span> {bag.grade}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {remainingWeight > 0 && (
+            <div className="mt-2 flex flex-col gap-3">
+              <div className="flex items-center justify-between bg-white border border-[#FCA5A5] rounded-[8px] p-3 text-[13px]">
+                <span className="font-medium text-[#B91C1C]">Slitting Item {idx + 1}</span>
+                <span className="font-semibold text-[#B91C1C]">Remaining Weight: {remainingWeight} kg</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-medium text-[#171717]">Reason for remaining weight</label>
+                <textarea
+                  value={item.reason || ""}
+                  onChange={(e) => updateSlittingRow(idx, { reason: e.target.value })}
+                  placeholder="Explain why the remaining weight was not converted into bags..."
+                  className="rounded-[8px] border border-[#DDE1E8] px-3 py-2 text-[14px] min-h-[80px] resize-none bg-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-    ));
+      );
+    });
   };
 
   return (
@@ -1183,7 +1220,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         const qrDetails: any = isRM
                           ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", weight: (row as any).weight ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
+                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", factoryWastageWeight: (row as any).factoryWastageWeight ?? "", weight: (row as any).weight ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
                             : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">

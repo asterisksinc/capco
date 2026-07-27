@@ -47,11 +47,9 @@ const metallisationConfig: TableConfig<any> = {
   columns: [
     { key: "coilNo", label: "Coil No.", type: "text", sortable: true },
     { key: "rmId", label: "RM ID", type: "text", sortable: true },
-    // { key: "machineNo", label: "Machine No.", type: "text", sortable: true },
-    { key: "weight", label: "Weight", type: "number", sortable: true },
+    { key: "rmWeight", label: "RM Weight", type: "number", sortable: true },
     { key: "factoryWastageWeight", label: "Factory Wastage Weight", type: "number", sortable: true },
-    // { key: "opticalDensity", label: "Optical Density (OD)", type: "text", sortable: true },
-    // { key: "resistance", label: "Resistance", type: "text", sortable: true },
+    { key: "weight", label: "Metallisation Weight", type: "number", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "nextStage", label: "Next Stage", type: "text", sortable: false },
     { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: WO_STATUS_OPTIONS },
@@ -134,11 +132,9 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
     return ((woData?.metallisation as any[]) || []).map((m) => ({
       coilNo: m.metallisation_no || "-",
       rmId: m.inventory?.raw_material_code || m.inventory?.roll_no || "-",
-      machineNo: m.machine_no || "-",
-      weight: m.weight_kg != null ? `${m.weight_kg}kgs` : "-",
+      rmWeight: m.inventory?.net_weight_kg ? `${m.inventory.net_weight_kg}kgs` : (m.inventory?.gross_weight_kg ? `${m.inventory.gross_weight_kg}kgs` : "-"),
       factoryWastageWeight: m.factory_wastage_kg != null ? `${m.factory_wastage_kg}kgs` : "-",
-      // opticalDensity: m.optical_density || "-",
-      // resistance: m.resistance_ohms != null ? `${m.resistance_ohms} Ohms` : "-",
+      weight: m.weight_kg != null ? `${m.weight_kg}kgs` : "-",
       timestamp: m.created_at
         ? new Date(m.created_at).toLocaleString("en-GB", {
           day: "2-digit", month: "short", year: "numeric",
@@ -415,7 +411,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
                         const qrDetails: any = isRM
                           ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
+                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", factoryWastageWeight: (row as any).factoryWastageWeight ?? "", weight: (row as any).weight.split("k")[0] ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
                             : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={key} className="px-4 py-3 whitespace-nowrap">

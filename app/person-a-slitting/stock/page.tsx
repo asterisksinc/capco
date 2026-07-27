@@ -33,7 +33,7 @@ const STAGE_OPTIONS = ["Slitting", "Ready for Winding", "Completed"];
 
 const statusFilter: EnumFilter = { label: "Stage", key: "stage", options: STAGE_OPTIONS };
 const textFilters: TextFilter[] = [
-  { label: "Stock ID", key: "stockId", placeholder: "Search..." },
+  { label: "Product No", key: "stockId", placeholder: "Search..." },
   { label: "Linked WO ID", key: "linkedWoId", placeholder: "Search..." },
   { label: "Grade", key: "grade" },
 ];
@@ -51,7 +51,7 @@ const filterConfig: FilterConfig = {
 
 const stockConfig: TableConfig<StockRow> = {
   columns: [
-    { key: "stockId", label: "STOCK ID", type: "text", sortable: true },
+    { key: "stockId", label: "Product No", type: "text", sortable: true },
     { key: "width", label: "Width", type: "text", sortable: true },
     { key: "micron", label: "Micron", type: "text", sortable: true },
     { key: "weight", label: "Weight", type: "text", sortable: true },
@@ -79,8 +79,8 @@ export default function OperatorSlittingStockPage() {
           width: row.width_m ? String(row.width_m) : "-",
           micron: row.micron ? String(row.micron) : "-",
           weight: row.weight_kg ? String(row.weight_kg) : "-",
-          grossWeight: row.gross_weight_kg ? String(row.gross_weight_kg) : "-",
-          usedWeight: row.used_weight_kg ? String(row.used_weight_kg) : "-",
+          grossWeight: row.gross_weight_kg || row.slitting?.gross_weight_kg ? String(row.gross_weight_kg || row.slitting?.gross_weight_kg) : "-",
+          usedWeight: row.used_weight_kg || row.slitting?.used_weight_kg ? String(row.used_weight_kg || row.slitting?.used_weight_kg) : "-",
           grade: row.grade || "-",
           stage: row.stage === "Stock" ? "Ready for Winding" : (row.stage || "Ready for Winding"),
           timestamp: new Date(row.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),

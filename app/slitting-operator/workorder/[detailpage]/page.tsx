@@ -55,8 +55,9 @@ const metallisationConfig: TableConfig<any> = {
   columns: [
     { key: "coilNo", label: "Coil No.", type: "text", sortable: true },
     { key: "rmId", label: "RM ID", type: "text", sortable: true },
-    { key: "weight", label: "Weight", type: "text", sortable: true },
+    { key: "rmWeight", label: "RM Weight", type: "text", sortable: true },
     { key: "factoryWastageWeight", label: "Factory Wastage Weight", type: "number", sortable: true },
+    { key: "weight", label: "Metallisation Weight", type: "text", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "nextStage", label: "Next Stage", type: "text", sortable: false },
     { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: WO_STATUS_OPTIONS },
@@ -124,8 +125,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
         coilNo: met.metallisation_no || met.id,
         metallisation_id: met.id,
         rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
-        weight: met.weight_kg || "0",
+        rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
         factoryWastageWeight: met.factory_wastage_kg || "0",
+        weight: met.weight_kg || "0",
         timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
         nextStage: "Slitting",
         status: met.status || "Completed",
@@ -613,7 +615,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         const qrType = isRM ? "RM" : "MC";
                         const qrDetails: any = isRM
                           ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split('k')[0] ?? "", grossWeight: (row as any).grossWeight.split('k')[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
-                          : { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", weight: (row as any).weight ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" };
+                          : { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", factoryWastageWeight: (row as any).factoryWastageWeight ?? "", weight: (row as any).weight ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
                             <button
