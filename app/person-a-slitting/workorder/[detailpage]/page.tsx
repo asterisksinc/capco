@@ -31,7 +31,7 @@ type DetailPageProps = {
   params: Promise<{ detailpage: string }>;
 };
 
-type TabType = "Raw Material" | "Metallisation" | "Slitting";
+type TabType = "RM" | "M" | "S";
 type ModalStep = 1 | 2 | 3;
 
 async function uploadSlittingImage(entityId: string, file: File): Promise<string> {
@@ -306,7 +306,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
     status: woData?.status || "Yet to Start",
   };
 
-  const [activeTab, setActiveTab] = useState<TabType>("Raw Material");
+  const [activeTab, setActiveTab] = useState<TabType>("RM");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState<ModalStep>(1);
   const [showValidationHint, setShowValidationHint] = useState(false);
@@ -342,9 +342,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
 
   const currentConfig = useMemo(() => {
     switch (activeTab) {
-      case "Raw Material": return rawMaterialConfig;
-      case "Metallisation": return metallisationConfig;
-      case "Slitting": return slittingConfig;
+      case "RM": return rawMaterialConfig;
+      case "M": return metallisationConfig;
+      case "S": return slittingConfig;
       default: return rawMaterialConfig;
     }
   }, [activeTab]);
@@ -352,9 +352,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   const currentData = useMemo(() => {
     if (!workOrderFlowData) return [];
     switch (activeTab) {
-      case "Raw Material": return workOrderFlowData.rawMaterialRows;
-      case "Metallisation": return workOrderFlowData.metallisationRows;
-      case "Slitting": return workOrderFlowData.slittingRows;
+      case "RM": return workOrderFlowData.rawMaterialRows;
+      case "M": return workOrderFlowData.metallisationRows;
+      case "S": return workOrderFlowData.slittingRows;
       default: return [];
     }
   }, [workOrderFlowData, activeTab]);
@@ -459,18 +459,18 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   };
 
   const isCurrentStepOneValid =
-    activeTab === "Metallisation"
+    activeTab === "M"
       ? metallisationRowsInput.every(isMetallisationRowValid)
       : slittingRowsInput.every(isSlittingRowValid);
 
-  const isStepTwoValid = activeTab === "Slitting" ? Boolean(slittingReviewRemarks.trim()) : true;
+  const isStepTwoValid = activeTab === "S" ? Boolean(slittingReviewRemarks.trim()) : true;
 
   const addCurrentItemToDraft = () => {
     if (!isCurrentStepOneValid) {
       setShowValidationHint(true);
       return;
     }
-    if (activeTab === "Metallisation") {
+    if (activeTab === "M") {
       setMetallisationRowsInput((prev) => [...prev, createMetallisationRow(availableRollIds[0] ?? "")]);
       return;
     }
@@ -516,7 +516,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   };
 
   const removeCurrentRow = (index: number) => {
-    if (activeTab === "Metallisation") {
+    if (activeTab === "M") {
       if (metallisationRowsInput.length === 1) return;
       setMetallisationRowsInput((prev) => prev.filter((_, idx) => idx !== index));
       return;
@@ -535,7 +535,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       setIsSubmitting(true);
       const user = await authService.getCurrentProfile();
 
-      if (activeTab === "Metallisation") {
+      if (activeTab === "M") {
         const payload = metallisationRowsInput;
         for (const item of payload) {
           const rmData = rmLookup.get(item.rmId);
@@ -556,7 +556,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
         });
       }
 
-      if (activeTab === "Slitting") {
+      if (activeTab === "S") {
         const payload = slittingRowsInput;
 
         let slittingImageUrl = undefined;
@@ -712,7 +712,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   };
 
   const renderStepOneForm = () => {
-    if (activeTab === "Metallisation") {
+    if (activeTab === "M") {
       return (
         <div className="flex flex-col gap-4">
           {metallisationRowsInput.map((row, idx) => (
@@ -899,7 +899,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   };
 
   const renderReviewCards = () => {
-    if (activeTab === "Metallisation") {
+    if (activeTab === "M") {
       const rows = metallisationRowsInput;
       return rows.map((item, idx) => (
         <div key={`met-${idx}`} className="rounded-[12px] border border-[#78CFFA] bg-[#F4FBFF] p-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-[14px] text-[#49526A]">
@@ -981,7 +981,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                     <p className="text-[13px] text-[#6B7280]">Review details before saving to logs.</p>
                   </div>
                   {renderReviewCards()}
-                  {activeTab === "Slitting" && (
+                  {activeTab === "S" && (
                     <div className="flex flex-col gap-2 rounded-[12px] border border-[#DDE1E8] p-4 bg-white">
                       <label className="text-[13px] font-medium text-[#171717]">Review Remarks</label>
                       <input value={slittingReviewRemarks} onChange={(e) => setSlittingReviewRemarks(e.target.value)} placeholder="Enter review remarks" className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
@@ -1071,7 +1071,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
               {modalStep === 2 && (
                 <>
                   <button onClick={() => setModalStep(1)} disabled={isSubmitting} className="h-[40px] px-2 md:px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[10px] md:text-[14px] font-medium rounded-[6px] hover:bg-gray-50">Back</button>
-                  {activeTab === "Slitting" && (
+                  {activeTab === "S" && (
                     <button onClick={() => submitCurrentStage(true)} disabled={isSubmitting || !isStepTwoValid} className={`h-[40px] px-2 md:px-4 text-[10px] md:text-[14px] font-medium rounded-[6px] flex items-center justify-center gap-2 border border-[#EBEBEB] bg-white text-[#171717] hover:bg-gray-50`}>
                       {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                       {!isSubmitting && <Printer className="w-4 h-4" />}
@@ -1154,7 +1154,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
             onDateRangeChange={setDateRange}
             onExport={() => {
               const exportData = currentData.map((row: any) => ({
-                ...(activeTab === "Raw Material" ? {
+                ...(activeTab === "RM" ? {
                   "Roll No": row.rollNo ?? "",
                   "Net Weight": row.netWeight ?? row.weight ?? "",
                   "Gross Weight": row.grossWeight ?? "",
@@ -1164,7 +1164,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                   "Supplier": row.supplier ?? "",
                   "Stage": row.stage ?? "",
                   "Status": row.status ?? "",
-                } : activeTab === "Metallisation" ? {
+                } : activeTab === "M" ? {
                   "Coil No": row.coilNo ?? "",
                   "RM ID": row.rollNo ?? "",
                   "RM Weight": row.rmWeight ?? "",
@@ -1188,7 +1188,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
             }}
           />
 
-          {activeTab !== "Raw Material" && activeTab !== "Metallisation" && (
+          {activeTab !== "RM" && activeTab !== "M" && (
             <button
               onClick={openModal}
               className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
@@ -1204,14 +1204,15 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
         {/* Scrollable tab bar on mobile */}
         <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
           <div className="flex items-center gap-2 border-b border-[#EBEBEB] pb-4 min-w-max">
-            {(["Raw Material", "Metallisation", "Slitting"] as TabType[]).map((tab) => (
+            {(["RM", "M", "S"] as TabType[]).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab as TabType)}
+                onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab
                   ? "bg-[#00B6E2] text-white"
                   : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
                   }`}
+                title={tab === "RM" ? "Raw Material" : tab === "M" ? "Metallisation" : "Slitting"}
               >
                 {tab}
               </button>
@@ -1242,8 +1243,8 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                   <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
                     {currentConfig.columns.map((col) => {
                       if (String(col.key) === "qr") {
-                        const isRM = activeTab === "Raw Material";
-                        const isMC = activeTab === "Metallisation";
+                        const isRM = activeTab === "RM";
+                        const isMC = activeTab === "M";
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
                         const qrDetails: any = isRM
@@ -1264,8 +1265,8 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         );
                       }
                       if (String(col.key) === "options") {
-                        const isRM = activeTab === "Raw Material";
-                        const isMC = activeTab === "Metallisation";
+                        const isRM = activeTab === "RM";
+                        const isMC = activeTab === "M";
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
                         const qrDetails: any = isRM
@@ -1275,7 +1276,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                             : { "Product No": (row as any).productNo ?? "", "RM ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
-                            {activeTab !== "Raw Material" ? (
+                            {activeTab !== "RM" ? (
                               <OptionsDropdown
                                 onEdit={() => alert(`Edit ${activeTab} Row ${idx}`)}
                                 onDelete={() => alert(`Delete ${activeTab} Row ${idx}`)}
@@ -1299,7 +1300,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                       }
                       const val = row[col.key];
                       let displayVal = val;
-                      if (activeTab === "Raw Material" && !val) {
+                      if (activeTab === "RM" && !val) {
                         const fallbackWeight = (row as any).netWeight ?? (row as any).weight ?? "-";
                         if (col.key === "actualWeight") displayVal = fallbackWeight;
                         else if (col.key === "usedWeight") displayVal = fallbackWeight;

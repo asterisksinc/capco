@@ -96,12 +96,17 @@ function StatusBadge({ status }: { status: string }) {
   return <span className="inline-flex items-center px-2 py-0.5 rounded-[12px] bg-gray-100 text-gray-700 text-[12px] font-medium leading-tight">{status}</span>;
 }
 
-export default function PersonBProductOrdersPage() {
-  const { store, deleteProductOrder } = useStore();
+export default function SupervisorProductOrdersPage() {
+  const { store, addProductOrder, updateProductOrder, deleteProductOrder } = useStore();
   const productOrders = store.productOrders;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
+
+  const generateProductOrderId = () => {
+    return `#PO-CC-${Math.floor(1000 + Math.random() * 9000)}`;
+  };
 
   const loadData = async () => {
     // using mock data via useStore hook
@@ -115,7 +120,7 @@ export default function PersonBProductOrdersPage() {
   const [qrData, setQrData] = useState<QRModalData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
-    poId: "PO-CC-4567",
+    poId: generateProductOrderId(),
     micron: "",
     width: "",
     product: "",
@@ -125,6 +130,38 @@ export default function PersonBProductOrdersPage() {
     customer: "",
     instructions: "",
   });
+
+  const openCreateModal = () => {
+    setIsEditMode(false);
+    setFormData({
+      poId: generateProductOrderId(),
+      micron: "",
+      width: "",
+      product: "",
+      grade: "",
+      specifications: "",
+      quantity: "",
+      customer: "",
+      instructions: "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (row: ProductOrderRow) => {
+    setIsEditMode(true);
+    setFormData({
+      poId: row.id,
+      micron: row.micron,
+      width: row.width,
+      product: row.product,
+      grade: row.grade,
+      specifications: row.specifications || "",
+      quantity: row.quantity,
+      customer: row.customer || "",
+      instructions: row.instructions || "",
+    });
+    setIsModalOpen(true);
+  };
 
   const {
     processedData,
@@ -150,31 +187,6 @@ export default function PersonBProductOrdersPage() {
     return state;
   });
 
-  const generateProductOrderId = () => `PO-CC-${String(Date.now()).slice(-6)}`;
-
-  const openEditModal = (order: ProductOrderRow) => {
-    setFormData({
-      poId: order.id,
-      micron: order.micron,
-      width: order.width,
-      product: order.product,
-      grade: order.grade,
-      specifications: order.specifications,
-      quantity: order.quantity,
-      customer: order.customer,
-      instructions: order.instructions,
-    });
-    setIsModalOpen(true);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-72px)] bg-white">
-        <Loader2 className="w-8 h-8 animate-spin text-[#00B6E2]" />
-      </div>
-    );
-  }
-
   const handleApplyFilters = (newFilters: FilterState) => {
     setTableFilters(newFilters);
   };
@@ -195,19 +207,7 @@ export default function PersonBProductOrdersPage() {
     }
   };
 
-  const filteredData = processedData.filter((row) => {
-    const f = tableFilters;
-    if (!(f.status as string[])?.includes(row.status)) return false;
-    if (!(f.stage as string[])?.includes(row.stage)) return false;
-    if (f.poId && !row.id.toLowerCase().includes((f.poId as string).toLowerCase())) return false;
-    if (f.customer && row.customer !== (f.customer as string)) return false;
-    if (f.grade && row.grade !== (f.grade as string)) return false;
-    if (f.quantityMin && parseInt(row.quantity) < parseInt(f.quantityMin as string)) return false;
-    if (f.quantityMax && parseInt(row.quantity) > parseInt(f.quantityMax as string)) return false;
-    return true;
-  });
-
-  const handleCreateOrder = async () => {
+  const handleSubmit = async () => {
     if (
       !formData.micron ||
       !formData.width ||
@@ -217,20 +217,48 @@ export default function PersonBProductOrdersPage() {
       return;
     }
 
-    // Since this is mock data, we just close the modal.
+    if (isEditMode) {
+      updateProductOrder(formData.poId, {
+        micron: formData.micron,
+        width: formData.width,
+        product: formData.product,
+        grade: formData.grade,
+        specifications: formData.specifications,
+        quantity: formData.quantity,
+        customer: formData.customer,
+        instructions: formData.instructions,
+      });
+    } else {
+      addProductOrder({
+        id: formData.poId,
+        micron: formData.micron,
+        width: formData.width,
+        product: formData.product,
+        grade: formData.grade,
+        specifications: formData.specifications,
+        quantity: formData.quantity,
+        customer: formData.customer,
+        instructions: formData.instructions,
+        status: "Yet to Start",
+        stage: "Raw Material",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     setIsModalOpen(false);
-    setFormData({
-      poId: generateProductOrderId(),
-      micron: "",
-      width: "",
-      product: "",
-      grade: "",
-      specifications: "",
-      quantity: "",
-      customer: "",
-      instructions: "",
-    });
   };
+
+  const filteredData = processedData.filter((row) => {
+    const f = tableFilters;
+    if (f.status && !(f.status as string[])?.includes(row.status)) return false;
+    if (f.stage && !(f.stage as string[])?.includes(row.stage)) return false;
+    if (f.poId && !row.id.toLowerCase().includes((f.poId as string).toLowerCase())) return false;
+    if (f.customer && row.customer !== (f.customer as string)) return false;
+    if (f.grade && row.grade !== (f.grade as string)) return false;
+    if (f.quantityMin && parseInt(row.quantity) < parseInt(f.quantityMin as string)) return false;
+    if (f.quantityMax && parseInt(row.quantity) > parseInt(f.quantityMax as string)) return false;
+    return true;
+  });
 
   const searchedData = filteredData.filter((row) =>
     row.id.toLowerCase().includes(searchQuery.toLowerCase())
@@ -242,123 +270,6 @@ export default function PersonBProductOrdersPage() {
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative w-full max-w-full">
       <MobileHeader title="Product Orders" />
 
-      {/* Modal Overlay */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-[12px] w-full max-w-[700px]  flex flex-col overflow-hidden max-h-[90vh]">
-            <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">Add New Product Order</h2>
-                <p className="text-[14px] text-[#5C5C5C] leading-tight">Enter product specifications and planning details to create a new order.</p>
-              </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="text-[#5C5C5C] hover:text-[#171717] transition-colors p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex flex-col gap-8 px-6 py-6 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] font-medium text-[#171717]">Product Order ID <span className="text-[#FB3748]">*</span></label>
-                  <input type="text" disabled value={formData.poId} className="h-[40px] px-3 bg-[#F5F7FA] border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#5C5C5C] focus:outline-none" />
-                </div>
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Micron <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.micron} onChange={(e) => setFormData({ ...formData, micron: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Micron</option>
-                    {["3.5", "4 HT", "4.5 HT", "5.0", "5.5", "5.5 HT", "6.0", "6 HT", "6.5", "6.5 HT", "7.0", "7.5", "8.0", "9.0", "10.0", "12.0"].map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Width <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.width} onChange={(e) => setFormData({ ...formData, width: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Width</option>
-                    {["30", "37.5", "45", "50", "60", "75", "100"].map(w => (
-                      <option key={w} value={w}>{w}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Product <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.product} onChange={(e) => setFormData({ ...formData, product: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Product</option>
-                    {["MFD", "PP", "AL", "OIL TYPE", "BOX TYPE", "KVAR", "ROUND"].map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Grade <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.grade} onChange={(e) => setFormData({ ...formData, grade: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Grade</option>
-                    {["AAA", "A", "B", "C", "D"].map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] font-medium text-[#171717]">Specifications <span className="text-[#FB3748]">*</span></label>
-                  <input type="text" placeholder="Enter specs" value={formData.specifications} onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] font-medium text-[#171717]">Quantity <span className="text-[#FB3748]">*</span></label>
-                  <input type="number" placeholder="Enter quantity" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
-                </div>
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Customer <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.customer} onChange={(e) => setFormData({ ...formData, customer: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Customer</option>
-                    {["OEM", "NON OEM"].map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[14px] font-medium text-[#171717]">Instructions</label>
-                <textarea rows={3} placeholder="Add any special instructions..." value={formData.instructions} onChange={(e) => setFormData({ ...formData, instructions: e.target.value })} className="p-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] resize-none"></textarea>
-              </div>
-
-            </div>
-
-            <div className="flex items-center justify-between px-6 py-5 bg-white border-t border-[#EBEBEB]">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="h-[40px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[14px] font-medium rounded-[6px] hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCreateOrder}
-                className="h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors"
-              >
-                Create Product Order
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header section */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
         <div className="w-full px-4 md:px-6 pt-[72px] pb-4 md:pt-6 md:pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 h-auto">
@@ -368,6 +279,13 @@ export default function PersonBProductOrdersPage() {
               Manage orders
             </p>
           </div>
+          {/* <button 
+            onClick={openNewOrderModal}
+            className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
+          >
+            <Plus className="w-5 h-5 shrink-0" strokeWidth={2.5} />
+            <span className="leading-tight">Add Product Order</span>
+          </button> */}
         </div>
       </section>
 
@@ -466,7 +384,6 @@ export default function PersonBProductOrdersPage() {
                 "Width": row.width,
                 "Product": row.product,
                 "Quantity": row.quantity,
-                "Customer": row.customer,
                 "Status": row.status,
                 "Stage": row.stage,
                 "Timestamp": row.timestamp,
@@ -502,12 +419,12 @@ export default function PersonBProductOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {paginatedData.map((row) => {
+                {searchedData.map((row) => {
                   const cleanId = row.id.replace('#', '');
                   return (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
-                      <Link href={`/person-b/product-orders/${cleanId}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
+                      <Link href={`/person-a-slitting/product-orders/${cleanId}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
                         {row.id}
                       </Link>
                     </td>
@@ -531,9 +448,9 @@ export default function PersonBProductOrdersPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
-                        viewHref={`/person-b/productorders/${cleanId}`}
+                        viewHref={`/person-a-slitting/product-orders/${cleanId}`}
                         status={row.status}
-                        onEdit={() => openEditModal(row)}
+                        // onEdit={() => openEditModal(row)}
                         onDelete={async () => {
                           if (confirm(`Are you sure you want to delete ${row.id}?`)) {
                             if ((row as any).uuid) {

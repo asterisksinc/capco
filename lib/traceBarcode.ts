@@ -99,10 +99,14 @@ interface WorkOrderSummary {
 
 interface ProductOrderSummary {
   id: string;
-  code: string;
-  type: string;
+  micron: string;
+  width: string;
+  product: string;
   grade: string;
-  batchSize: string;
+  specifications: string;
+  quantity: string;
+  customer: string;
+  instructions: string;
   status: string;
   stage: string;
   timestamp: string;
@@ -234,10 +238,10 @@ export function traceBarcode(store: StoreSnapshot, rawId: string): TraceResult |
     );
     return {
       scanned: e(id, "PO", `Product Order ${id}`, [
-        { label: "Code", value: po.code },
-        { label: "Type", value: po.type },
+        { label: "Code", value: po.micron },
+        { label: "Type", value: po.width },
         { label: "Grade", value: po.grade },
-        { label: "Batch", value: po.batchSize },
+        { label: "Batch", value: po.quantity },
       ], po.status),
       parentChain: [],
       children,
@@ -355,8 +359,8 @@ export function traceBarcode(store: StoreSnapshot, rawId: string): TraceResult |
     const poEntity = findPOByPM(store, id);
     const poResult = poEntity
       ? e(poEntity.id, "PO", `Product Order ${poEntity.id}`, [
-        { label: "Code", value: poEntity.code },
-        { label: "Type", value: poEntity.type },
+        { label: "Code", value: poEntity.micron },
+        { label: "Type", value: poEntity.width },
       ], poEntity.status)
       : undefined;
 
@@ -410,7 +414,7 @@ export function traceBarcode(store: StoreSnapshot, rawId: string): TraceResult |
         ], pmRow.status);
 
         const po = findPOByPM(store, pmRow.productNo);
-        if (po) poResult = e(po.id, "PO", `Product Order ${po.id}`, [{ label: "Code", value: po.code }], po.status);
+        if (po) poResult = e(po.id, "PO", `Product Order ${po.id}`, [{ label: "Code", value: po.micron }], po.status);
 
         const rawMaterial = findRM(store, pmRow.rmId);
         if (rawMaterial) {
@@ -472,7 +476,7 @@ export function traceBarcode(store: StoreSnapshot, rawId: string): TraceResult |
           ], pmRow.status);
 
           const po = findPOByPM(store, pmRow.productNo);
-          if (po) poResult = e(po.id, "PO", `Product Order ${po.id}`, [{ label: "Code", value: po.code }], po.status);
+          if (po) poResult = e(po.id, "PO", `Product Order ${po.id}`, [{ label: "Code", value: po.micron }], po.status);
 
           const rawMaterial = findRM(store, pmRow.rmId);
           if (rawMaterial) {
@@ -879,10 +883,10 @@ export function getLineageChain(store: StoreSnapshot, rawId: string): LineageNod
     const details = [];
     let status = "Yet to Start";
     if (po) {
-      details.push({ label: "Code", value: po.code });
-      details.push({ label: "Type", value: po.type });
+      details.push({ label: "Code", value: po.micron });
+      details.push({ label: "Type", value: po.width });
       details.push({ label: "Grade", value: po.grade });
-      details.push({ label: "Batch Size", value: po.batchSize });
+      details.push({ label: "Batch Size", value: po.quantity });
       status = po.status;
     }
 

@@ -52,10 +52,14 @@ type WorkOrderRow = {
 
 type ProductOrderRow = {
   id: string;
-  code: string;
-  type: string;
+  micron: string;
+  width: string;
+  product: string;
   grade: string;
-  batchSize: string;
+  specifications: string;
+  quantity: string;
+  customer: string;
+  instructions: string;
   status: string;
   stage: string;
   timestamp: string;
@@ -70,10 +74,8 @@ type KanbanCard = {
   width?: string;
   quantity: string;
   date: string;
-  code?: string;
-  type?: string;
+  product?: string;
   grade?: string;
-  batchSize?: string;
 };
 
 const workOrderConfig: TableConfig<WorkOrderRow> = {
@@ -106,10 +108,11 @@ const workOrderConfig: TableConfig<WorkOrderRow> = {
 const productOrderConfig: TableConfig<ProductOrderRow> = {
   columns: [
     { key: "id", label: "Order ID", type: "text", sortable: true },
-    { key: "code", label: "Product Code", type: "text", sortable: true },
-    { key: "type", label: "Capacitor Type", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "product", label: "Product", type: "text", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
-    { key: "batchSize", label: "Batch Size", type: "number", sortable: true },
+    { key: "quantity", label: "Quantity", type: "number", sortable: true },
     {
       key: "status",
       label: "Status",
@@ -234,16 +237,20 @@ export default function PipelinePage() {
     action: "View",
   }));
 
-  const pipelineProductOrders: ProductOrderRow[] = productOrders.map((po) => ({
-    id: po.product_order_no || po.id,
-    code: po.product_code || "-",
-    type: po.capacitor_type || "-",
-    grade: po.grade || "-",
-    batchSize: po.batch_size?.toString() || "-",
-    status: po.status || "Yet to Start",
-    stage: po.stage || "Raw Material",
-    timestamp: formatCardDate(po.created_at || po.timestamp),
-    action: "View",
+  const initialPOs: ProductOrderRow[] = productOrders.map((p: any) => ({
+    id: p.id,
+    micron: p.micron,
+    width: p.width,
+    product: p.product,
+    specifications: p.specifications,
+    grade: p.grade,
+    quantity: p.quantity,
+    customer: p.customer,
+    instructions: p.instructions,
+    status: p.status,
+    stage: p.stage || "Not Started",
+    timestamp: p.timestamp || p.date || new Date().toISOString().split("T")[0],
+    action: "",
   }));
 
   const {
@@ -260,7 +267,7 @@ export default function PipelinePage() {
     handleSort: handleProductSort,
     filters: productFilters,
     handleFilterChange: handleProductFilter,
-  } = useTableControls({ data: pipelineProductOrders, config: productOrderConfig });
+  } = useTableControls({ data: initialPOs, config: productOrderConfig });
 
   const searchedWorkOrders = processedWorkOrders.filter((row) =>
     row.id.toLowerCase().includes(searchQuery.toLowerCase())
@@ -309,24 +316,24 @@ export default function PipelinePage() {
       });
     }
 
-    for (const row of pipelineProductOrders) {
-      if (!groups[row.stage]) {
-        groups[row.stage] = [];
+    for (const newPO of initialPOs) {
+      if (!groups[newPO.stage]) {
+        groups[newPO.stage] = [];
       }
-      groups[row.stage].push({
-        id: row.id,
-        status: row.status,
-        code: row.code,
-        type: row.type,
-        grade: row.grade,
-        batchSize: row.batchSize,
-        quantity: "1",
-        date: row.timestamp.split(":")[0],
+      groups[newPO.stage].push({
+        id: newPO.id,
+        status: newPO.status,
+        micron: newPO.micron,
+        width: newPO.width,
+        product: newPO.product,
+        grade: newPO.grade,
+        quantity: newPO.quantity,
+        date: new Date().toISOString().split("T")[0],
       });
     }
 
     return groups;
-  }, [pipelineWorkOrders, pipelineProductOrders]);
+  }, [pipelineWorkOrders, initialPOs]);
 
   if (isLoading) {
     return (
@@ -641,12 +648,12 @@ export default function PipelinePage() {
                         </div>
 
                         <div className="border-t border-[#EBEBEB] pt-3 grid grid-cols-2 gap-y-3 gap-x-2 text-[12px] text-[#5C5C5C]">
-                          {card.code ? (
+                          {card.micron ? (
                             <>
-                              <div className="text-[#171717] font-medium col-span-1 text-[14px] truncate">{card.code}</div>
-                              <div className="text-[#171717] font-medium col-span-1 text-[14px] truncate">{card.type}</div>
+                              <div className="text-[#171717] font-medium col-span-1 text-[14px] truncate">{card.micron}</div>
+                              <div className="text-[#171717] font-medium col-span-1 text-[14px] truncate">{card.width}</div>
                               <div className="flex items-center gap-1 text-[12px]"><span className="text-[#A1A1AA]">Grade:</span> <span className="text-[#171717] font-medium">{card.grade}</span></div>
-                              <div className="flex items-center gap-1 text-[12px]"><span className="text-[#A1A1AA]">Batch Size:</span> <span className="text-[#171717] font-medium">{card.batchSize}</span></div>
+                              <div className="flex items-center gap-1 text-[12px]"><span className="text-[#A1A1AA]">Batch Size:</span> <span className="text-[#171717] font-medium">{card.quantity}</span></div>
                             </>
                           ) : (
                             <>

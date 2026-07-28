@@ -12,6 +12,7 @@ import { workOrderService } from "@/src/services/workOrderService";
 import { productOrderService } from "@/src/services/productOrderService";
 import { dashboardService } from "@/src/services/dashboardService";
 import { Loader2 } from "lucide-react";
+import { useStore } from "@/hooks/useStore";
 
 function FilterPopover({
   config,
@@ -158,23 +159,22 @@ type PersonColumn = {
 
 export default function OverviewPage() {
   const { setIsMobileMenuOpen } = useMobileMenu();
+  const { store, addProductOrder } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
 
   const [workOrders, setWorkOrders] = useState<any[]>([]);
-  const [productOrders, setProductOrders] = useState<any[]>([]);
+  const productOrders = store.productOrders;
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [woData, poData, dbStats] = await Promise.all([
+      const [woData, dbStats] = await Promise.all([
         workOrderService.list(),
-        productOrderService.list(),
         dashboardService.productionHead()
       ]);
       setWorkOrders(woData || []);
-      setProductOrders(poData || []);
       setStats(dbStats);
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -193,59 +193,57 @@ export default function OverviewPage() {
   const [formData, setFormData] = useState({ micron: "", width: "", quantity: "" });
   const [isPOModalOpen, setIsPOModalOpen] = useState(false);
   const [poFormData, setPOFormData] = useState({
-    poId: "",
-    productCode: "",
-    capacitance: "",
-    voltage: "",
-    capacitorType: "",
+    poId: `PO-CC-${String(Date.now()).slice(-4)}`,
+    micron: "",
+    width: "",
+    product: "",
     grade: "",
-    tolerance: "",
-    dielectric: "",
-    batchSize: "",
-    priority: "",
-    customerName: "",
-    customerReference: "",
-    specialInstructions: ""
+    specifications: "",
+    quantity: "",
+    customer: "",
+    instructions: "",
   });
 
   const resetPOForm = () => ({
     poId: `PO-CC-${String(Date.now()).slice(-6)}`,
-    productCode: "",
-    capacitance: "",
-    voltage: "",
-    capacitorType: "",
+    micron: "",
+    width: "",
+    product: "",
     grade: "",
-    tolerance: "",
-    dielectric: "",
-    batchSize: "",
-    priority: "",
-    customerName: "",
-    customerReference: "",
-    specialInstructions: ""
+    specifications: "",
+    quantity: "",
+    customer: "",
+    instructions: "",
   });
 
   const handleCreateProductOrder = async () => {
-    if (!poFormData.productCode || !poFormData.capacitorType || !poFormData.grade || !poFormData.batchSize) return;
+    if (!poFormData.micron || !poFormData.width || !poFormData.product || !poFormData.quantity) return;
 
-    const generatedOrderId = poFormData.poId.trim() || `PO-CC-${String(Date.now()).slice(-6)}`;
+    const nextIdNum = store.productOrders.reduce((maxId, row) => {
+      const orderNo = row.id || "";
+      const match = orderNo.match(/PO-CC-(\d+)/);
+      const parsed = match ? Number.parseInt(match[1], 10) : NaN;
+      return Number.isNaN(parsed) ? maxId : Math.max(maxId, parsed);
+    }, 0) + 1;
+    const newId = `PO-CC-${String(nextIdNum).padStart(5, "0")}`;
 
-    try {
-      await productOrderService.create({
-        product_order_no: generatedOrderId,
-        product_code: poFormData.productCode,
-        capacitor_type: poFormData.capacitorType,
-        grade: poFormData.grade.toUpperCase(),
-        batch_size: Number(poFormData.batchSize),
-        quantity: Number(poFormData.batchSize), // assuming batch size is qty here
-        instructions: poFormData.specialInstructions,
-      });
-      await loadData();
-      setIsPOModalOpen(false);
-      setPOFormData(resetPOForm());
-    } catch (error) {
-      console.error("Failed to create PO:", error);
-      alert("Failed to create Product Order");
-    }
+    addProductOrder({
+      id: newId,
+      micron: poFormData.micron,
+      width: poFormData.width,
+      product: poFormData.product,
+      grade: poFormData.grade,
+      specifications: poFormData.specifications,
+      quantity: poFormData.quantity,
+      customer: poFormData.customer,
+      instructions: poFormData.instructions,
+      status: "Yet to Start",
+      stage: "Raw Material",
+      timestamp: new Date().toISOString(),
+    });
+
+    setIsPOModalOpen(false);
+    setPOFormData(resetPOForm());
   };
 
   const handleCreateWorkOrder = async () => {
@@ -318,9 +316,9 @@ export default function OverviewPage() {
   }));
 
   const personBCards: Card[] = productOrders.map((po) => ({
-    id: po.product_order_no || po.id,
+    id: po.id,
     stage: po.stage || "Raw Material",
-    date: formatCardDate(po.created_at || po.timestamp),
+    date: formatCardDate(po.timestamp),
     status: po.status === "Completed" ? "Completed" : po.status === "In-progress" ? "In-progress" : "Yet to Start",
   }));
 
@@ -808,224 +806,85 @@ export default function OverviewPage() {
 
             {/* Body */}
             <div className="flex flex-col gap-8 px-6 py-6 overflow-y-auto">
-              {/* Section 1: Capacitor Specification */}
-              <div className="flex flex-col gap-5">
-                <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Capacitor Specification</h3>
-
-                {/* Product Order ID (read-only) */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[14px] text-[#171717] leading-tight">Product Order ID</label>
-                  <input
-                    type="text"
-                    value={poFormData.poId}
-                    readOnly
-                    placeholder="PO-CC-000000"
-                    className="w-full h-[44px] bg-[#F5F7FA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] focus:outline-none"
-                  />
-                  <div className="flex items-center gap-1.5 text-[12px] text-[#5C5C5C] mt-1">
-                    <Info className="w-3.5 h-3.5" />
-                    <p>Use format like PO-CC-4589 for easier tracking.</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[14px] font-medium text-[#171717]">Product Order ID <span className="text-[#FB3748]">*</span></label>
+                  <input type="text" disabled value={poFormData.poId} className="h-[40px] px-3 bg-[#F5F7FA] border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#5C5C5C] focus:outline-none" />
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-                  {/* Product Code / Model No. */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Product Code / Model No.</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.productCode}
-                        onChange={(e) => setPOFormData({ ...poFormData, productCode: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select or Search Product Code...</option>
-                        <option value="C-450V-100uF">C-450V-100uF</option>
-                        <option value="C-630V-47uF">C-630V-47uF</option>
-                        <option value="MKT-250V-22uF">MKT-250V-22uF</option>
-                        <option value="MKP-400V-10uF">MKP-400V-10uF</option>
-                        <option value="SNUB-1KV-1uF">SNUB-1KV-1uF</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {/* Capacitance Value */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Capacitance Value</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.capacitance}
-                        onChange={(e) => setPOFormData({ ...poFormData, capacitance: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Value...</option>
-                        <option value="1uF">1uF</option>
-                        <option value="10uF">10uF</option>
-                        <option value="22uF">22uF</option>
-                        <option value="47uF">47uF</option>
-                        <option value="100uF">100uF</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {/* Voltage Rating */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Voltage Rating</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.voltage}
-                        onChange={(e) => setPOFormData({ ...poFormData, voltage: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Voltage Rating...</option>
-                        <option value="63V">63V</option>
-                        <option value="250V">250V</option>
-                        <option value="400V">400V</option>
-                        <option value="450V">450V</option>
-                        <option value="630V">630V</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {/* Capacitor Type */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Capacitor Type</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.capacitorType}
-                        onChange={(e) => setPOFormData({ ...poFormData, capacitorType: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select type...</option>
-                        <option value="Motor">Motor</option>
-                        <option value="Snubber">Snubber</option>
-                        <option value="Power">Power</option>
-                        <option value="Lighting">Lighting</option>
-                        <option value="General Purpose">General Purpose</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Micron <span className="text-[#FB3748]">*</span></label>
+                  <select value={poFormData.micron} onChange={(e) => setPOFormData({ ...poFormData, micron: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Micron</option>
+                    {["3.5", "4 HT", "4.5 HT", "5.0", "5.5", "5.5 HT", "6.0", "6 HT", "6.5", "6.5 HT", "7.0", "7.5", "8.0", "9.0", "10.0", "12.0"].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
                 </div>
               </div>
 
-              {/* Section 2: Grade & Tolerance */}
-              <div className="flex flex-col gap-5">
-                <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Grade & Tolerance</h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-                  {/* Grade */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Grade</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.grade}
-                        onChange={(e) => setPOFormData({ ...poFormData, grade: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Choose Grade...</option>
-                        <option value="A+">A+</option>
-                        <option value="AA">AA</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {/* Tolerance */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Tolerance</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.tolerance}
-                        onChange={(e) => setPOFormData({ ...poFormData, tolerance: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Value...</option>
-                        <option value="±1%">±1%</option>
-                        <option value="±2%">±2%</option>
-                        <option value="±5%">±5%</option>
-                        <option value="±10%">±10%</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {/* Dielectric Material (full width) */}
-                  <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Dielectric Material</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.dielectric}
-                        onChange={(e) => setPOFormData({ ...poFormData, dielectric: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Material...</option>
-                        <option value="Metallized Polypropylene">Metallized Polypropylene</option>
-                        <option value="Metallized Polyester">Metallized Polyester</option>
-                        <option value="Paper-Oil">Paper-Oil</option>
-                        <option value="Ceramic Hybrid">Ceramic Hybrid</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Width <span className="text-[#FB3748]">*</span></label>
+                  <select value={poFormData.width} onChange={(e) => setPOFormData({ ...poFormData, width: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Width</option>
+                    {["30", "37.5", "45", "50", "60", "75", "100"].map(w => (
+                      <option key={w} value={w}>{w}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
+                </div>
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Product <span className="text-[#FB3748]">*</span></label>
+                  <select value={poFormData.product} onChange={(e) => setPOFormData({ ...poFormData, product: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Product</option>
+                    {["MFD", "PP", "AL", "OIL TYPE", "BOX TYPE", "KVAR", "ROUND"].map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
                 </div>
               </div>
 
-              {/* Section 3: Production Quantity */}
-              <div className="flex flex-col gap-5">
-                <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Production Quantity</h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-                  {/* Batch Size */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Batch Size</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={poFormData.batchSize}
-                      onChange={(e) => setPOFormData({ ...poFormData, batchSize: e.target.value })}
-                      placeholder="Enter batch size"
-                      className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
-                    />
-                  </div>
-
-                  {/* Production Priority */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Production Priority</label>
-                    <div className="relative">
-                      <select
-                        value={poFormData.priority}
-                        onChange={(e) => setPOFormData({ ...poFormData, priority: e.target.value })}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Value...</option>
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Critical</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {/* Special Instructions (full width) */}
-                  <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Special Instructions</label>
-                    <textarea
-                      rows={3}
-                      value={poFormData.specialInstructions}
-                      onChange={(e) => setPOFormData({ ...poFormData, specialInstructions: e.target.value })}
-                      placeholder="Add any process notes, dispatch priority, or QC instructions..."
-                      className="w-full bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 py-2.5 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors resize-none"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Grade <span className="text-[#FB3748]">*</span></label>
+                  <select value={poFormData.grade} onChange={(e) => setPOFormData({ ...poFormData, grade: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Grade</option>
+                    {["AA", "A", "B", "C", "D"].map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[14px] font-medium text-[#171717]">Specifications <span className="text-[#FB3748]">*</span></label>
+                  <input type="text" placeholder="Enter specs" value={poFormData.specifications} onChange={(e) => setPOFormData({ ...poFormData, specifications: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[14px] font-medium text-[#171717]">Quantity <span className="text-[#FB3748]">*</span></label>
+                  <input type="number" placeholder="Enter quantity" value={poFormData.quantity} onChange={(e) => setPOFormData({ ...poFormData, quantity: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
+                </div>
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Customer <span className="text-[#FB3748]">*</span></label>
+                  <select value={poFormData.customer} onChange={(e) => setPOFormData({ ...poFormData, customer: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Customer</option>
+                    {["OEM", "NON OEM"].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[14px] font-medium text-[#171717]">Instructions</label>
+                <textarea rows={3} placeholder="Add any special instructions..." value={poFormData.instructions} onChange={(e) => setPOFormData({ ...poFormData, instructions: e.target.value })} className="p-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] resize-none"></textarea>
+              </div>
+
             </div>
 
             {/* Footer / Action buttons */}

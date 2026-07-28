@@ -110,7 +110,7 @@ export default function PersonBOverviewPage() {
                     <td className="py-2.5 text-[13px] text-[#00B6E2] font-medium">
                       <Link href={`/person-b/product-orders/${po.id.replace('#', '')}`} className="hover:underline">{po.id}</Link>
                     </td>
-                    <td className="py-2.5 text-[13px] text-[#5C5C5C]">{po.code}</td>
+                    <td className="py-2.5 text-[13px] text-[#5C5C5C]">{po.micron}</td>
                     <td className="py-2.5"><StatusBadge status={po.status} /></td>
                   </tr>
                 ))}

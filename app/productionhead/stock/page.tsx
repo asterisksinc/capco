@@ -31,7 +31,7 @@ const STAGE_OPTIONS = ["Ready for Winding", "Ready for Dispatch", "QC Pending", 
 
 const statusFilter: EnumFilter = { label: "Stage", key: "stage", options: STAGE_OPTIONS };
 const textFilters: TextFilter[] = [
-  { label: "Stock ID", key: "stockId", placeholder: "Search..." },
+  { label: "Product No", key: "stockId", placeholder: "Search..." },
   { label: "Linked WO ID", key: "linkedWoId", placeholder: "Search..." },
   { label: "Grade", key: "grade" },
 ];
@@ -266,7 +266,7 @@ export default function SupervisorStockPage() {
               type="text" 
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder="Search by Stock ID..." 
+              placeholder="Search by Product No..." 
               className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] " 
             />
           </div>
@@ -276,7 +276,7 @@ export default function SupervisorStockPage() {
             onExport={(scope = "all") => {
             const dataToExport = scope === "all" ? filteredData : paginatedData;
             const exportData = dataToExport.map(row => ({
-                "Stock ID": row.stockId,
+                "Product No": row.stockId,
                 "Linked WO ID": row.linkedWoId,
                 "Weight": row.weight,
                 "Width": row.width,

@@ -51,8 +51,8 @@ export default function PersonBPipelinePage() {
                   <Link key={po.id} href={`/person-b/product-orders/${po.id.replace("#", "")}`}
                     className="block p-3 rounded-[8px] border border-[#EBEBEB] hover:border-[#00B6E2] transition-colors bg-white">
                     <p className="text-[13px] font-medium text-[#00B6E2]">{po.id}</p>
-                    <p className="text-[11px] text-[#5C5C5C] mt-1">{po.code}</p>
-                    <p className="text-[11px] text-[#5C5C5C]">{po.type} &bull; {po.grade}</p>
+                    <p className="text-[11px] text-[#5C5C5C] mt-1">{po.micron}</p>
+                    <p className="text-[11px] text-[#5C5C5C]">{po.width} &bull; {po.grade}</p>
                     <div className="mt-1.5"><StatusBadge status={po.status} /></div>
                   </Link>
                 ))

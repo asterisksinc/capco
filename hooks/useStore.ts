@@ -166,7 +166,23 @@ function sanitizeStore(raw: unknown): StoreData {
     : createSeedInventory();
 
   const productOrders: ProductOrderSummary[] = Array.isArray(raw.productOrders)
-    ? raw.productOrders.filter((row): row is ProductOrderSummary => isRecord(row))
+    ? raw.productOrders
+        .filter((row): row is Record<string, unknown> => isRecord(row))
+        .map((row: Record<string, any>) => ({
+          id: String(row.id || ''),
+          micron: String(row.micron || '-'),
+          width: String(row.width || '-'),
+          product: String(row.product || row.type || row.code || '-'),
+          grade: String(row.grade || '-'),
+          specifications: String(row.specifications || '-'),
+          quantity: String(row.quantity || row.batchSize || '0'),
+          customer: String(row.customer || 'OEM'),
+          instructions: String(row.instructions || '-'),
+          status: String(row.status || 'Yet to Start'),
+          stage: String(row.stage || 'Raw Material'),
+          timestamp: String(row.timestamp || new Date().toISOString()),
+        }))
+        .filter((row) => row.id.length > 0)
     : [];
 
   const materialRequests: MaterialRequest[] = Array.isArray(raw.materialRequests)
@@ -377,7 +393,22 @@ export function useStore() {
   const deleteProductOrder = (poId: string) => {
     const nextStore = loadStore();
     nextStore.productOrders = nextStore.productOrders.filter((row) => row.id !== poId);
+    delete nextStore.assignments[poId]; // clean up orphaned stock assignments
     saveStore(nextStore);
+  };
+
+  const updateProductOrder = (poId: string, updates: Partial<ProductOrderSummary>) => {
+    const nextStore = loadStore();
+    const idx = nextStore.productOrders.findIndex((row) => row.id === poId);
+    if (idx === -1) return false;
+
+    nextStore.productOrders[idx] = {
+      ...nextStore.productOrders[idx],
+      ...updates,
+    };
+
+    saveStore(nextStore);
+    return true;
   };
 
   const addMaterialRequest = (req: MaterialRequest) => {
@@ -481,5 +512,5 @@ export function useStore() {
     saveStore(nextStore);
   };
 
-  return { store, mounted, workOrders, addWorkOrder, deleteWorkOrder, addFlowRow, updateFlowRowField, updateInventoryStatus, addInventoryItem, deleteInventoryItem, getAvailableInventory, addProductOrder, deleteProductOrder, addMaterialRequest, issueMaterialRequest, cancelMaterialRequest, addMaterialReturn, acceptMaterialReturn, rejectMaterialReturn, assignStockToProductOrder, removeAssignedStock, getAssignedStocks, addVendorPurchase, updateVendorPurchase, vendorPurchases: store.vendorPurchases };
+  return { store, mounted, workOrders, addWorkOrder, deleteWorkOrder, addFlowRow, updateFlowRowField, updateInventoryStatus, addInventoryItem, deleteInventoryItem, getAvailableInventory, addProductOrder, updateProductOrder, deleteProductOrder, addMaterialRequest, issueMaterialRequest, cancelMaterialRequest, addMaterialReturn, acceptMaterialReturn, rejectMaterialReturn, assignStockToProductOrder, removeAssignedStock, getAssignedStocks, addVendorPurchase, updateVendorPurchase, vendorPurchases: store.vendorPurchases };
 }

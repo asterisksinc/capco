@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { Plus, X, ChevronDown, Search, Info, ChevronLeft, ChevronRight, QrCode } from "lucide-react";
 import { useState, useEffect } from "react";
-import { productOrderService } from "@/src/services/productOrderService";
-import { dashboardService } from "@/src/services/dashboardService";
+import { useStore } from "@/hooks/useStore";
 import { Loader2 } from "lucide-react";
 import type { TableConfig } from "@/hooks/useTableControls";
 import { TablePagination } from "@/components/table/TablePagination";
@@ -23,12 +22,12 @@ const STAGE_OPTIONS = ["Yet to Start", "Raw Material", "Metallisation", "Slittin
 const statusFilter: EnumFilter = { label: "Status", key: "status", options: STATUS_OPTIONS };
 const stageFilter: EnumFilter = { label: "Stage", key: "stage", options: STAGE_OPTIONS };
 const textFilters: TextFilter[] = [
-  { label: "Product Code", key: "productCode", placeholder: "Search..." },
-  { label: "Capacitor Type", key: "capacitorType" },
+  { label: "Product Order ID", key: "poId", placeholder: "Search..." },
+  { label: "Customer", key: "customer" },
   { label: "Grade", key: "grade" },
 ];
 const numberFilters: NumberRangeFilter[] = [
-  { label: "Batch Size", minKey: "batchSizeMin", maxKey: "batchSizeMax" },
+  { label: "Quantity", minKey: "quantityMin", maxKey: "quantityMax" },
 ];
 
 const filterConfig: FilterConfig = {
@@ -39,10 +38,14 @@ const filterConfig: FilterConfig = {
 
 export type ProductOrderRow = {
   id: string;
-  code: string;
-  type: string;
+  micron: string;
+  width: string;
+  product: string;
   grade: string;
-  batchSize: string;
+  specifications: string;
+  quantity: string;
+  customer: string;
+  instructions: string;
   status: string;
   stage: string;
   timestamp: string;
@@ -52,10 +55,12 @@ export type ProductOrderRow = {
 const productOrderConfig: TableConfig<ProductOrderRow> = {
   columns: [
     { key: "id", label: "Order ID", type: "text", sortable: true },
-    { key: "code", label: "Product Code", type: "text", sortable: true },
-    { key: "type", label: "Capacitor Type", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "product", label: "Product", type: "text", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
-    { key: "batchSize", label: "Batch Size", type: "number", sortable: true },
+    { key: "quantity", label: "Quantity", type: "number", sortable: true },
+    { key: "customer", label: "Customer", type: "text", sortable: true },
     { 
       key: "status", 
       label: "Status", 
@@ -70,9 +75,9 @@ const productOrderConfig: TableConfig<ProductOrderRow> = {
       type: "enum", 
       sortable: false, 
       filter: "dropdown", 
-      options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"] 
+      options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] 
     },
-    { key: "timestamp", label: "Created Timestamp", type: "date", sortable: true },
+    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false }
   ],
@@ -92,60 +97,68 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function SupervisorProductOrdersPage() {
-  const [productOrders, setProductOrders] = useState<(ProductOrderRow & { uuid?: string })[]>([]);
+  const { store, addProductOrder, updateProductOrder, deleteProductOrder } = useStore();
+  const productOrders = store.productOrders;
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
 
   const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const [data, dbStats] = await Promise.all([
-        productOrderService.list(),
-        dashboardService.productionHead()
-      ]);
-      const mapped = data.map((po: any) => ({
-        uuid: po.id,
-        id: po.product_order_no || po.id,
-        code: po.product_code || "-",
-        type: po.capacitor_type || "-",
-        grade: po.grade || "-",
-        batchSize: po.batch_size?.toString() || "-",
-        status: po.status || "Yet to Start",
-        stage: po.stage || "Raw Material",
-        timestamp: po.created_at ? new Date(po.created_at).toLocaleDateString("en-GB") : "-"
-      }));
-      setProductOrders(mapped);
-      setStats(dbStats);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
+    // using mock data via useStore hook
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // All hooks MUST be called before any conditional returns (Rules of Hooks)
   const [qrData, setQrData] = useState<QRModalData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
-    poId: "PO-CC-4567",
-    productCode: "",
-    capacitance: "",
-    voltage: "",
-    capacitorType: "",
+    poId: "",
+    micron: "",
+    width: "",
+    product: "",
     grade: "",
-    tolerance: "",
-    dielectric: "",
-    batchSize: "",
-    priority: "",
-    customerName: "",
-    customerReference: "",
-    specialInstructions: ""
+    specifications: "",
+    quantity: "",
+    customer: "",
+    instructions: "",
   });
+
+  const generateProductOrderId = () => `PO-CC-${String(Date.now()).slice(-4)}`;
+
+  const openCreateModal = () => {
+    setIsEditMode(false);
+    setFormData({
+      poId: generateProductOrderId(),
+      micron: "",
+      width: "",
+      product: "",
+      grade: "",
+      specifications: "",
+      quantity: "",
+      customer: "",
+      instructions: "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (row: ProductOrderRow) => {
+    setIsEditMode(true);
+    setFormData({
+      poId: row.id,
+      micron: row.micron,
+      width: row.width,
+      product: row.product,
+      grade: row.grade,
+      specifications: row.specifications || "",
+      quantity: row.quantity,
+      customer: row.customer || "",
+      instructions: row.instructions || "",
+    });
+    setIsModalOpen(true);
+  };
 
   const {
     processedData,
@@ -163,54 +176,15 @@ export default function SupervisorProductOrdersPage() {
     const state: FilterState = {};
     state.status = [...STATUS_OPTIONS];
     state.stage = [...STAGE_OPTIONS];
-    state.productCode = "";
-    state.capacitorType = "";
+    state.poId = "";
+    state.customer = "";
     state.grade = "";
-    state.batchSizeMin = "";
-    state.batchSizeMax = "";
+    state.quantityMin = "";
+    state.quantityMax = "";
     return state;
   });
 
-  const generateProductOrderId = () => `PO-CC-${String(Date.now()).slice(-6)}`;
 
-  const openNewOrderModal = () => {
-    setFormData((current) => ({
-      ...current,
-      poId: generateProductOrderId(),
-      productCode: "",
-      capacitance: "",
-      voltage: "",
-      capacitorType: "",
-      grade: "",
-      tolerance: "",
-      dielectric: "",
-      batchSize: "",
-      priority: "",
-      customerName: "",
-      customerReference: "",
-      specialInstructions: "",
-    }));
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (order: ProductOrderRow) => {
-    setFormData({
-      poId: order.id,
-      productCode: order.code,
-      capacitance: "",
-      voltage: "",
-      capacitorType: order.type,
-      grade: order.grade,
-      tolerance: "",
-      dielectric: "",
-      batchSize: order.batchSize,
-      priority: "",
-      customerName: "",
-      customerReference: "",
-      specialInstructions: "",
-    });
-    setIsModalOpen(true);
-  };
 
   if (isLoading) {
     return (
@@ -229,14 +203,14 @@ export default function SupervisorProductOrdersPage() {
       setTableFilters({ ...tableFilters, status: [...STATUS_OPTIONS] });
     } else if (key === "stage") {
       setTableFilters({ ...tableFilters, stage: [...STAGE_OPTIONS] });
-    } else if (key === "productCode") {
-      setTableFilters({ ...tableFilters, productCode: "" });
-    } else if (key === "capacitorType") {
-      setTableFilters({ ...tableFilters, capacitorType: "" });
+    } else if (key === "poId") {
+      setTableFilters({ ...tableFilters, poId: "" });
+    } else if (key === "customer") {
+      setTableFilters({ ...tableFilters, customer: "" });
     } else if (key === "grade") {
       setTableFilters({ ...tableFilters, grade: "" });
-    } else if (key === "batchSizeMin") {
-      setTableFilters({ ...tableFilters, batchSizeMin: "", batchSizeMax: "" });
+    } else if (key === "quantityMin") {
+      setTableFilters({ ...tableFilters, quantityMin: "", quantityMax: "" });
     }
   };
 
@@ -244,57 +218,53 @@ export default function SupervisorProductOrdersPage() {
     const f = tableFilters;
     if (!(f.status as string[])?.includes(row.status)) return false;
     if (!(f.stage as string[])?.includes(row.stage)) return false;
-    if (f.productCode && !row.code.toLowerCase().includes((f.productCode as string).toLowerCase())) return false;
-    if (f.capacitorType && row.type !== (f.capacitorType as string)) return false;
+    if (f.poId && !row.id.toLowerCase().includes((f.poId as string).toLowerCase())) return false;
+    if (f.customer && row.customer !== (f.customer as string)) return false;
     if (f.grade && row.grade !== (f.grade as string)) return false;
-    if (f.batchSizeMin && parseInt(row.batchSize) < parseInt(f.batchSizeMin as string)) return false;
-    if (f.batchSizeMax && parseInt(row.batchSize) > parseInt(f.batchSizeMax as string)) return false;
+    if (f.quantityMin && parseInt(row.quantity) < parseInt(f.quantityMin as string)) return false;
+    if (f.quantityMax && parseInt(row.quantity) > parseInt(f.quantityMax as string)) return false;
     return true;
   });
 
-  const handleCreateOrder = async () => {
+  const handleSubmit = async () => {
     if (
-      !formData.productCode ||
-      !formData.capacitorType ||
-      !formData.grade ||
-      !formData.batchSize
+      !formData.micron ||
+      !formData.width ||
+      !formData.product ||
+      !formData.quantity
     ) {
       return;
     }
 
-    const generatedOrderId = formData.poId.trim() || generateProductOrderId();
-
-    try {
-      await productOrderService.create({
-        product_order_no: generatedOrderId,
-        product_code: formData.productCode,
-        capacitor_type: formData.capacitorType,
-        grade: formData.grade.toUpperCase(),
-        batch_size: Number(formData.batchSize),
-        quantity: Number(formData.batchSize), // assuming batch size is qty here
-        instructions: formData.specialInstructions,
+    if (isEditMode) {
+      updateProductOrder(formData.poId, {
+        micron: formData.micron,
+        width: formData.width,
+        product: formData.product,
+        grade: formData.grade,
+        specifications: formData.specifications,
+        quantity: formData.quantity,
+        customer: formData.customer,
+        instructions: formData.instructions,
       });
-      await loadData();
-      setIsModalOpen(false);
-      setFormData({
-        poId: generateProductOrderId(),
-        productCode: "",
-        capacitance: "",
-        voltage: "",
-        capacitorType: "",
-        grade: "",
-        tolerance: "",
-        dielectric: "",
-        batchSize: "",
-        priority: "",
-        customerName: "",
-        customerReference: "",
-        specialInstructions: ""
+    } else {
+      addProductOrder({
+        id: formData.poId,
+        micron: formData.micron,
+        width: formData.width,
+        product: formData.product,
+        grade: formData.grade,
+        specifications: formData.specifications,
+        quantity: formData.quantity,
+        customer: formData.customer,
+        instructions: formData.instructions,
+        status: "Yet to Start",
+        stage: "Raw Material",
+        timestamp: new Date().toISOString(),
       });
-    } catch (error) {
-      console.error(error);
-      alert("Failed to create product order");
     }
+
+    setIsModalOpen(false);
   };
 
   const searchedData = filteredData.filter((row) =>
@@ -325,225 +295,100 @@ export default function SupervisorProductOrdersPage() {
             </div>
             
             <div className="flex flex-col gap-8 px-6 py-6 overflow-y-auto custom-scrollbar">
-              <div className="flex flex-col gap-5">
-                <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Capacitor Specification</h3>
-                
-                <div className="flex flex-col gap-2">
-                  <label className="text-[14px] text-[#171717] leading-tight">Product Order ID</label>
-                  <input 
-                    type="text"
-                    value={formData.poId}
-                    readOnly
-                    placeholder="PO-CC-000000"
-                    className="w-full h-[44px] bg-[#F5F7FA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2] transition-colors"
-                  />
-                  <div className="flex items-center gap-1.5 text-[12px] text-[#5C5C5C] mt-1">
-                    <Info className="w-3.5 h-3.5" />
-                    <p>Use format like PO-CC-4589 for easier tracking.</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[14px] font-medium text-[#171717]">Product Order ID <span className="text-[#FB3748]">*</span></label>
+                  <input type="text" disabled value={formData.poId} className="h-[40px] px-3 bg-[#F5F7FA] border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#5C5C5C] focus:outline-none" />
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Product Code / Moden No.</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.productCode}
-                        onChange={(e) => setFormData({...formData, productCode: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select or Search Product Code...</option>
-                        <option value="C-450V-100uF">C-450V-100uF</option>
-                        <option value="C-630V-47uF">C-630V-47uF</option>
-                        <option value="MKT-250V-22uF">MKT-250V-22uF</option>
-                        <option value="MKP-400V-10uF">MKP-400V-10uF</option>
-                        <option value="SNUB-1KV-1uF">SNUB-1KV-1uF</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Capacitance Value</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.capacitance}
-                        onChange={(e) => setFormData({...formData, capacitance: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Value...</option>
-                        <option value="1uF">1uF</option>
-                        <option value="10uF">10uF</option>
-                        <option value="22uF">22uF</option>
-                        <option value="47uF">47uF</option>
-                        <option value="100uF">100uF</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Voltage Rating</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.voltage}
-                        onChange={(e) => setFormData({...formData, voltage: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Voltage Rating...</option>
-                        <option value="63V">63V</option>
-                        <option value="250V">250V</option>
-                        <option value="400V">400V</option>
-                        <option value="450V">450V</option>
-                        <option value="630V">630V</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Capacitor Type</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.capacitorType}
-                        onChange={(e) => setFormData({...formData, capacitorType: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select type...</option>
-                        <option value="Motor">Motor</option>
-                        <option value="Snubber">Snubber</option>
-                        <option value="Power">Power</option>
-                        <option value="Lighting">Lighting</option>
-                        <option value="General Purpose">General Purpose</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Micron <span className="text-[#FB3748]">*</span></label>
+                  <select value={formData.micron} onChange={(e) => setFormData({ ...formData, micron: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Micron</option>
+                    {["3.5", "4 HT", "4.5 HT", "5.0", "5.5", "5.5 HT", "6.0", "6 HT", "6.5", "6.5 HT", "7.0", "7.5", "8.0", "9.0", "10.0", "12.0"].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-5">
-                <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Grade & Tolerance</h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Grade</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.grade}
-                        onChange={(e) => setFormData({...formData, grade: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Choose Grade...</option>
-                        <option value="A+">A+</option>
-                        <option value="AA">AA</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Tolerance</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.tolerance}
-                        onChange={(e) => setFormData({...formData, tolerance: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Value...</option>
-                        <option value="±1%">±1%</option>
-                        <option value="±2%">±2%</option>
-                        <option value="±5%">±5%</option>
-                        <option value="±10%">±10%</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Dielectric Material</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.dielectric}
-                        onChange={(e) => setFormData({...formData, dielectric: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Material...</option>
-                        <option value="Metallized Polypropylene">Metallized Polypropylene</option>
-                        <option value="Metallized Polyester">Metallized Polyester</option>
-                        <option value="Paper-Oil">Paper-Oil</option>
-                        <option value="Ceramic Hybrid">Ceramic Hybrid</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Width <span className="text-[#FB3748]">*</span></label>
+                  <select value={formData.width} onChange={(e) => setFormData({ ...formData, width: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Width</option>
+                    {["30", "37.5", "45", "50", "60", "75", "100"].map(w => (
+                      <option key={w} value={w}>{w}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
+                </div>
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Product <span className="text-[#FB3748]">*</span></label>
+                  <select value={formData.product} onChange={(e) => setFormData({ ...formData, product: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Product</option>
+                    {["MFD", "PP", "AL", "OIL TYPE", "BOX TYPE", "KVAR", "ROUND"].map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-5">
-                <h3 className="text-[16px] font-medium text-[#171717] leading-tight border-b border-[#EBEBEB] pb-2">Production Quantity</h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Batch Size</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={formData.batchSize}
-                      onChange={(e) => setFormData({...formData, batchSize: e.target.value})}
-                      placeholder="Enter batch size"
-                      className="w-full h-[44px] bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Production Priority</label>
-                    <div className="relative">
-                      <select 
-                        value={formData.priority}
-                        onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                        className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
-                      >
-                        <option value="" disabled hidden>Select Value...</option>
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Critical</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 col-span-1 sm:col-span-2">
-                    <label className="text-[14px] text-[#171717] leading-tight">Special Instructions</label>
-                    <textarea
-                      rows={3}
-                      value={formData.specialInstructions}
-                      onChange={(e) => setFormData({ ...formData, specialInstructions: e.target.value })}
-                      placeholder="Add any process notes, dispatch priority, or QC instructions..."
-                      className="w-full bg-[#FAFAFA] border border-[#EBEBEB] rounded-[8px] px-3 py-2.5 text-[14px] text-[#5C5C5C] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors resize-none"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Grade <span className="text-[#FB3748]">*</span></label>
+                  <select value={formData.grade} onChange={(e) => setFormData({ ...formData, grade: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Grade</option>
+                    {["AA", "A", "B", "C", "D"].map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
                 </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[14px] font-medium text-[#171717]">Specifications <span className="text-[#FB3748]">*</span></label>
+                  <input type="text" placeholder="Enter specs" value={formData.specifications} onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[14px] font-medium text-[#171717]">Quantity <span className="text-[#FB3748]">*</span></label>
+                  <input type="number" placeholder="Enter quantity" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
+                </div>
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-[14px] font-medium text-[#171717]">Customer <span className="text-[#FB3748]">*</span></label>
+                  <select value={formData.customer} onChange={(e) => setFormData({ ...formData, customer: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
+                    <option value="" disabled>Select Customer</option>
+                    {["OEM", "NON OEM"].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[14px] font-medium text-[#171717]">Instructions</label>
+                <textarea rows={3} placeholder="Add any special instructions..." value={formData.instructions} onChange={(e) => setFormData({ ...formData, instructions: e.target.value })} className="p-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] resize-none"></textarea>
               </div>
 
             </div>
 
-            <div className="flex items-center justify-between px-6 py-5 bg-white border-t border-[#EBEBEB]">
-              <button 
+            <div className="flex items-center justify-end gap-3 px-6 py-6 border-t border-[#EBEBEB]">
+              <button
                 onClick={() => setIsModalOpen(false)}
-                className="h-[40px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[14px] font-medium rounded-[6px] hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-[14px] font-medium text-[#5C5C5C] bg-white border border-[#EBEBEB] rounded-[8px] hover:bg-[#F5F7FA] transition-colors"
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleCreateOrder}
-                className="h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors"
+              <button
+                onClick={handleSubmit}
+                disabled={!formData.micron || !formData.width || !formData.product || !formData.quantity}
+                className="px-4 py-2 text-[14px] font-medium text-white bg-[#00B6E2] rounded-[8px] hover:bg-[#00A0E3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Product Order
+                {isEditMode ? "Save Changes" : "Create Product Order"}
               </button>
             </div>
           </div>
@@ -560,7 +405,7 @@ export default function SupervisorProductOrdersPage() {
             </p>
           </div>
           <button 
-            onClick={openNewOrderModal}
+            onClick={openCreateModal}
             className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
           >
             <Plus className="w-5 h-5 shrink-0" strokeWidth={2.5} />
@@ -576,9 +421,9 @@ export default function SupervisorProductOrdersPage() {
         <section className="grid grid-cols-2 gap-0 md:hidden bg-white border border-[#EBEBEB] rounded-[12px]">
           {[
             { title: "Total Orders", value: String(productOrders.length), valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
-            { title: "Units Planned", value: String(productOrders.reduce((sum, po) => sum + (Number(po.batchSize) || 0), 0)), valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
-            { title: "In Progress", value: String(productOrders.filter(po => po.status === 'In-progress').length), valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
-            { title: "Completed", value: String(productOrders.filter(po => po.status === 'Completed').length), valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "Units Planned", value: String(productOrders.reduce((sum, po) => sum + (Number(po.quantity) || 0), 0)), valClass: "text-[#171717]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "In Progress", value: String(productOrders.filter(po => po.status === "In-progress").length), valClass: "text-[#E19242]", subtextClass: "text-[#5C5C5C]", subtext: "" },
+            { title: "Yet to Start", value: String(productOrders.filter(po => po.status === "Yet to Start").length), valClass: "text-[#FB3748]", subtextClass: "text-[#5C5C5C]", subtext: "" }
           ].map((stat, i) => (
             <div key={i} className={`p-3 ${i % 2 === 0 ? 'border-r border-b border-[#EBEBEB]' : 'border-b border-[#EBEBEB]'}`}>
               <div className="flex flex-col gap-1">
@@ -608,7 +453,7 @@ export default function SupervisorProductOrdersPage() {
             <div className="flex flex-col gap-[8px]">
               <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Units Planned</p>
               <div className="flex items-baseline gap-3">
-                <span className="text-[20px] font-semibold leading-tight text-[#171717]">{productOrders.reduce((sum, po) => sum + (Number(po.batchSize) || 0), 0)}</span>
+                <span className="text-[20px] font-semibold leading-tight text-[#171717]">{productOrders.reduce((sum, po) => sum + (Number(po.quantity) || 0), 0)}</span>
                 <span className="text-[12px] leading-tight text-[#5C5C5C]">
                   Total Units
                 </span>
@@ -660,13 +505,13 @@ export default function SupervisorProductOrdersPage() {
             onExport={() => {
               const exportData = searchedData.map(row => ({
                 "Order ID": row.id,
-                "Product Code": row.code,
-                "Capacitor Type": row.type,
-                "Grade": row.grade,
-                "Batch Size": row.batchSize,
+                "Micron": row.micron,
+                "Width": row.width,
+                "Product": row.product,
+                "Quantity": row.quantity,
                 "Status": row.status,
                 "Stage": row.stage,
-                "Created Timestamp": row.timestamp,
+                "Timestamp": row.timestamp,
               }));
               exportToExcel(exportData, "product-orders", "Product Orders");
             }}
@@ -680,7 +525,7 @@ export default function SupervisorProductOrdersPage() {
         <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table */}
-        <section className="bg-white border border-[#EBEBEB] rounded-[12px] flex flex-col gap-4 overflow-hidden shadow-sm">
+        <section className="hidden md:block bg-white rounded-[12px] flex flex-col gap-4 overflow-hidden">
           <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
@@ -688,50 +533,54 @@ export default function SupervisorProductOrdersPage() {
                   {productOrderConfig.columns.map((col) => (
                     <th key={String(col.key)} className="px-4 py-[11px]">
                       <SortableHeader
-                        column={col}
-                        sortConfig={sortConfig}
-                        onSort={handleSort}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
+                        column={col as any}
+                        sortConfig={sortConfig as any}
+                        onSort={handleSort as any}
+                        filters={filters as any}
+                        onFilterChange={handleFilterChange as any}
                       />
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {searchedData.map((row) => (
+                {searchedData.map((row) => {
+                  const cleanId = row.id.replace('#', '');
+                  return (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
-                      <Link href={`/productionhead/productorders/${row.id.replace('#', '')}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
+                    <td className="px-3 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
+                      <Link href={`/productionhead/productorders/${cleanId}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
                         {row.id}
                       </Link>
                     </td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.code}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.type}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grade}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.batchSize}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.micron}</td>
+                    <td className="px-3 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.width}</td>
+                    <td className="px-3 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.product}</td>
+                    <td className="px-3 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.grade}</td>
+                    <td className="px-3 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.quantity}</td>
+                    <td className="px-3 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.customer}</td>
+                    <td className="px-3 whitespace-nowrap">
                       <StatusBadge status={row.status} />
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 whitespace-nowrap">
                       <StatusBadge status={row.stage} />
                     </td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <button onClick={() => setQrData({ id: row.id, type: "PO", data: { productCode: row.code, type: row.type, grade: row.grade, batchSize: row.batchSize, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                    <td className="px-3 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-3 whitespace-nowrap">
+                      <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { micron: row.micron, width: row.width, product: row.product, quantity: row.quantity, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
                         <QrCode className="w-4 h-4" />
                       </button>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
-                        viewHref={`/productionhead/productorders/${row.id.replace('#', '')}`}
+                        viewHref={`/productionhead/productorders/${cleanId}`}
                         status={row.status}
                         onEdit={() => openEditModal(row)}
                         onDelete={async () => {
                           if (confirm(`Are you sure you want to delete ${row.id}?`)) {
                             if ((row as any).uuid) {
                               try {
-                                await productOrderService.remove((row as any).uuid);
+                                deleteProductOrder(row.id);
                                 await loadData();
                               } catch (e) {
                                 console.error(e);
@@ -743,7 +592,7 @@ export default function SupervisorProductOrdersPage() {
                       />
                     </td>
                   </tr>
-                ))}
+                )})}
                 {searchedData.length === 0 && (
                   <tr>
                     <td colSpan={10} className="px-1 py-8 text-center text-[14px] text-[#5C5C5C]">

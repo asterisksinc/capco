@@ -241,7 +241,7 @@ export default function AdminInventoryPage() {
         success = true;
       } catch (err: any) {
         // If it's a unique constraint violation on raw_material_code or roll_no, retry
-        if (err?.message?.toLowerCase().includes("duplicate") || err?.code === "23505") {
+        if (err?.message?.toLowerCase().includes("duplicate") || err?.micron === "23505") {
           nextIdNum++;
           rollSeqNum++;
           retries++;

@@ -12,13 +12,21 @@ import { useTableControls } from "@/hooks/useTableControls";
 import { SortableHeader } from "@/components/table/SortableHeader";
 import { TableToolbar } from "@/components/table/TableToolbar";
 import { exportToExcel } from "@/lib/exportExcel";
+import { OptionsDropdown } from "@/components/table/OptionsDropdown";
+import { ProductOrderModal, type ProductOrderFormData } from "@/components/modals/ProductOrderModal";
+import { Plus } from "lucide-react";
+import { useStore } from "@/hooks/useStore";
 
 type ProductOrderSummary = {
   id: string;
-  code: string;
-  type: string;
+  micron: string;
+  width: string;
+  product: string;
   grade: string;
-  batchSize: string;
+  specifications: string;
+  quantity: string;
+  customer: string;
+  instructions: string;
   status: string;
   stage: string;
   timestamp: string;
@@ -27,47 +35,64 @@ type ProductOrderSummary = {
 const productOrderConfig: TableConfig<ProductOrderSummary> = {
   columns: [
     { key: "id", label: "Order ID", type: "text", sortable: true },
-    { key: "code", label: "Product Code", type: "text", sortable: true },
-    { key: "type", label: "Capacitor Type", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "product", label: "Product", type: "text", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
-    { key: "batchSize", label: "Batch Size", type: "number", sortable: true },
+    { key: "quantity", label: "Quantity", type: "number", sortable: true },
+    { key: "customer", label: "Customer", type: "text", sortable: true },
     { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
-    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Completed"] },
-    { key: "timestamp", label: "Created Timestamp", type: "date", sortable: true },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] },
+    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false }
   ]
 };
 
 export default function ProductOrdersPage() {
-  const [loading, setLoading] = useState(true);
+  const { store, addProductOrder, updateProductOrder, deleteProductOrder } = useStore();
+  const productOrders = store.productOrders;
+  const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<ProductOrderSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [qrData, setQrData] = useState<QRModalData | null>(null);
 
-  useEffect(() => {
-    async function fetchOrders() {
-      try {
-        const data = await productOrderService.list();
-        const formatted = (data as any[]).map(po => ({
-          id: po.product_order_no,
-          code: po.product_code || "-",
-          type: po.capacitor_type || "-",
-          grade: po.grade || "-",
-          batchSize: String(po.batch_size || po.quantity || 0),
-          status: po.status || "Yet to Start",
-          stage: po.stage || "Raw Material",
-          timestamp: new Date(po.created_at).toLocaleDateString("en-GB")
-        }));
-        setRows(formatted);
-      } catch (error) {
-        console.error("Failed to fetch product orders", error);
-      } finally {
-        setLoading(false);
-      }
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalInitialData, setModalInitialData] = useState<ProductOrderFormData | null>(null);
+
+  const openEditModal = (row: ProductOrderSummary) => {
+    setModalInitialData({
+      poId: row.id,
+      micron: row.micron,
+      width: row.width,
+      product: row.product,
+      grade: row.grade,
+      specifications: row.specifications,
+      quantity: row.quantity,
+      customer: row.customer,
+      instructions: row.instructions,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleModalSubmit = (data: ProductOrderFormData, isEditMode: boolean) => {
+    if (isEditMode) {
+      updateProductOrder(data.poId, data);
+    } else {
+      addProductOrder({
+        ...data,
+        id: data.poId,
+        status: "Yet to Start",
+        stage: "Raw Material",
+        timestamp: new Date().toISOString(),
+      });
     }
-    fetchOrders();
-  }, []);
+    setIsModalOpen(false);
+  };
+
+  useEffect(() => {
+    setRows(productOrders);
+  }, [productOrders]);
 
   const {
     processedData,
@@ -83,7 +108,7 @@ export default function ProductOrdersPage() {
 
   const filteredData = useMemo(() => {
     return processedData.filter((row) => {
-      if (searchQuery && !row.id.toLowerCase().includes(searchQuery.toLowerCase()) && !row.code.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && !row.id.toLowerCase().includes(searchQuery.toLowerCase()) && !row.customer.toLowerCase().includes(searchQuery.toLowerCase()) && !row.product.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
   }, [processedData, searchQuery]);
@@ -112,13 +137,22 @@ export default function ProductOrdersPage() {
 
       {/* DESKTOP HEADER */}
       <section className="bg-white border-b border-[#EBEBEB] hidden md:block">
-        <div className="px-6 py-6 flex flex-col">
-          <h1 className="text-[20px] font-semibold text-[#171717]">Product Orders</h1>
-          <p className="text-[14px] text-[#5C5C5C] mt-1">
-            Track and manage product orders across their production stages
-          </p>
+        <div className="px-6 py-6 flex items-center justify-between">
+          <div className="flex flex-col">
+            <h1 className="text-[20px] font-semibold text-[#171717]">Product Orders</h1>
+            <p className="text-[14px] text-[#5C5C5C] mt-1">
+              Track and manage product orders across their production stages
+            </p>
+          </div>
         </div>
       </section>
+
+      <ProductOrderModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={modalInitialData}
+      />
 
       {/* MOBILE PAGE TITLE */}
       <section className="px-4 pt-4 sm:hidden">
@@ -164,13 +198,15 @@ export default function ProductOrdersPage() {
             const dataToExport = scope === "all" ? filteredData : paginatedData;
             const exportData = dataToExport.map((row: any) => ({
               "Order ID": row.id ?? "",
-              "Product Code": row.code ?? "",
-              "Capacitor Type": row.type ?? "",
+              "Micron": row.micron ?? "",
+              "Width": row.width ?? "",
+              "Product": row.product ?? "",
               "Grade": row.grade ?? "",
-              "Batch Size": row.batchSize ?? "",
+              "Quantity": row.quantity ?? "",
+              "Customer": row.customer ?? "",
               "Status": row.status ?? "",
               "Stage": row.stage ?? "",
-              "Created Timestamp": row.timestamp ?? "",
+              "Timestamp": row.timestamp ?? "",
             }));
             exportToExcel(exportData, "product-orders", "Product Orders");
           }} />
@@ -183,7 +219,7 @@ export default function ProductOrdersPage() {
               <thead>
                 <tr className="border-b border-[#EBEBEB] bg-[#F9FAFB]">
                   {productOrderConfig.columns.map((col) => (
-                    <th key={String(col.key)} className="px-6 py-4 text-[13px] font-semibold text-[#171717]">
+                    <th key={String(col.key)} className="px-3 py-3 text-[13px] font-semibold text-[#171717]">
                       <SortableHeader
                         column={col}
                         sortConfig={sortConfig}
@@ -215,11 +251,11 @@ export default function ProductOrdersPage() {
                     <tr key={idx} className="hover:bg-[#F9FAFB] transition-colors">
                       {productOrderConfig.columns.map((col) => {
                         if (String(col.key) === "id") {
-                          return <td key={String(col.key)} className="px-6 py-4 text-[14px] text-[#5C5C5C] font-semibold">{row.id}</td>;
+                          return <td key={String(col.key)} className="px-2 py-2 text-[14px] text-[#5C5C5C] font-semibold">{row.id}</td>;
                         }
                         if (String(col.key) === "status") {
                           return (
-                            <td key={String(col.key)} className="px-6 py-4">
+                            <td key={String(col.key)} className="px-2 py-2">
                               {row.status === "Yet to Start" && (
                                 <span className="inline-flex px-2.5 py-1 rounded-[12px] bg-[#FFF0F1] text-[#FB3748] text-[12px] font-medium whitespace-nowrap">
                                   Yet to Start
@@ -240,7 +276,7 @@ export default function ProductOrdersPage() {
                         }
                         if (String(col.key) === "stage") {
                           return (
-                            <td key={String(col.key)} className="px-6 py-4">
+                            <td key={String(col.key)} className="px-2 py-2">
                               <span className="inline-flex px-2.5 py-0.5 rounded-[12px] bg-[#E6F8FC] text-[#00B6E2] text-[12px] font-medium">
                                 {row.stage}
                               </span>
@@ -250,8 +286,8 @@ export default function ProductOrdersPage() {
                         if (String(col.key) === "qr") {
                           const cleanId = row.id.replace('#', '');
                           return (
-                            <td key={String(col.key)} className="px-6 py-4">
-                              <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { productCode: row.code, type: row.type, grade: row.grade, batchSize: row.batchSize, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
+                            <td key={String(col.key)} className="px-2 py-2">
+                              <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { micron: row.micron, width: row.width, product: row.product, grade: row.grade, quantity: row.quantity, customer: row.customer, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
                                 <QrCode className="w-4 h-4" />
                               </button>
                             </td>
@@ -260,17 +296,21 @@ export default function ProductOrdersPage() {
                         if (String(col.key) === "options") {
                           const cleanId = row.id.replace('#', '');
                           return (
-                            <td key={String(col.key)} className="px-6 py-4">
-                              <Link
-                                href={`/admin/productorders/${cleanId}`}
-                                className="inline-flex items-center justify-center h-8 px-4 bg-[#00B6E2] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#00A0E3] transition-colors"
-                              >
-                                View
-                              </Link>
+                            <td key={String(col.key)} className="px-2 py-2">
+                              <OptionsDropdown
+                                viewHref={`/admin/productorders/${cleanId}`}
+                                status={row.status}
+                                onEdit={() => openEditModal(row)}
+                                onDelete={async () => {
+                                  if (confirm(`Are you sure you want to delete ${row.id}?`)) {
+                                    deleteProductOrder(row.id);
+                                  }
+                                }}
+                              />
                             </td>
                           );
                         }
-                        return <td key={String(col.key)} className="px-6 py-4 text-[14px] text-[#5C5C5C]">{(row as any)[col.key]}</td>;
+                        return <td key={String(col.key)} className="px-2 py-2 text-[14px] text-[#5C5C5C]">{(row as any)[col.key]}</td>;
                       })}
                     </tr>
                   ))

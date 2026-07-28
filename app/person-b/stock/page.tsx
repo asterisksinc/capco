@@ -391,7 +391,7 @@ export default function PersonBStockPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder={`Search by ${activeTab === "Metallisation" ? "Coil No" : "Stock ID"}...`}
+              placeholder={`Search by ${activeTab === "Metallisation" ? "Coil No" : "Product No"}...`}
               className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2]"
             />
           </div>
@@ -414,7 +414,7 @@ export default function PersonBStockPage() {
                 exportToExcel(exportData, "metallisation_stock", "Metallisation Stock");
               } else {
                 const exportData = filteredData.map((row: any) => ({
-                  "Stock ID": row.stockId,
+                  "Product No": row.stockId,
                   "Linked WO ID": row.linkedWoId,
                   "Weight": row.weight,
                   "Gross Weight": row.grossWeight,

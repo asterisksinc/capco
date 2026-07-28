@@ -7,7 +7,7 @@ export type DocsUploadedModalProps = {
   isOpen: boolean;
   onClose: () => void;
   activeTab: "Raw Material" | "Metallisation" | "Slitting" | string;
-  woData: any;
+  woData?: any;
 };
 
 export function DocsUploadedModal({ isOpen, onClose, activeTab, woData }: DocsUploadedModalProps) {

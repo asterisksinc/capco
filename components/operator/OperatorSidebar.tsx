@@ -39,15 +39,13 @@ export function OperatorSidebar() {
   } else if (pathname.startsWith("/person-a-slitting")) {
     navItems = [
       { name: "Work Orders", href: "/person-a-slitting/workorder", icon: Calendar },
+      { name: "Product Orders", href: "/person-a-slitting/product-orders", icon: Calendar },
       { name: "Stock", href: "/person-a-slitting/stock", icon: BarChart2 },
-
       { name: "Material Returns", href: "/person-a-slitting/material-returns", icon: Undo2 },
     ];
   } else if (pathname.startsWith("/slitting-operator")) {
     navItems = [
       { name: "Work Orders", href: "/slitting-operator/workorder", icon: Calendar },
-      // { name: "Stock", href: "/slitting-operator/stock", icon: BarChart2 },
-      // { name: "Material Returns", href: "/slitting-operator/material-returns", icon: Undo2 },
     ];
   }
 

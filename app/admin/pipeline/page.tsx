@@ -38,8 +38,8 @@ export default function PipelinePage() {
         
         setProductOrders(pos.map((po: any) => ({
           id: po.product_order_no,
-          code: po.product_code || "-",
-          type: po.capacitor_type || "-",
+          micron: po.product_code || "-",
+          width: po.capacitor_type || "-",
           grade: po.grade || "-",
           batch: po.batch_size || po.quantity || 0,
           status: po.status || "Yet to Start",
@@ -73,8 +73,8 @@ export default function PipelinePage() {
       id: po.id,
       status: po.status,
       isPO: true as const,
-      code: po.code,
-      type: po.type,
+      micron: po.micron,
+      width: po.width,
       grade: po.grade,
       batch: po.batch,
       qty: po.batch,
@@ -88,8 +88,8 @@ export default function PipelinePage() {
       id: po.id,
       status: po.status,
       isPO: true as const,
-      code: po.code,
-      type: po.type,
+      micron: po.micron,
+      width: po.width,
       grade: po.grade,
       batch: po.batch,
       qty: po.batch,
@@ -160,7 +160,7 @@ export default function PipelinePage() {
       ...po
     })).filter(row => {
       const search = searchQuery.toLowerCase();
-      if (searchQuery && !row.id.toLowerCase().includes(search) && !row.code.toLowerCase().includes(search)) return false;
+      if (searchQuery && !row.id.toLowerCase().includes(search) && !row.micron.toLowerCase().includes(search)) return false;
       return true;
     });
   }, [productOrders, searchQuery]);
@@ -288,10 +288,10 @@ export default function PipelinePage() {
                   const rows = viewMode === "list" ? productOrdersList : productOrders;
                   const exportData = rows.map((row: any) => ({
                     "Order ID": row.id ?? "",
-                    "Product Code": row.code ?? "",
-                    "Capacitor Type": row.type ?? "",
+                    "Product Code": row.micron ?? "",
+                    "Capacitor Type": row.width ?? "",
                     "Grade": row.grade ?? "",
-                    "Batch Size": row.batch ?? row.batchSize ?? "",
+                    "Batch Size": row.batch ?? row.quantity ?? "",
                     "Status": row.status ?? "",
                     "Stage": row.stage ?? "",
                     "Created Timestamp": row.date ?? row.timestamp ?? "",
@@ -347,11 +347,11 @@ export default function PipelinePage() {
                       {card.isPO ? (
                         <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[13px]">
                           <div className="flex flex-col gap-1">
-                            <span className="text-[#5C5C5C] font-semibold">{card.code}</span>
+                            <span className="text-[#5C5C5C] font-semibold">{card.micron}</span>
                             <span className="text-[#5C5C5C]">Grade: <span className="text-[#171717] font-medium">{card.grade}</span></span>
                           </div>
                           <div className="flex flex-col gap-1">
-                            <span className="text-[#5C5C5C]">{card.type}</span>
+                            <span className="text-[#5C5C5C]">{card.width}</span>
                             <span className="text-[#5C5C5C]">Batch: <span className="text-[#171717] font-medium">{card.batch}</span></span>
                             <div className="flex items-center gap-1.5 mt-auto pt-2">
                               <Calendar className="w-3.5 h-3.5 text-[#5C5C5C]" />
@@ -431,8 +431,8 @@ export default function PipelinePage() {
                     paginatedProductOrdersList.map((row, idx) => (
                       <tr key={idx} className="hover:bg-[#F9FAFB] transition-colors">
                         <td className="px-6 py-4 text-[14px] text-[#5C5C5C] font-semibold">{row.id}</td>
-                        <td className="px-6 py-4 text-[14px] text-[#5C5C5C]">{row.code}</td>
-                        <td className="px-6 py-4 text-[14px] text-[#5C5C5C]">{row.type}</td>
+                        <td className="px-6 py-4 text-[14px] text-[#5C5C5C]">{row.micron}</td>
+                        <td className="px-6 py-4 text-[14px] text-[#5C5C5C]">{row.width}</td>
                         <td className="px-6 py-4 text-[14px] text-[#5C5C5C]">{row.grade}</td>
                         <td className="px-6 py-4 text-[14px] text-[#5C5C5C]">{row.batch}</td>
                         <td className="px-6 py-4">

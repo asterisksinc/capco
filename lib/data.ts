@@ -2,10 +2,14 @@ export type WorkflowStatus = "Yet to Start" | "In-progress" | "Completed";
 
 export type ProductOrderSummary = {
   id: string;
-  code: string;
-  type: string;
+  micron: string;
+  width: string;
+  product: string;
   grade: string;
-  batchSize: string;
+  specifications: string;
+  quantity: string;
+  customer: string;
+  instructions: string;
   status: string;
   stage: string;
   timestamp: string;
@@ -328,9 +332,48 @@ export function createSeedStore() {
   };
 
   const productOrders: ProductOrderSummary[] = [
-    { id: "#PO-CC-0001", code: "C-450V-100uF", type: "Motor", grade: "AA", batchSize: "5000", status: "Yet to Start", stage: "Yet to Start", timestamp: `${d(-5)}:09:00:00` },
-    { id: "#PO-CC-0002", code: "MKT-250V-22uF", type: "Power", grade: "A+", batchSize: "3000", status: "In-progress", stage: "Raw Material", timestamp: `${d(-4)}:10:30:00` },
-    { id: "#PO-CC-0003", code: "SNUB-1KV-1uF", type: "Snubber", grade: "A", batchSize: "1000", status: "Completed", stage: "Completed", timestamp: `${d(-7)}:08:00:00` },
+    {
+      id: "PO-CC-21045",
+      micron: "3.5",
+      width: "30",
+      product: "MFD",
+      grade: "AAA",
+      specifications: "Standard",
+      quantity: "1500",
+      customer: "OEM",
+      instructions: "Handle with care",
+      status: "Completed",
+      stage: "Winding",
+      timestamp: "2024-03-24T10:00:00Z",
+    },
+    {
+      id: "PO-CC-21046",
+      micron: "4 HT",
+      width: "37.5",
+      product: "PP",
+      grade: "A",
+      specifications: "High temp rating",
+      quantity: "2000",
+      customer: "NON OEM",
+      instructions: "",
+      status: "In-progress",
+      stage: "Slitting",
+      timestamp: "2024-03-24T11:30:00Z",
+    },
+    {
+      id: "PO-CC-21047",
+      micron: "4.5 HT",
+      width: "45",
+      product: "AL",
+      grade: "B",
+      specifications: "Aluminum coating",
+      quantity: "1000",
+      customer: "OEM",
+      instructions: "Expedite delivery",
+      status: "Yet to Start",
+      stage: "Raw Material",
+      timestamp: "2024-03-24T14:15:00Z",
+    },
   ];
 
   const assignments: Record<string, AssignedStock[]> = {
