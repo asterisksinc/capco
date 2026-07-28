@@ -29,6 +29,7 @@
     { "key": "slittingBatchId", "value": "" },
     { "key": "generatedDocumentId", "value": "" },
     { "key": "inventoryId", "value": "40000000-0000-0000-0000-000000000003" },
+    { "key": "secondInventoryId", "value": "40000000-0000-0000-0000-000000000004" },
     { "key": "stockId", "value": "80000000-0000-0000-0000-000000000001" },
     { "key": "requestId", "value": "70000000-0000-0000-0000-000000000001" }
   ],
@@ -189,7 +190,7 @@
           { "key": "Prefer", "value": "return=representation" }
         ],
         "url": "{{supabaseUrl}}/rest/v1/inventory",
-        "body": { "mode": "raw", "raw": "{\n  \"raw_material_code\": \"RM-9001\",\n  \"raw_material_name\": \"BOPP Capacitor Film\",\n  \"roll_no\": \"RL-2607-001\",\n  \"micron\": 4.5,\n  \"width_m\": 1.0,\n  \"net_weight_kg\": 58.5,\n  \"gross_weight_kg\": 60.0,\n  \"current_weight_kg\": 58.5,\n  \"supplier\": \"VedaCap Industries\",\n  \"temperature_c\": 25,\n  \"raw_material_image_url\": \"{{rawMaterialImageUrl}}\",\n  \"status\": \"In Inventory\",\n  \"stage\": \"Inventory\"\n}" },
+        "body": { "mode": "raw", "raw": "{\n  \"raw_material_code\": \"RM-9001\",\n  \"raw_material_name\": \"BOPP Capacitor Film\",\n  \"roll_no\": \"RL-2607-001\",\n  \"package_no\": \"PKG-9001\",\n  \"core_inch\": 3,\n  \"micron\": 4.5,\n  \"width_m\": 1.0,\n  \"net_weight_kg\": 58.5,\n  \"gross_weight_kg\": 60.0,\n  \"current_weight_kg\": 58.5,\n  \"supplier\": \"VedaCap Industries\",\n  \"temperature_c\": 25,\n  \"raw_material_image_url\": \"{{rawMaterialImageUrl}}\",\n  \"status\": \"In Inventory\",\n  \"stage\": \"Inventory\"\n}" },
         "description": "Success response: [{ \"id\": \"...\", \"raw_material_code\": \"RM-9001\" }]\nError response: { \"message\": \"duplicate key value violates unique constraint\" }"
       }
     },
@@ -206,6 +207,22 @@
         "url": "{{supabaseUrl}}/rest/v1/inventory?id=eq.{{inventoryId}}",
         "body": { "mode": "raw", "raw": "{\n  \"raw_material_image_url\": \"{{rawMaterialImageUrl}}\"\n}" },
         "description": "Success response: [{ \"id\": \"...\", \"raw_material_image_url\": \"...\" }]\nError response: { \"message\": \"new row violates row-level security policy\" }"
+      }
+    },
+    {
+      "name": "Inventory - Admin Bulk Update Micron and Supplier",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/inventory/bulk-update",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"inventoryIds\": [\n    \"{{inventoryId}}\",\n    \"{{secondInventoryId}}\"\n  ],\n  \"micron\": 5.5,\n  \"supplier\": \"VedaCap Industries\"\n}"
+        },
+        "description": "Super Admin only. Updates one or many raw materials atomically. Send micron, supplier, or both. Success: { \"ok\": true, \"updatedCount\": 2, \"inventory\": [...] }. Validation errors return 400, missing auth returns 401, and a non-Super-Admin token returns 403."
       }
     },
     {
