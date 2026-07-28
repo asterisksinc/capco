@@ -948,7 +948,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                 ...(activeTab === "Raw Material"
                   ? { "Roll No": row.rollNo ?? "", "Net Weight": row.netWeight ?? "", "Gross Weight": row.grossWeight ?? "", "Micron": row.thickness ?? "", "Width (m)": row.width ?? "", "Temperature": row.temperature ?? "", "Supplier": row.supplier ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }
                   : activeTab === "Metallisation"
-                    ? { "Coil No": row.coilNo ?? "", "RM ID": row.rmId ?? "", "Machine No": row.machineNo ?? "", "Weight": row.weight ?? "", "Optical Density": row.opticalDensity ?? "", "Resistance": row.resistance ?? "", "Timestamp": row.timestamp ?? "", "Next Stage": row.nextStage ?? "", "Status": row.status ?? "" }
+                    ? { "Coil No": row.coilNo ?? "", "RM ID": row.rmId ?? "","RM Weight": row.rmWeight ?? "", "Factory Wastage": row.factoryWastageWeight ?? "", "Metallisation Weight": row.weight ?? "", "Timestamp": row.timestamp ?? "", "Next Stage": row.nextStage ?? "", "Status": row.status ?? "" }
                     : { "Product No": row.productNo ?? "", "RM ID": row.rmId ?? "", "Weight": row.weight ?? "", "Thickness": row.thickness ?? "", "Grade": row.grade ?? "", "Timestamp": row.timestampAdded ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }),
               }));
               exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);

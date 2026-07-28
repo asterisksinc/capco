@@ -30,6 +30,7 @@ type StockRow = {
   grade: string;
   stage: string;
   timestamp: string;
+  coilNo: string;
 };
 
 type MetallisationRow = {
@@ -115,20 +116,29 @@ const metallisationConfig: TableConfig<any> = {
 
 export default function OperatorStockPage() {
   const [activeTab, setActiveTab] = useState<"Metallisation" | "Slitting">("Metallisation");
-  
+
   const [slittingData, setSlittingData] = useState<StockRow[]>([]);
   const [metallisationData, setMetallisationData] = useState<MetallisationRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [stockRows, metRows] = await Promise.all([
-          stockService.list(),
-          productionStageService.listMetallisation()
-        ]);
-        
-        setSlittingData((stockRows as any[]).map((row: any) => ({
+  async function loadData() {
+    try {
+      const [stockRows, metRows, slittingRows] = await Promise.all([
+        stockService.list(),
+        productionStageService.listMetallisation(),
+        productionStageService.listSlitting()
+      ]);
+
+      // Build a lookup so each stock row can find its own slitting record's coil info
+      // without needing stockService's select to embed it.
+      const slittingById = new Map((slittingRows as any[]).map((s) => [s.id, s]));
+
+      setSlittingData((stockRows as any[]).map((row: any) => {
+        const linkedSlitting = slittingById.get(row.slitting_id);
+        const coilNo = linkedSlitting?.metallisation?.coil_no || linkedSlitting?.metallisation?.metallisation_no || "-";
+
+        return {
           stockId: row.stock_no || row.id,
           linkedWoId: row.work_orders?.work_order_no || "-",
           weight: row.weight_kg ? String(row.weight_kg) : "-",
@@ -139,28 +149,30 @@ export default function OperatorStockPage() {
           grade: row.grade || "-",
           stage: row.stage === "Stock" ? "Ready for Winding" : (row.stage || "Ready for Winding"),
           timestamp: new Date(row.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-        })));
-        
-        setMetallisationData((metRows as any[]).map((met: any) => ({
-          originalId: met.id,
-          coilNo: met.coil_no || met.metallisation_no || met.id,
-          rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
-          weight: met.weight_kg ? String(met.weight_kg) : "0",
-          grossWeight: met.gross_weight_kg ? String(met.gross_weight_kg) : "-",
-          usedWeight: met.used_weight_kg ? String(met.used_weight_kg) : "-",
-          factoryWastageWeight: met.factory_wastage_kg ? String(met.factory_wastage_kg) : "0",
-          timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-          nextStage: "Slitting",
-          status: met.status || "Completed",
-        })));
-      } catch (err) {
-        console.error("Failed to load stock data", err);
-      } finally {
-        setLoading(false);
-      }
+          coilNo,
+        };
+      }));
+
+      setMetallisationData((metRows as any[]).map((met: any) => ({
+        originalId: met.id,
+        coilNo: met.coil_no || met.metallisation_no || met.id,
+        rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
+        weight: met.weight_kg ? String(met.weight_kg) : "0",
+        grossWeight: met.gross_weight_kg ? String(met.gross_weight_kg) : "-",
+        usedWeight: met.used_weight_kg ? String(met.used_weight_kg) : "-",
+        factoryWastageWeight: met.factory_wastage_kg ? String(met.factory_wastage_kg) : "0",
+        timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+        nextStage: "Slitting",
+        status: met.status || "Completed",
+      })));
+    } catch (err) {
+      console.error("Failed to load stock data", err);
+    } finally {
+      setLoading(false);
     }
-    loadData();
-  }, []);
+  }
+  loadData();
+}, []);
 
   const currentConfig = activeTab === "Metallisation" ? metallisationConfig : stockConfig;
   const currentData = activeTab === "Metallisation" ? metallisationData : slittingData;
@@ -431,9 +443,8 @@ export default function OperatorStockPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as TabType)}
-                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${
-                  activeTab === tab ? "bg-[#00B6E2] text-white" : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                }`}
+                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab ? "bg-[#00B6E2] text-white" : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                  }`}
               >
                 {tab}
               </button>
@@ -474,15 +485,15 @@ export default function OperatorStockPage() {
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.nextStage}</td>
                         <td className="px-4 py-4 whitespace-nowrap"><StatusBadge status={row.status} /></td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <button onClick={() => setQrData({ id: row.coilNo, type: "MC", data: { coilNo: row.coilNo, rmId: row.rmId, weight: row.weight, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                          <button onClick={() => setQrData({ id: row.coilNo, type: "MC", data: { coilNo: row.coilNo, rmId: row.rmId, factoryWastageWeight: row.factoryWastageWeight, weight: row.weight, date: row.timestamp, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                             <QrCode className="w-4 h-4" />
                           </button>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <OptionsDropdown
                             status={row.status}
-                            onEdit={() => {}}
-                            onDelete={() => {}}
+                            onEdit={() => { }}
+                            onDelete={() => { }}
                           />
                         </td>
                       </>
@@ -501,20 +512,20 @@ export default function OperatorStockPage() {
                         <td className="px-4 py-4 text-[14px] font-medium text-[#171717] whitespace-nowrap">{row.grade}</td>
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
                           <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-[6px] text-xs font-medium tracking-wide">
-                              {row.stage}
+                            {row.stage}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <button onClick={() => setQrData({ id: row.stockId, type: "RM", data: { rollNo: row.stockId, linkedWoId: row.linkedWoId, weight: row.weight, width: row.width, micron: row.micron, grade: row.grade, stage: row.stage } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                          <button onClick={() => setQrData({ id: row.stockId, type: "PM", data: { coilId: row.coilNo, weight: row.weight ?? "", grade: row.grade ?? "", date: row.timestamp ?? "", stage: row.stage ?? "" } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                             <QrCode className="w-4 h-4" />
                           </button>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <OptionsDropdown
                             status="Yet to Start"
-                            onEdit={() => {}}
-                            onDelete={() => {}}
+                            onEdit={() => { }}
+                            onDelete={() => { }}
                           />
                         </td>
                       </>

@@ -15,6 +15,7 @@ import { FilterChips, type FilterConfig, type FilterState, type EnumFilter, type
 import { exportToExcel } from "@/lib/exportExcel";
 import { MobileHeader } from "@/components/MobileHeader";
 import { QRCodeModal, type QRModalData } from "@/components/QRCodeModal";
+import { productionStageService } from "@/src/services/productionStageService";
 
 type StockRow = {
   stockId: string;
@@ -27,6 +28,7 @@ type StockRow = {
   grade: string;
   stage: string;
   timestamp: string;
+  coilNo: string;
 };
 
 const STAGE_OPTIONS = ["Slitting", "Ready for Winding", "Completed"];
@@ -72,19 +74,30 @@ export default function OperatorSlittingStockPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const rows = await stockService.list();
-        setData(rows.map((row: any) => ({
-          stockId: row.stock_no || row.id,
-          linkedWoId: row.work_orders?.work_order_no || "-",
-          width: row.width_m ? String(row.width_m) : "-",
-          micron: row.micron ? String(row.micron) : "-",
-          weight: row.weight_kg ? String(row.weight_kg) : "-",
-          grossWeight: row.gross_weight_kg || row.slitting?.gross_weight_kg ? String(row.gross_weight_kg || row.slitting?.gross_weight_kg) : "-",
-          usedWeight: row.used_weight_kg || row.slitting?.used_weight_kg ? String(row.used_weight_kg || row.slitting?.used_weight_kg) : "-",
-          grade: row.grade || "-",
-          stage: row.stage === "Stock" ? "Ready for Winding" : (row.stage || "Ready for Winding"),
-          timestamp: new Date(row.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-        })));
+        const [rows, slittingRows] = await Promise.all([
+          stockService.list(),
+          productionStageService.listSlitting()
+        ]);
+
+        const slittingById = new Map((slittingRows as any[]).map((s) => [s.id, s]));
+
+        setData(rows.map((row: any) => {
+          const slitting = slittingById.get(row.slitting_id);
+
+          return {
+            stockId: row.stock_no || row.id,
+            coilNo: slitting?.metallisation?.coil_no || slitting?.metallisation?.metallisation_no || "-",
+            linkedWoId: row.work_orders?.work_order_no || "-",
+            width: row.width_m ? String(row.width_m) : "-",
+            micron: row.micron ? String(row.micron) : "-",
+            weight: row.weight_kg ? String(row.weight_kg) : "-",
+            grossWeight: row.gross_weight_kg || row.slitting?.gross_weight_kg ? String(row.gross_weight_kg || row.slitting?.gross_weight_kg) : "-",
+            usedWeight: row.used_weight_kg || row.slitting?.used_weight_kg ? String(row.used_weight_kg || row.slitting?.used_weight_kg) : "-",
+            grade: row.grade || "-",
+            stage: row.stage === "Stock" ? "Ready for Winding" : (row.stage || "Ready for Winding"),
+            timestamp: new Date(row.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+          }
+        }));
       } catch (err) {
         console.error("Failed to load stock data", err);
       } finally {
@@ -247,8 +260,8 @@ export default function OperatorSlittingStockPage() {
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
             onExport={(scope = "all") => {
-            const dataToExport = scope === "all" ? filteredData : paginatedData;
-            const exportData = dataToExport.map(row => ({
+              const dataToExport = scope === "all" ? filteredData : paginatedData;
+              const exportData = dataToExport.map(row => ({
                 "Stock ID": row.stockId,
                 "Linked WO ID": row.linkedWoId,
                 "Width": row.width,
@@ -303,21 +316,21 @@ export default function OperatorSlittingStockPage() {
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.usedWeight}kgs</td>
                     <td className="px-4 py-4 text-[14px] font-medium text-[#171717] whitespace-nowrap">{row.grade}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
-                       <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-[6px] text-xs font-medium tracking-wide">
-                          {row.stage}
-                       </span>
+                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-[6px] text-xs font-medium tracking-wide">
+                        {row.stage}
+                      </span>
                     </td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <button onClick={() => setQrData({ id: row.stockId, type: "RM", data: { rollNo: row.stockId, linkedWoId: row.linkedWoId, weight: row.weight, width: row.width, micron: row.micron, grade: row.grade, stage: row.stage } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
+                      <button onClick={() => setQrData({ id: row.stockId, type: "PM", data: { coilId: row.coilNo, weight: row.weight ?? "", grade: row.grade ?? "", date: row.timestamp ?? "", stage: row.stage ?? "" } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                         <QrCode className="w-4 h-4" />
                       </button>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown
                         status="Yet to Start"
-                        onEdit={() => {}}
-                        onDelete={() => {}}
+                        onEdit={() => { }}
+                        onDelete={() => { }}
                       />
                     </td>
                   </tr>

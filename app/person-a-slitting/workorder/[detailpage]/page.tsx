@@ -18,6 +18,7 @@ import { OptionsDropdown } from "@/components/table/OptionsDropdown";
 import { MobileHeader } from "@/components/MobileHeader";
 import { QRCodeModal, type QRModalData } from "@/components/QRCodeModal";
 import { exportToExcel } from "@/lib/exportExcel";
+import { useWorkOrderAccess } from "@/hooks/useWorkOrderAccess";
 import { workOrderService } from "@/src/services/workOrderService";
 import { productionStageService } from "@/src/services/productionStageService";
 import { authService } from "@/src/services/authService";
@@ -134,7 +135,7 @@ const metallisationConfig: TableConfig<any> = {
 const slittingConfig: TableConfig<any> = {
   columns: [
     { key: "productNo", label: "Product No", type: "text", sortable: true },
-    { key: "rmId", label: "RM ID", type: "text", sortable: true },
+    { key: "coilId", label: "Coil ID", type: "text", sortable: true },
     { key: "weight", label: "Weight", type: "text", sortable: true },
     { key: "thickness", label: "Thickness", type: "text", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
@@ -215,12 +216,21 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
 
   const [loading, setLoading] = useState(true);
   const [woData, setWoData] = useState<any>(null);
+  const [allWorkOrders, setAllWorkOrders] = useState<any[]>([]);
+
+  const { isLocked } = useWorkOrderAccess(allWorkOrders);
 
   const fetchWorkOrder = async () => {
     try {
-      const data = await workOrderService.getByWorkOrderNo(orderId);
+      const [data, allData] = await Promise.all([
+        workOrderService.getByWorkOrderNo(orderId),
+        workOrderService.list()
+      ]);
       if (data) {
         setWoData(data);
+      }
+      if (allData) {
+        setAllWorkOrders(allData);
       }
     } catch (err) {
       console.error(err);
@@ -270,7 +280,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       }),
       metallisationRows: (woData.metallisation || []).map((met: any) => ({
         coilNo: met.metallisation_no || met.id,
-        metallisation_id: met.id,
+        rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
         rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
         factoryWastageWeight: met.factory_wastage_kg || "0",
         weight: met.weight_kg || "0",
@@ -280,7 +290,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       })),
       slittingRows: (woData.slitting || []).map((slit: any) => ({
         productNo: slit.product_no || slit.slitting_no || slit.id,
-        rmId: slit.metallisation?.metallisation_no || "-",
+        coilId: slit.metallisation?.metallisation_no || "-",
         weight: slit.weight_kg || "0",
         thickness: slit.thickness_micron || "-",
         grade: slit.grade || "-",
@@ -365,7 +375,27 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
 
   const { paginatedData, totalPages, validPage: currentPage } = getPaginatedData(processedData);
 
-  if (loading) return <div className="p-6 text-center text-[#5C5C5C]">Loading details...</div>;
+  if (loading || !woData) return <div className="p-6 text-center text-[#5C5C5C]">Loading work order...</div>;
+
+  if (isLocked(woData)) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#EBEBEB] p-8 max-w-md w-full text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-[#F5F7FA] rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#A1A1AA]"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <h2 className="text-xl font-bold text-[#171717] mb-2">Work Order Locked</h2>
+          <p className="text-[#5C5C5C] mb-6">
+            This work order is locked. Please complete the active 'Yet to Start' work orders first.
+          </p>
+          <Link href="/person-a-slitting/workorder" className="h-[40px] px-6 bg-[#00B6E2] text-white font-medium rounded-[8px] flex items-center justify-center hover:bg-[#0095B8] transition-colors">
+            Back to Work Orders
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!workOrderFlowData) return <div className="p-6 text-center text-[#5C5C5C]">Work Order not found</div>;
 
   const recalculateProductNos = (rows: SlittingForm[], basePmId: number) => {
@@ -1136,17 +1166,16 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                   "Status": row.status ?? "",
                 } : activeTab === "Metallisation" ? {
                   "Coil No": row.coilNo ?? "",
-                  "RM ID": row.rmId ?? "",
-                  "Machine No": row.machineNo ?? "",
-                  "Weight": row.weight ?? "",
-                  "Optical Density": row.opticalDensity ?? "",
-                  "Resistance": row.resistance ?? "",
+                  "RM ID": row.rollNo ?? "",
+                  "RM Weight": row.rmWeight ?? "",
+                  "Factory Wastage": row.factoryWastageWeight ?? "",
+                  "Metallisation Weight": row.weight ?? "",
                   "Timestamp": row.timestamp ?? "",
                   "Next Stage": row.nextStage ?? "",
                   "Status": row.status ?? "",
                 } : {
                   "Product No": row.productNo ?? "",
-                  "RM ID": row.rmId ?? "",
+                  "Coil ID": row.rmId ?? "",
                   "Weight": row.weight ?? "",
                   "Thickness": row.thickness ?? "",
                   "Grade": row.grade ?? "",

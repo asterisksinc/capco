@@ -190,6 +190,11 @@ alter table public.inventory
   drop constraint if exists inventory_assigned_work_order_id_fkey,
   add constraint inventory_assigned_work_order_id_fkey foreign key (assigned_work_order_id) references public.work_orders(id) on delete set null;
 
+-- Add Package No and Core (Inch) to inventory
+alter table public.inventory
+  add column if not exists package_no text,
+  add column if not exists core_inch numeric(8,2);
+
 create table if not exists public.work_order_materials (
   id uuid primary key default gen_random_uuid(),
   work_order_id uuid not null references public.work_orders(id) on delete cascade,

@@ -20,6 +20,7 @@ import { QRCodeModal, type QRModalData } from "@/components/QRCodeModal";
 import { exportToExcel } from "@/lib/exportExcel";
 import { workOrderService } from "@/src/services/workOrderService";
 import { productionStageService } from "@/src/services/productionStageService";
+import { useWorkOrderAccess } from "@/hooks/useWorkOrderAccess";
 import { authService } from "@/src/services/authService";
 import { getAccessToken, supabaseConfig } from "@/src/services/supabaseClient";
 import { useEffect } from "react";
@@ -171,14 +172,23 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
 
   const [loading, setLoading] = useState(true);
   const [woData, setWoData] = useState<any>(null);
+  const [allWorkOrders, setAllWorkOrders] = useState<any[]>([]);
+
+  const { isLocked } = useWorkOrderAccess(allWorkOrders);
 
   const [inProgressCoils, setInProgressCoils] = useState<any[]>([]);
 
   const fetchWorkOrder = async () => {
     try {
-      const data = await workOrderService.getByWorkOrderNo(orderId);
+      const [data, allData] = await Promise.all([
+        workOrderService.getByWorkOrderNo(orderId),
+        workOrderService.list()
+      ]);
       if (data) {
         setWoData(data);
+      }
+      if (allData) {
+        setAllWorkOrders(allData);
       }
     } catch (err) {
       console.error(err);
@@ -292,12 +302,31 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
     getPaginatedData,
     setCurrentPage,
   } = useTableControls({ data: currentData, config: currentConfig });
-
   const handleSort = handleSortRaw as (key: string | number | symbol) => void;
 
   const { paginatedData, totalPages, validPage: currentPage } = getPaginatedData(processedData);
 
-  if (loading) return <div className="p-6 text-center text-[#5C5C5C]">Loading details...</div>;
+  if (loading || !woData) return <div className="p-6 text-center text-[#5C5C5C]">Loading work order...</div>;
+
+  if (isLocked(woData)) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#EBEBEB] p-8 max-w-md w-full text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-[#F5F7FA] rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#A1A1AA]"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <h2 className="text-xl font-bold text-[#171717] mb-2">Work Order Locked</h2>
+          <p className="text-[#5C5C5C] mb-6">
+            This work order is locked. Please complete the active 'Yet to Start' work orders first.
+          </p>
+          <Link href="/person-a-metallisation/workorder" className="h-[40px] px-6 bg-[#00B6E2] text-white font-medium rounded-[8px] flex items-center justify-center hover:bg-[#0095B8] transition-colors">
+            Back to Work Orders
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!workOrderFlowData) return <div className="p-6 text-center text-[#5C5C5C]">Work Order not found</div>;
 
   const resetModalState = async (type: "Wastage" | "Metallisation") => {

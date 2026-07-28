@@ -20,6 +20,7 @@ import { QRCodeModal, type QRModalData } from "@/components/QRCodeModal";
 import { exportToExcel } from "@/lib/exportExcel";
 import { workOrderService } from "@/src/services/workOrderService";
 import { productionStageService } from "@/src/services/productionStageService";
+import { useWorkOrderAccess } from "@/hooks/useWorkOrderAccess";
 import { authService } from "@/src/services/authService";
 import { slittingService } from "@/src/services/slittingService";
 import { useEffect } from "react";
@@ -72,11 +73,22 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
 
   const [loading, setLoading] = useState(true);
   const [woData, setWoData] = useState<any>(null);
+  const [allWorkOrders, setAllWorkOrders] = useState<any[]>([]);
+
+  const { isLocked } = useWorkOrderAccess(allWorkOrders);
 
   const fetchWorkOrder = async () => {
     try {
-      const data = await workOrderService.getByWorkOrderNo(orderId);
-      if (data) setWoData(data);
+      const [data, allData] = await Promise.all([
+        workOrderService.getByWorkOrderNo(orderId),
+        workOrderService.list()
+      ]);
+      if (data) {
+        setWoData(data);
+      }
+      if (allData) {
+        setAllWorkOrders(allData);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -139,8 +151,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
           coilNo: met.metallisation_no || met.id,
           metallisation_id: met.id,
           rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
-          weight: met.weight_kg || "0",
+          rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
           factoryWastageWeight: met.factory_wastage_kg || "0",
+          weight: met.weight_kg || "0",
           timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
           nextStage: "Slitting",
           status: met.status || "Issued",
@@ -200,7 +213,27 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
   const handleSort = handleSortRaw as (key: string | number | symbol) => void;
   const { paginatedData, totalPages, validPage: currentPage } = getPaginatedData(processedData);
 
-  if (loading) return <div className="p-6 text-center text-[#5C5C5C]">Loading details...</div>;
+  if (loading || !woData) return <div className="p-6 text-center text-[#5C5C5C]">Loading work order...</div>;
+
+  if (isLocked(woData)) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#EBEBEB] p-8 max-w-md w-full text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-[#F5F7FA] rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#A1A1AA]"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <h2 className="text-xl font-bold text-[#171717] mb-2">Work Order Locked</h2>
+          <p className="text-[#5C5C5C] mb-6">
+            This work order is locked. Please complete the active 'Yet to Start' work orders first.
+          </p>
+          <Link href="/slitting-operator/workorder" className="h-[40px] px-6 bg-[#00B6E2] text-white font-medium rounded-[8px] flex items-center justify-center hover:bg-[#0095B8] transition-colors">
+            Back to Work Orders
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!workOrderFlowData) return <div className="p-6 text-center text-[#5C5C5C]">Work Order not found</div>;
 
   const openScanner = () => {
@@ -227,6 +260,13 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
 
     try {
       const scan = await slittingService.scanMetallisationCoil(rawValue);
+      
+      if (isLocked(scan.work_order_id)) {
+        setScanError(`Coil belongs to locked Work Order (${scan.work_order_id}). Complete active ones first.`);
+        setPendingScanData(null);
+        return;
+      }
+
       if (scan.work_order_id !== woData.id) {
         // Wrong work order — show invalid coil error, keep scanner open for retry
         setInvalidCoilId(scan.coil_no || scan.metallisation_no || rawValue);
@@ -374,13 +414,13 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                   <div className="rounded-[10px] border border-[#DDE1E8] bg-[#F5F7FA] p-4 flex flex-col gap-2 text-[13px]">
                     {[
                       ["Coil No.", pendingScanData.coil_no || "-"],
-                      ["Metallisation No.", pendingScanData.metallisation_no || "-"],
                       ["Work Order", pendingScanData.work_order_no || "-"],
-                      ["Product Order", pendingScanData.product_order?.product_order_no || "-"],
                       ["Material", pendingScanData.material || "-"],
                       ["Micron", pendingScanData.micron != null ? `${pendingScanData.micron}µ` : "-"],
                       ["Width", pendingScanData.width_m != null ? `${pendingScanData.width_m} m` : "-"],
-                      ["Weight", pendingScanData.weight_kg != null ? `${pendingScanData.weight_kg} kg` : "-"],
+                      ["RM Weight", pendingScanData.rmWeight || "-"],
+                      ["Factory Wastage", pendingScanData.factoryWastageWeight || "-"],
+                      ["Metallisation Weight", pendingScanData.weight_kg != null ? `${pendingScanData.weight_kg} kg` : "-"],
                       ["Metallisation Status", pendingScanData.metallisation_status || "-"],
                       ["Existing Slitting Status", pendingScanData.existing_slitting_status || "None"],
                     ].map(([label, val]) => (
@@ -546,7 +586,9 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                 } : {
                   "Coil No": row.coilNo ?? "",
                   "RM ID": row.rmId ?? "",
-                  "Weight": row.weight ?? "",
+                  "RM Weight": row.rmWeight ?? "",
+                  "Factory Wastage": row.factoryWastageWeight ?? "",
+                  "Metallisation Weight": row.weight ?? "",
                   "Timestamp": row.timestamp ?? "",
                   "Next Stage": row.nextStage ?? "",
                   "Status": row.status ?? "",

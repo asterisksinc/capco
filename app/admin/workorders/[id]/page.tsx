@@ -109,7 +109,7 @@ export default function AdminWorkOrderDetailPage({ params }: DetailPageProps) {
         .reduce((sum, m) => sum + (m.factory_wastage_kg || 0), 0) || 0;
 
       return {
-        rollNo: inv.roll_no || "-",
+        rollNo: inv.raw_material_code || inv.roll_no || "-",
         netWeight: inv.net_weight_kg != null ? `${inv.net_weight_kg}kgs` : "-",
         grossWeight: inv.gross_weight_kg != null ? `${inv.gross_weight_kg}kgs` : "-",
         thickness: inv.micron || "-",
@@ -220,7 +220,7 @@ export default function AdminWorkOrderDetailPage({ params }: DetailPageProps) {
     const exportData = currentData.map((row: any) => ({
       ...(activeTab === "Raw Material"
         ? {
-          "Roll No": row.rollNo ?? "",
+          "Roll No": row.raw_material_code || row.roll_no || "-",
           "Net Weight": row.netWeight ?? "",
           "Gross Weight": row.grossWeight ?? "",
           "Micron": row.thickness ?? "",
@@ -238,10 +238,9 @@ export default function AdminWorkOrderDetailPage({ params }: DetailPageProps) {
           ? {
             "Coil No": row.coilNo ?? "",
             "RM ID": row.rmId ?? "",
-            "Machine No": row.machineNo ?? "",
-            "Weight": row.weight ?? "",
-            "Optical Density": row.opticalDensity ?? "",
-            "Resistance": row.resistance ?? "",
+            "RM Weight": row.rmWeight ?? "",
+            "Factory Wastage": row.factoryWastageWeight ?? "",
+            "Metallisation Weight": row.weight ?? "",
             "Timestamp": row.timestamp ?? "",
             "Next Stage": row.nextStage ?? "",
             "Status": row.status ?? "",

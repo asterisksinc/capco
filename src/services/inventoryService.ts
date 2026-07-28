@@ -13,6 +13,8 @@ export type InventoryPayload = {
   wastage_weight_kg?: number;
   damaged_weight_kg?: number;
   supplier: string;
+  package_no?: string;
+  core_inch?: number;
   temperature_c?: number;
   raw_material_image_url?: string;
   date_received?: string;

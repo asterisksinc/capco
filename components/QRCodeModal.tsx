@@ -86,7 +86,8 @@ export function QRCodeModal({
       fields.push({ label: 'Weight', value: data.weight ? `${data.weight} Kgs` : '-' });
       fields.push({ label: 'Grade', value: String(data.grade || '-') });
       fields.push({ label: 'Date', value: formatDate(data.date) });
-      fields.push({ label: 'Status', value: String(data.status || '-') });
+      {data.status && fields.push({ label: 'Status', value: String(data.status || '-') });}
+      {data.stage && fields.push({ label: 'Stage', value: String(data.stage) })};
     } else if (type === 'PO') {
       fields.push({ label: 'Product Code', value: String(data.productCode || id || '-') });
       fields.push({ label: 'Type', value: String(data.type || '-') });

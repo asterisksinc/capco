@@ -50,6 +50,7 @@ export default function WorkOrdersPage() {
     async function fetchOrders() {
       try {
         const data = await workOrderService.list();
+        console.log("Work Order data: ", data);
         const formatted = (data as any[]).map(wo => ({
           id: wo.work_order_no,
           micron: `${wo.micron}μ`,

@@ -10,6 +10,7 @@ import { useStore } from "@/hooks/useStore";
 import type { TableConfig } from "@/hooks/useTableControls";
 import { TablePagination } from "@/components/table/TablePagination";
 import { useTableControls } from "@/hooks/useTableControls";
+import { useWorkOrderAccess } from "@/hooks/useWorkOrderAccess";
 import { useEffect, useMemo } from "react";
 import { SortableHeader } from "@/components/table/SortableHeader";
 import { TableToolbar } from "@/components/table/TableToolbar";
@@ -58,6 +59,8 @@ export default function OperatorWorkOrderPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [qrData, setQrData] = useState<QRModalData | null>(null);
+
+  const { isLocked } = useWorkOrderAccess(workOrders);
 
   useEffect(() => {
     async function loadData() {
@@ -269,12 +272,21 @@ export default function OperatorWorkOrderPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAECF0]">
-                {paginatedData.length > 0 ? paginatedData.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+                {paginatedData.length > 0 ? paginatedData.map((row, idx) => {
+                  const locked = isLocked(row.id);
+                  return (
+                  <tr key={idx} className={`hover:bg-gray-50/50 transition-colors group ${locked ? 'opacity-50 grayscale bg-[#FAFAFA]' : ''}`} title={locked ? "Locked — complete an active work order first" : ""}>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
-                      <Link href={`/person-a-slitting/workorder/${row.id}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
-                        {row.id}
-                      </Link>
+                      {locked ? (
+                        <span className="flex items-center gap-1 cursor-not-allowed">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#A1A1AA]"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                          {row.id}
+                        </span>
+                      ) : (
+                        <Link href={`/person-a-slitting/workorder/${row.id}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
+                          {row.id}
+                        </Link>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
@@ -294,20 +306,26 @@ export default function OperatorWorkOrderPage() {
                             </button>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <OptionsDropdown 
-                        viewHref={`/person-a-slitting/workorder/${row.id}`}
-                        status={row.status}
-                        onEdit={() => {}}
-                        onDelete={async () => {
-                          if (confirm(`Are you sure you want to delete ${row.id}?`)) {
-                            await workOrderService.remove(row.originalId);
-                            setWorkOrders(workOrders.filter(w => w.id !== row.originalId));
-                          }
-                        }}
-                      />
+                      {locked ? (
+                        <div className="w-8 h-8 flex items-center justify-center opacity-50 cursor-not-allowed">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#A1A1AA]"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                        </div>
+                      ) : (
+                        <OptionsDropdown 
+                          viewHref={`/person-a-slitting/workorder/${row.id}`}
+                          status={row.status}
+                          onEdit={() => {}}
+                          onDelete={async () => {
+                            if (confirm(`Are you sure you want to delete ${row.id}?`)) {
+                              await workOrderService.remove(row.originalId);
+                              setWorkOrders(workOrders.filter(w => w.id !== row.originalId));
+                            }
+                          }}
+                        />
+                      )}
                     </td>
                   </tr>
-                )) : (
+                )}) : (
                   <tr>
                     <td colSpan={9} className="px-4 py-8 text-center text-[#5C5C5C] text-[14px]">
                       No work orders found.
