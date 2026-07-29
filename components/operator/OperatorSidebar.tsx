@@ -22,7 +22,7 @@ export function OperatorSidebar() {
   let navItems = [
     { name: "Overview", href: "/person-a/overview", icon: LayoutDashboard },
     { name: "Work Orders", href: "/person-a/workorder", icon: Calendar },
-    { name: "Product Orders", href: "/person-a/product-orders", icon: Calendar },
+    // { name: "Product Orders", href: "/person-a/product-orders", icon: Calendar },
     { name: "Stock", href: "/person-a/stock", icon: BarChart2 },
     { name: "Material Requests", href: "/person-a/material-requests", icon: ClipboardList },
     { name: "Material Returns", href: "/person-a/material-returns", icon: Undo2 },
@@ -46,6 +46,18 @@ export function OperatorSidebar() {
   } else if (pathname.startsWith("/slitting-operator")) {
     navItems = [
       { name: "Work Orders", href: "/slitting-operator/workorder", icon: Calendar },
+    ];
+  } else if (pathname.startsWith("/person-b-winding")) {
+    navItems = [
+      { name: "Product Orders", href: "/person-b-winding/productorder", icon: Calendar },
+    ];
+  } else if (pathname.startsWith("/spray-operator")) {
+    navItems = [
+      { name: "Product Orders", href: "/spray-operator/productorder", icon: Calendar },
+    ];
+  } else if (pathname.startsWith("/spray-qc")) {
+    navItems = [
+      { name: "Product Orders", href: "/spray-qc/productorder", icon: Calendar },
     ];
   }
 

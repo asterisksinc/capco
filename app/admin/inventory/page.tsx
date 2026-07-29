@@ -10,6 +10,7 @@ import { ScannerInput } from "@/components/ScannerInput";
 import * as XLSX from "xlsx";
 
 import { productionStageService } from "@/src/services/productionStageService";
+import { getAccessToken } from "@/src/services/supabaseClient";
 
 const micronOptions = ["3", "3.5", "4", "4.5HT", "5", "5.5", "5.5HT", "6", "6HT", "6.5", "6.5HT", "7", "7.5", "8.0", "9.0", "10.0", "12.0"];
 const supplierOptions = ["VedaCap Industries", "ElectroForge Capacitors", "NextGen Metallic Pvt Ltd"];
@@ -482,28 +483,63 @@ export default function AdminInventoryPage() {
   const handleBulkUpdate = async () => {
     if (!bulkUpdateField || !bulkUpdateValue || selectedIds.size === 0) return;
     
-    // Optimistic UI Update
-    const updatedItems = inventoryItems.map(item => {
-      if (selectedIds.has(item.id)) {
-        return {
-          ...item,
-          micron: bulkUpdateField === "Micron" ? bulkUpdateValue : item.micron,
-          supplier: bulkUpdateField === "Supplier" ? bulkUpdateValue : item.supplier,
-        };
+    try {
+      const token = getAccessToken();
+      const payload: any = {
+        inventoryIds: Array.from(selectedIds),
+      };
+      console.log("Token: ", token, "Payload: ", payload);
+      
+      if (bulkUpdateField === "Micron") {
+        payload.micron = Number(bulkUpdateValue);
+      } else if (bulkUpdateField === "Supplier") {
+        payload.supplier = bulkUpdateValue;
       }
-      return item;
-    });
-    setInventoryItems(updatedItems);
-    
-    // TODO: call inventoryService.update(id, payload) here once bulk-edit backend is ready
-    // Array.from(selectedIds).forEach(id => {
-    //   inventoryService.update(id, { [bulkUpdateField.toLowerCase()]: bulkUpdateValue });
-    // });
-    
-    setSelectedIds(new Set());
-    setIsBulkModalOpen(false);
-    setBulkUpdateField("");
-    setBulkUpdateValue("");
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/inventory/bulk-update`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      console.log("Response: ", res);
+      
+      if (!res.ok) {
+        let errMsg = "Bulk update failed";
+        try {
+          const rawText = await res.text();
+          console.error(`Bulk update API failed with status ${res.status}:`, rawText);
+          const errData = JSON.parse(rawText);
+          errMsg = errData.error || errData.message || errMsg;
+        } catch(e) {
+          console.error("Failed to parse error response:", e);
+        }
+        
+        if (res.status === 403) {
+          throw new Error("You don't have permission to perform bulk updates");
+        }
+        throw new Error(errMsg);
+      }
+      
+      const data = await res.json();
+      
+      if (data.ok && data.inventory) {
+        setInventoryItems(prevItems => {
+          const map = new Map(data.inventory.map((i: any) => [i.id, i]));
+          return prevItems.map(item => map.has(item.id) ? { ...item, ...(map.get(item.id) as any) } : item);
+        });
+      }
+      
+      setSelectedIds(new Set());
+      setIsBulkModalOpen(false);
+      setBulkUpdateField("");
+      setBulkUpdateValue("");
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "An error occurred during bulk update");
+    }
   };
 
   const handleBulkDelete = async () => {

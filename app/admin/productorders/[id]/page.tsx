@@ -62,26 +62,36 @@ const slittingConfig: TableConfig<any> = {
 const windingConfig: TableConfig<any> = {
   columns: [
     { key: "wdId", label: "WD-ID", type: "text", sortable: true },
-    { key: "filmWidth", label: "Film Width", type: "text", sortable: true },
-    { key: "windingTension", label: "Winding Tension", type: "text", sortable: true },
-    { key: "turnsCount", label: "Turns Count", type: "text", sortable: true },
-    { key: "quantityWound", label: "Quantity Wound", type: "text", sortable: true },
+    { key: "mfd", label: "MFD", type: "text", sortable: true },
+    { key: "filmTurns", label: "Film Turns", type: "number", sortable: true },
+    { key: "weightOfElement", label: "Weight of Element", type: "text", sortable: true },
+    { key: "quantity", label: "Quantity", type: "number", sortable: true },
+    { key: "totalFilmConsumed", label: "Total Film Consumed", type: "text", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: true },
     { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "qr", label: "QR", type: "text", sortable: false },
+    { key: "options", label: "Action", type: "text", sortable: false },
   ],
 };
+
 
 const sprayConfig: TableConfig<any> = {
   columns: [
     { key: "spId", label: "SP-ID", type: "text", sortable: true },
-    { key: "linkedWdId", label: "Linked WD-ID", type: "text", sortable: true },
-    { key: "sprayType", label: "Spray Type", type: "text", sortable: true },
-    { key: "feedRate", label: "Feed Rate", type: "text", sortable: true },
-    { key: "pressureSitting", label: "Pressure Sitting", type: "text", sortable: true },
+    { key: "wdId", label: "WD-ID", type: "text", sortable: true },
+    { key: "mfd", label: "MFD", type: "text", sortable: true },
+    { key: "noOfCoats", label: "No. of Coats", type: "number", sortable: true },
+    { key: "thicknessMaintained", label: "Thickness Maintained", type: "text", sortable: true },
+    { key: "rejectedQuantity", label: "Rejected Quantity", type: "number", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: true },
     { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "qr", label: "QR", type: "text", sortable: false },
+    { key: "options", label: "Action", type: "text", sortable: false },
   ],
 };
+
 
 export default function ProductOrderDetailPage({ params }: DetailPageProps) {
   const resolvedParams = use(params);

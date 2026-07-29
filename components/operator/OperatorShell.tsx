@@ -12,7 +12,7 @@ import { LayoutDashboard, Calendar, BarChart2, Share2, ClipboardList, Undo2 } fr
 const mobileNavItems = [
   { name: "Overview", href: "/person-a/overview", icon: LayoutDashboard },
   { name: "Work Orders", href: "/person-a/workorder", icon: Calendar },
-  { name: "Product Orders", href: "/person-a/product-orders", icon: Calendar },
+  // { name: "Product Orders", href: "/person-a/product-orders", icon: Calendar },
   { name: "Stock", href: "/person-a/stock", icon: BarChart2 },
   { name: "Material Requests", href: "/person-a/material-requests", icon: ClipboardList },
   { name: "Material Returns", href: "/person-a/material-returns", icon: Undo2 },
@@ -41,6 +41,18 @@ function OperatorShellContent({ children }: { children: ReactNode }) {
   } else if (pathname.startsWith("/slitting-operator")) {
     activeMobileNav = [
       { name: "Work Orders", href: "/slitting-operator/workorder", icon: Calendar },
+    ];
+  } else if (pathname.startsWith("/person-b-winding")) {
+    activeMobileNav = [
+      { name: "Product Orders", href: "/person-b-winding/productorder", icon: Calendar },
+    ];
+  } else if (pathname.startsWith("/spray-operator")) {
+    activeMobileNav = [
+      { name: "Product Orders", href: "/spray-operator/productorder", icon: Calendar },
+    ];
+  } else if (pathname.startsWith("/spray-qc")) {
+    activeMobileNav = [
+      { name: "Product Orders", href: "/spray-qc/productorder", icon: Calendar },
     ];
   }
 

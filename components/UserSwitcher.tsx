@@ -6,13 +6,16 @@ import Link from "next/link";
 
 const userRoles = [
   { label: "Admin", href: "/admin", icon: Shield },
+  { label: "Production Head", href: "/productionhead", icon: Factory },
+  { label: "Store Head", href: "/store-head", icon: Store },
   { label: "Person A ", href: "/person-a", icon: UserCircle },
   { label: "Person A - Metallisation", href: "/person-a-metallisation", icon: UserCircle },
   { label: "Slitting Operator", href: "/slitting-operator", icon: UserCircle },
   { label: "Person A - Slitting", href: "/person-a-slitting", icon: UserCircle },
   { label: "Person B", href: "/person-b", icon: UserCheck },
-  { label: "Production Head", href: "/productionhead", icon: Factory },
-  { label: "Store Head", href: "/store-head", icon: Store },
+  { label: "Person B - Winding", href: "/person-b-winding", icon: UserCheck },
+  { label: "Spray Operator", href: "/spray-operator", icon: UserCheck },
+  { label: "Spray QC", href: "/spray-qc", icon: UserCheck },
   { label: "Sales", href: "/sales", icon: TrendingUp },
   { label: "Accountant", href: "/accountant", icon: Receipt },
 ];

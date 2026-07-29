@@ -14,72 +14,62 @@ import { exportToExcel } from "@/lib/exportExcel";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useStore } from "@/hooks/useStore";
 import { productOrderService } from "@/src/services/productOrderService";
+import { WO_STATUS_OPTIONS } from "@/lib/constants";
 
 type DetailPageProps = {
   params: Promise<{ id?: string, detailpage?: string }>;
 };
 
-type TabType = "Raw Material" | "Metallisation" | "Slitting" | "Winding" | "Spray";
-
-const rawMaterialConfig: TableConfig<any> = {
-  columns: [
-    { key: "rollNo", label: "Roll No", type: "text", sortable: true },
-    { key: "netWeight", label: "Net Weight", type: "text", sortable: true },
-    { key: "grossWeight", label: "Gross Weight", type: "text", sortable: true },
-    { key: "thickness", label: "Micron", type: "number", sortable: true },
-    { key: "width", label: "Width", type: "text", sortable: true },
-    { key: "temperature", label: "Temperature", type: "text", sortable: true },
-    { key: "supplier", label: "Supplier", type: "text", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
-  ],
-};
-
-const metallisationConfig: TableConfig<any> = {
-  columns: [
-    { key: "coilNo", label: "Coil No", type: "text", sortable: true },
-    { key: "rmId", label: "RM ID", type: "text", sortable: true },
-    { key: "weight", label: "Weight", type: "number", sortable: true },
-    { key: "opticalDensity", label: "Optical Density", type: "text", sortable: true },
-    { key: "resistance", label: "Resistance", type: "text", sortable: true },
-    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
-  ],
-};
+type TabType = "Slitting" | "Winding" | "Spray";
 
 const slittingConfig: TableConfig<any> = {
   columns: [
     { key: "productNo", label: "Product No", type: "text", sortable: true },
-    { key: "rmId", label: "Coil ID", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "number", sortable: true },
+    { key: "width", label: "Width", type: "number", sortable: true },
     { key: "weight", label: "Weight", type: "number", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "timestampAdded", label: "Timestamp", type: "date", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: false },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: WO_STATUS_OPTIONS },
+    { key: "qr", label: "QR", type: "text", sortable: false },
+    { key: "options", label: "Action", type: "text", sortable: false },
   ],
 };
 
 const windingConfig: TableConfig<any> = {
   columns: [
     { key: "wdId", label: "WD-ID", type: "text", sortable: true },
-    { key: "filmWidth", label: "Film Width", type: "text", sortable: true },
-    { key: "windingTension", label: "Winding Tension", type: "text", sortable: true },
-    { key: "turnsCount", label: "Turns Count", type: "text", sortable: true },
-    { key: "quantityWound", label: "Quantity Wound", type: "text", sortable: true },
+    { key: "mfd", label: "MFD", type: "text", sortable: true },
+    { key: "filmTurns", label: "Film Turns", type: "number", sortable: true },
+    { key: "weightOfElement", label: "Weight of Element", type: "text", sortable: true },
+    { key: "quantity", label: "Quantity", type: "number", sortable: true },
+    { key: "totalFilmConsumed", label: "Total Film Consumed", type: "text", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: true },
     { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "qr", label: "QR", type: "text", sortable: false },
+    { key: "options", label: "Action", type: "text", sortable: false },
   ],
 };
+
 
 const sprayConfig: TableConfig<any> = {
   columns: [
     { key: "spId", label: "SP-ID", type: "text", sortable: true },
-    { key: "linkedWdId", label: "Linked WD-ID", type: "text", sortable: true },
-    { key: "sprayType", label: "Spray Type", type: "text", sortable: true },
-    { key: "feedRate", label: "Feed Rate", type: "text", sortable: true },
-    { key: "pressureSitting", label: "Pressure Sitting", type: "text", sortable: true },
+    { key: "wdId", label: "WD-ID", type: "text", sortable: true },
+    { key: "mfd", label: "MFD", type: "text", sortable: true },
+    { key: "noOfCoats", label: "No. of Coats", type: "number", sortable: true },
+    { key: "thicknessMaintained", label: "Thickness Maintained", type: "text", sortable: true },
+    { key: "rejectedQuantity", label: "Rejected Quantity", type: "number", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: true },
     { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "qr", label: "QR", type: "text", sortable: false },
+    { key: "options", label: "Action", type: "text", sortable: false },
   ],
 };
+
 
 export default function ProductOrderDetailPage({ params }: DetailPageProps) {
   const resolvedParams = use(params);
@@ -89,7 +79,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
 
   const [poData, setPoData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>("Raw Material");
+  const [activeTab, setActiveTab] = useState<TabType>("Slitting");
   const [qrData, setQrData] = useState<QRModalData | null>(null);
 
   useEffect(() => {
@@ -99,11 +89,9 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
     setLoading(false);
   }, [orderId, store.productOrders]);
 
-  const currentConfig = activeTab === "Raw Material" ? rawMaterialConfig
-    : activeTab === "Metallisation" ? metallisationConfig
-      : activeTab === "Slitting" ? slittingConfig
-        : activeTab === "Winding" ? windingConfig
-          : sprayConfig;
+  const currentConfig = activeTab === "Slitting" ? slittingConfig
+    : activeTab === "Winding" ? windingConfig
+      : sprayConfig;
 
   // Empty data for now
   const rows = useMemo(() => [], [activeTab]);
@@ -122,7 +110,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
 
   const { paginatedData, totalPages, validPage: currentPage } = getPaginatedData(processedData);
 
-  const tabs: TabType[] = ["Raw Material", "Metallisation", "Slitting", "Winding", "Spray"];
+  const tabs: TabType[] = ["Slitting", "Winding", "Spray"];
 
   if (loading) {
     return (
@@ -255,13 +243,12 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                     {currentConfig.columns.map((col) => {
                       const key = String(col.key);
                       if (key === "options") {
-                        const isRM = activeTab === "Raw Material";
-                        const isMC = activeTab === "Metallisation";
-                        const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
-                        const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
-                        const qrDetails: any = isRM
+                        const isSlitting = activeTab === "Slitting";
+                        const rowId = isSlitting ? (row as any).rollNo : (row as any).productNo;
+                        const qrType = isSlitting ? "SL" : "PM";
+                        const qrDetails: any = isSlitting
                           ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
-                          : isMC
+                          : isSlitting
                             ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", factoryWastageWeight: (row as any).factoryWastageWeight ?? "", weight: (row as any).weight.split("k")[0] ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
                             : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
