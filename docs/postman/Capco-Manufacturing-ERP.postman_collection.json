@@ -226,6 +226,43 @@
       }
     },
     {
+      "name": "Inventory - Admin Bulk Create Material Batches",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/inventory/bulk-create",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"micron\": 4.5,\n  \"supplier\": \"VedaCap Industries\",\n  \"batches\": [\n    {\n      \"roll_no\": \"RL-{{$timestamp}}-001\",\n      \"width_m\": 1,\n      \"net_weight_kg\": 58.5,\n      \"gross_weight_kg\": 60,\n      \"package_no\": \"PKG-{{$timestamp}}-001\",\n      \"core_inch\": 3,\n      \"temperature_c\": 25\n    },\n    {\n      \"roll_no\": \"RL-{{$timestamp}}-002\",\n      \"width_m\": 1.2,\n      \"net_weight_kg\": 61.25,\n      \"gross_weight_kg\": 63,\n      \"package_no\": \"PKG-{{$timestamp}}-002\",\n      \"core_inch\": 3\n    }\n  ]\n}"
+        },
+        "description": "Super Admin only. Creates 1-500 raw-material batches atomically from the admin paste grid. micron and supplier may be provided once at request level or overridden on an individual row. RM codes and current weights are generated server-side. Success returns HTTP 201 with { \"ok\": true, \"createdCount\": 2, \"inventory\": [...] }. Row validation errors return 422 with an issues array, duplicate roll numbers return 409, missing auth returns 401, and a non-Super-Admin token returns 403. If any row fails, no rows are created."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Material batches created', function () {",
+              "  pm.response.to.have.status(201);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.ok).to.eql(true);",
+              "  pm.expect(body.createdCount).to.eql(2);",
+              "});",
+              "if (pm.response.code === 201) {",
+              "  const body = pm.response.json();",
+              "  if (body.inventory?.[0]?.id) pm.collectionVariables.set('inventoryId', body.inventory[0].id);",
+              "  if (body.inventory?.[1]?.id) pm.collectionVariables.set('secondInventoryId', body.inventory[1].id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Work Orders - List",
       "request": {
         "method": "GET",
@@ -626,7 +663,7 @@
           { "key": "Authorization", "value": "Bearer {{accessToken}}" }
         ],
         "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/documents/slitting_batches/{{slittingBatchId}}?kind=stickers&intent=print",
-        "description": "Returns one inline printer-friendly HTML document containing all stickers in the selected Slitting batch."
+        "description": "Returns one inline printer-friendly HTML document containing all stickers in the selected Slitting batch. Each sticker is exactly 50 mm x 25 mm in landscape orientation, prints on its own label page, and includes a blank Notes strip at the bottom for handwriting. Configure the printer driver for 50 mm x 25 mm paper with margins disabled."
       }
     },
     {
@@ -637,7 +674,7 @@
           { "key": "Authorization", "value": "Bearer {{accessToken}}" }
         ],
         "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/documents/generated_documents/{{generatedDocumentId}}?intent=download",
-        "description": "Downloads a generated sticker document without recreating the business record or changing serial numbers."
+        "description": "Downloads one generated 50 mm x 25 mm landscape sticker with a blank Notes strip at the bottom, without recreating the business record or changing serial numbers."
       }
     },
     {
