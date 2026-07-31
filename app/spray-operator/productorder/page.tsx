@@ -61,22 +61,8 @@ const productOrderConfig: TableConfig<ProductOrderRow> = {
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "quantity", label: "Quantity", type: "number", sortable: true },
     { key: "customer", label: "Customer", type: "text", sortable: true },
-    { 
-      key: "status", 
-      label: "Status", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "In-progress", "Completed"] 
-    },
-    { 
-      key: "stage", 
-      label: "Stage", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] 
-    },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false }
@@ -99,7 +85,6 @@ function StatusBadge({ status }: { status: string }) {
 export default function SupervisorProductOrdersPage() {
   const { store, addProductOrder, updateProductOrder, deleteProductOrder } = useStore();
   const productOrders = store.productOrders;
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
@@ -119,49 +104,6 @@ export default function SupervisorProductOrdersPage() {
   // All hooks MUST be called before any conditional returns (Rules of Hooks)
   const [qrData, setQrData] = useState<QRModalData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [formData, setFormData] = useState({
-    poId: generateProductOrderId(),
-    micron: "",
-    width: "",
-    product: "",
-    grade: "",
-    specifications: "",
-    quantity: "",
-    customer: "",
-    instructions: "",
-  });
-
-  const openCreateModal = () => {
-    setIsEditMode(false);
-    setFormData({
-      poId: generateProductOrderId(),
-      micron: "",
-      width: "",
-      product: "",
-      grade: "",
-      specifications: "",
-      quantity: "",
-      customer: "",
-      instructions: "",
-    });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (row: ProductOrderRow) => {
-    setIsEditMode(true);
-    setFormData({
-      poId: row.id,
-      micron: row.micron,
-      width: row.width,
-      product: row.product,
-      grade: row.grade,
-      specifications: row.specifications || "",
-      quantity: row.quantity,
-      customer: row.customer || "",
-      instructions: row.instructions || "",
-    });
-    setIsModalOpen(true);
-  };
 
   const {
     processedData,
@@ -207,47 +149,6 @@ export default function SupervisorProductOrdersPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (
-      !formData.micron ||
-      !formData.width ||
-      !formData.product ||
-      !formData.quantity
-    ) {
-      return;
-    }
-
-    if (isEditMode) {
-      updateProductOrder(formData.poId, {
-        micron: formData.micron,
-        width: formData.width,
-        product: formData.product,
-        grade: formData.grade,
-        specifications: formData.specifications,
-        quantity: formData.quantity,
-        customer: formData.customer,
-        instructions: formData.instructions,
-      });
-    } else {
-      addProductOrder({
-        id: formData.poId,
-        micron: formData.micron,
-        width: formData.width,
-        product: formData.product,
-        grade: formData.grade,
-        specifications: formData.specifications,
-        quantity: formData.quantity,
-        customer: formData.customer,
-        instructions: formData.instructions,
-        status: "Yet to Start",
-        stage: "Raw Material",
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    setIsModalOpen(false);
-  };
-
   const filteredData = processedData.filter((row) => {
     const f = tableFilters;
     if (f.status && !(f.status as string[])?.includes(row.status)) return false;
@@ -279,13 +180,6 @@ export default function SupervisorProductOrdersPage() {
               Manage orders
             </p>
           </div>
-          {/* <button 
-            onClick={openNewOrderModal}
-            className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
-          >
-            <Plus className="w-5 h-5 shrink-0" strokeWidth={2.5} />
-            <span className="leading-tight">Add Product Order</span>
-          </button> */}
         </div>
       </section>
 
@@ -383,7 +277,9 @@ export default function SupervisorProductOrdersPage() {
                 "Micron": row.micron,
                 "Width": row.width,
                 "Product": row.product,
+                "Grade": row.grade,
                 "Quantity": row.quantity,
+                "Customer": row.customer,
                 "Status": row.status,
                 "Stage": row.stage,
                 "Timestamp": row.timestamp,
@@ -435,12 +331,18 @@ export default function SupervisorProductOrdersPage() {
                     <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.quantity}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.customer}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.stage} />
                     </td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <StatusBadge status={row.status} />
+                    </td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
+                        {row.timestamp
+                          ? new Date(row.timestamp).toLocaleDateString("en-GB", {
+                            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
+                          })
+                          : "-"}
+                      </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { micron: row.micron, width: row.width, product: row.product, quantity: row.quantity, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
                         <QrCode className="w-4 h-4" />

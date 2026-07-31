@@ -242,16 +242,19 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
           status: rm.status || "Completed",
         };
       }),
-      metallisationRows: (woData.metallisation || []).map((met: any) => ({
-        coilNo: met.metallisation_no || met.id,
-        rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
-        rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
-        factoryWastageWeight: met.factory_wastage_kg || "0",
-        weight: met.weight_kg || "0",
-        timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-        nextStage: "Slitting",
-        status: met.status || "Completed",
-      })),
+      metallisationRows: (woData.metallisation || [])
+        .slice()
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .map((met: any) => ({
+          coilNo: met.metallisation_no || met.id,
+          rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
+          rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
+          factoryWastageWeight: met.factory_wastage_kg || "0",
+          weight: met.weight_kg || "0",
+          timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, }),
+          nextStage: "Slitting",
+          status: met.status || "Completed",
+        })),
     };
   }, [woData]);
 
@@ -685,12 +688,12 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
                   <p className="text-[12px] text-[#444444]">Verify Selected RM ID</p>
                 )}
                 {row.rmIdError && (
-                    <p className="text-[12px] text-[#D92D20]">Incorrect RM ID</p>
+                  <p className="text-[12px] text-[#D92D20]">Incorrect RM ID</p>
                 )}
                 {row.rmIdScanned && !row.rmIdError && (
-                    <p className="text-[12px] text-[#039855] flex items-center gap-1">
-                      <Check className="w-3 h-3" strokeWidth={3} /> Verified
-                    </p>
+                  <p className="text-[12px] text-[#039855] flex items-center gap-1">
+                    <Check className="w-3 h-3" strokeWidth={3} /> Verified
+                  </p>
                 )}
               </div>
 
@@ -954,76 +957,78 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
       </section>
 
       <section className="w-full px-4 md:px-6 py-6 flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <TableToolbar
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-            onExport={() => {
-              const exportData = currentData.map((row: any) => ({
-                ...(activeTab === "Raw Material" ? {
-                  "Roll No": row.rollNo ?? "",
-                  "Net Weight": row.netWeight ?? row.weight ?? "",
-                  "Gross Weight": row.grossWeight ?? "",
-                  "Micron": row.thickness ?? "",
-                  "Width (m)": row.width ?? "",
-                  "Temperature": row.temperature ?? "",
-                  "Supplier": row.supplier ?? "",
-                  "Stage": row.stage ?? "",
-                  "Status": row.status ?? "",
-                } : {
-                  "Coil No": row.coilNo ?? "",
-                  "RM ID": row.rmId ?? "",
-                  "RM Weight": row.rmWeight ?? "",
-                  "Factory Wastage": row.factoryWastageWeight ?? "",
-                  "Metallisation Weight": row.weight ?? "",
-                  "Timestamp": row.timestamp ?? "",
-                  "Next Stage": row.nextStage ?? "",
-                  "Status": row.status ?? "",
-                })
-              }));
-              exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);
-            }}
-          />
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col md:flex-row sm:items-center justify-between gap-4 w-full md:w-auto order-1 lg:order-2">
+            <TableToolbar
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              onExport={() => {
+                const exportData = currentData.map((row: any) => ({
+                  ...(activeTab === "Raw Material" ? {
+                    "Roll No": row.rollNo ?? "",
+                    "Net Weight": row.netWeight ?? row.weight ?? "",
+                    "Gross Weight": row.grossWeight ?? "",
+                    "Micron": row.thickness ?? "",
+                    "Width (m)": row.width ?? "",
+                    "Temperature": row.temperature ?? "",
+                    "Supplier": row.supplier ?? "",
+                    "Stage": row.stage ?? "",
+                    "Status": row.status ?? "",
+                  } : {
+                    "Coil No": row.coilNo ?? "",
+                    "RM ID": row.rmId ?? "",
+                    "RM Weight": row.rmWeight ?? "",
+                    "Factory Wastage": row.factoryWastageWeight ?? "",
+                    "Metallisation Weight": row.weight ?? "",
+                    "Timestamp": row.timestamp ?? "",
+                    "Next Stage": row.nextStage ?? "",
+                    "Status": row.status ?? "",
+                  })
+                }));
+                exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);
+              }}
+            />
 
-          {activeTab !== "Raw Material" && (
-            <>
-              <button
-                onClick={openWastageModal}
-                className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
-              >
-                <Plus className="w-4 h-4 shrink-0" strokeWidth={2.5} />
-                <span className="leading-tight truncate">
-                  Add Factory Wastage
-                </span>
-              </button>
-              <button
-                onClick={openMetallisationModal}
-                className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
-              >
-                <Plus className="w-4 h-4 shrink-0" strokeWidth={2.5} />
-                <span className="leading-tight truncate">
-                  Add Metallisation
-                </span>
-              </button>
-            </>
-          )}
-        </div>
+            {activeTab !== "Raw Material" && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+                <button
+                  onClick={openWastageModal}
+                  className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
+                >
+                  <Plus className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                  <span className="leading-tight truncate">
+                    Add Factory Wastage
+                  </span>
+                </button>
+                <button
+                  onClick={openMetallisationModal}
+                  className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
+                >
+                  <Plus className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                  <span className="leading-tight truncate">
+                    Add Metallisation
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
 
-        {/* Scrollable tab bar on mobile */}
-        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-          <div className="flex items-center gap-2 border-b border-[#EBEBEB] pb-4 min-w-max">
-            {["Raw Material", "Metallisation"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab as TabType)}
-                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab
-                  ? "bg-[#00B6E2] text-white"
-                  : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                  }`}
-              >
-                {tab}
-              </button>
-            ))}
+          {/* Scrollable tab bar on mobile */}
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0 order-2 lg:order-1">
+            <div className="flex items-center gap-2 min-w-max">
+              {["Raw Material", "Metallisation"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as TabType)}
+                  className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab
+                    ? "bg-[#00B6E2] text-white"
+                    : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                    }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

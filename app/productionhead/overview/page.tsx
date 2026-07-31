@@ -205,7 +205,7 @@ export default function OverviewPage() {
   });
 
   const resetPOForm = () => ({
-    poId: `PO-CC-${String(Date.now()).slice(-6)}`,
+    poId: `PO-CC-${String(Date.now()).slice(-4)}`,
     micron: "",
     width: "",
     product: "",
@@ -225,7 +225,7 @@ export default function OverviewPage() {
       const parsed = match ? Number.parseInt(match[1], 10) : NaN;
       return Number.isNaN(parsed) ? maxId : Math.max(maxId, parsed);
     }, 0) + 1;
-    const newId = `PO-CC-${String(nextIdNum).padStart(5, "0")}`;
+    const newId = `PO-CC-${String(nextIdNum).padStart(4, "0")}`;
 
     addProductOrder({
       id: newId,

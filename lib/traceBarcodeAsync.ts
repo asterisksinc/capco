@@ -87,13 +87,13 @@ export async function resolveLineageChainAsync(rawId: string): Promise<AsyncLine
                 
                 // Upstream RM from WO materials
                 if (wo.work_order_materials && wo.work_order_materials.length > 0) {
-                  for (const mat of wo.work_order_materials) {
-                    if (mat.inventory) {
-                      nodes.push(buildNode("RM", mat.inventory.raw_material_code || mat.inventory.roll_no, `Raw Material ${mat.inventory.raw_material_code || mat.inventory.roll_no}`, [
-                        { label: "Supplier", value: mat.inventory.supplier || "—" },
-                        { label: "Weight", value: `${mat.inventory.net_weight_kg || 0} kg` },
-                      ], mat.inventory.status));
-                    }
+                  const specificMat = wo.work_order_materials.find((m: any) => m.inventory_id === mc.raw_material_id);
+                  const mat = specificMat || wo.work_order_materials[0];
+                  if (mat && mat.inventory) {
+                    nodes.push(buildNode("RM", mat.inventory.raw_material_code || mat.inventory.roll_no, `Raw Material ${mat.inventory.raw_material_code || mat.inventory.roll_no}`, [
+                      { label: "Supplier", value: mat.inventory.supplier || "—" },
+                      { label: "Weight", value: `${mat.inventory.net_weight_kg || 0} kg` },
+                    ], mat.inventory.status));
                   }
                 }
               }
@@ -130,13 +130,13 @@ export async function resolveLineageChainAsync(rawId: string): Promise<AsyncLine
             
             // Upstream RM from WO materials
             if (wo.work_order_materials && wo.work_order_materials.length > 0) {
-              for (const mat of wo.work_order_materials) {
-                if (mat.inventory) {
-                  nodes.push(buildNode("RM", mat.inventory.raw_material_code || mat.inventory.roll_no, `Raw Material ${mat.inventory.raw_material_code || mat.inventory.roll_no}`, [
-                    { label: "Supplier", value: mat.inventory.supplier || "—" },
-                    { label: "Weight", value: `${mat.inventory.net_weight_kg || 0} kg` },
-                  ], mat.inventory.status));
-                }
+              const specificMat = wo.work_order_materials.find((m: any) => m.inventory_id === mc.raw_material_id);
+              const mat = specificMat || wo.work_order_materials[0];
+              if (mat && mat.inventory) {
+                nodes.push(buildNode("RM", mat.inventory.raw_material_code || mat.inventory.roll_no, `Raw Material ${mat.inventory.raw_material_code || mat.inventory.roll_no}`, [
+                  { label: "Supplier", value: mat.inventory.supplier || "—" },
+                  { label: "Weight", value: `${mat.inventory.net_weight_kg || 0} kg` },
+                ], mat.inventory.status));
               }
             }
           }
@@ -263,7 +263,8 @@ export async function resolveLineageChainAsync(rawId: string): Promise<AsyncLine
                                   if (wo) {
                                      nodes.push(buildNode("WO", wo.work_order_no || wo.id, `Work Order ${wo.work_order_no || wo.id}`, [{ label: "Qty", value: `${wo.quantity} kg` }], wo.status));
                                      if (wo.work_order_materials && wo.work_order_materials.length > 0) {
-                                        const mat2 = wo.work_order_materials[0];
+                                        const specificMat = wo.work_order_materials.find((m: any) => m.inventory_id === mc.raw_material_id);
+                                        const mat2 = specificMat || wo.work_order_materials[0];
                                         if (mat2 && mat2.inventory) {
                                            nodes.push(buildNode("RM", mat2.inventory.raw_material_code || mat2.inventory.roll_no, `Raw Material ${mat2.inventory.raw_material_code || mat2.inventory.roll_no}`, [{ label: "Supplier", value: mat2.inventory.supplier || "—" }], mat2.inventory.status));
                                         }

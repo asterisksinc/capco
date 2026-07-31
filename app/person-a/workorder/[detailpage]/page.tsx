@@ -201,36 +201,45 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
   }, [woData]);
 
   const metallisationRows = useMemo(() => {
-    return ((woData?.metallisation as any[]) || []).map((m) => ({
-      coilNo: m.metallisation_no || "-",
-      rmId: m.inventory?.raw_material_code || m.inventory?.roll_no || "-",
-      rmWeight: m.inventory?.net_weight_kg ? `${m.inventory.net_weight_kg}kgs` : (m.inventory?.gross_weight_kg ? `${m.inventory.gross_weight_kg}kgs` : "-"),
-      factoryWastageWeight: m.factory_wastage_kg != null ? `${m.factory_wastage_kg}kgs` : "-",
-      weight: m.weight_kg != null ? `${m.weight_kg}kgs` : "-",
-      timestamp: m.created_at
-        ? new Date(m.created_at).toLocaleString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric",
-          hour: "2-digit", minute: "2-digit",
-        })
-        : "-",
-      nextStage: m.next_stage || "Slitting",
-      status: m.status || "-",
-    }));
+    return ((woData?.metallisation as any[]) || [])
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((m) => ({
+        coilNo: m.metallisation_no || "-",
+        rmId: m.inventory?.raw_material_code || m.inventory?.roll_no || "-",
+        rmWeight: m.inventory?.net_weight_kg ? `${m.inventory.net_weight_kg}kgs` : (m.inventory?.gross_weight_kg ? `${m.inventory.gross_weight_kg}kgs` : "-"),
+        factoryWastageWeight: m.factory_wastage_kg != null ? `${m.factory_wastage_kg}kgs` : "-",
+        weight: m.weight_kg != null ? `${m.weight_kg}kgs` : "-",
+        timestamp: m.created_at
+          ? new Date(m.created_at).toLocaleString("en-GB", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: true,
+          })
+          : "-",
+        nextStage: m.next_stage || "Slitting",
+        status: m.status || "-",
+      }));
   }, [woData]);
 
   const slittingRows = useMemo(() => {
-    return ((woData?.slitting as any[]) || []).map((s) => ({
-      productNo: s.product_no || "-",
-      rmId: s.metallisation?.metallisation_no || "-",
-      weight: s.weight_kg != null ? `${s.weight_kg}kgs` : "-",
-      thickness: s.thickness_micron || "-",
-      grade: s.grade || "-",
-      timestampAdded: s.created_at
-        ? new Date(s.created_at).toLocaleDateString("en-GB")
-        : "-",
-      stage: s.stage || "-",
-      status: s.status || "-",
-    }));
+    return ((woData?.slitting as any[]) || [])
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((s) => ({
+        productNo: s.product_no || "-",
+        rmId: s.metallisation?.metallisation_no || "-",
+        weight: s.weight_kg != null ? `${s.weight_kg}kgs` : "-",
+        thickness: s.thickness_micron || "-",
+        grade: s.grade || "-",
+        timestampAdded: s.created_at
+          ? new Date(s.created_at).toLocaleString("en-GB", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: true,
+          })
+          : "-",
+        stage: s.stage || "-",
+        status: s.status || "-",
+      }));
   }, [woData]);
 
   // ── Lookup maps (for modal dropdowns + auto-fill) ─────────────────────────
@@ -485,7 +494,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                 grade: item.grade,
                 remarks: slittingReviewRemarks || undefined,
               });
-              
+
               await stockService.create({
                 stock_no: (slittingRecord as any).product_no || finalId,
                 slitting_id: (slittingRecord as any).id,
@@ -497,7 +506,7 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
                 quantity: 1,
                 stage: "Stock",
               });
-              
+
               success = true;
               maxPmId = currentMaxId;
             } catch (err: any) {
@@ -939,43 +948,45 @@ export default function OperatorWorkOrderDetailPage({ params }: DetailPageProps)
 
       {/* Tabs + Table */}
       <section className="w-full px-4 md:px-6 py-6 flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <TableToolbar
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-            onExport={() => {
-              const exportData = currentData.map((row: any) => ({
-                ...(activeTab === "Raw Material"
-                  ? { "Roll No": row.rollNo ?? "", "Net Weight": row.netWeight ?? "", "Gross Weight": row.grossWeight ?? "", "Micron": row.thickness ?? "", "Width (m)": row.width ?? "", "Temperature": row.temperature ?? "", "Supplier": row.supplier ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }
-                  : activeTab === "Metallisation"
-                    ? { "Coil No": row.coilNo ?? "", "RM ID": row.rmId ?? "","RM Weight": row.rmWeight ?? "", "Factory Wastage": row.factoryWastageWeight ?? "", "Metallisation Weight": row.weight ?? "", "Timestamp": row.timestamp ?? "", "Next Stage": row.nextStage ?? "", "Status": row.status ?? "" }
-                    : { "Product No": row.productNo ?? "", "RM ID": row.rmId ?? "", "Weight": row.weight ?? "", "Thickness": row.thickness ?? "", "Grade": row.grade ?? "", "Timestamp": row.timestampAdded ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }),
-              }));
-              exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);
-            }}
-          />
-          {/* Add button — only for Metallisation & Slitting */}
-          {(activeTab === "Metallisation" || activeTab === "Slitting") && (
-            <button onClick={openModal} className="flex items-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-4 hover:bg-[#0092b5] transition-colors shrink-0 whitespace-nowrap">
-              <Plus className="w-4 h-4" strokeWidth={2.5} />
-              Add {activeTab}
-            </button>
-          )}
-        </div>
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+          {/* Scrollable tab bar */}
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0 order-2 lg:order-1">
+            <div className="flex items-center gap-2 min-w-max">
+              {(["Raw Material", "Metallisation", "Slitting"] as TabType[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as TabType)}
+                  className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab ? "bg-[#00B6E2] text-white" : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                    }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {/* Scrollable tab bar */}
-        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-          <div className="flex items-center gap-2 border-b border-[#EBEBEB] pb-4 min-w-max">
-            {(["Raw Material", "Metallisation", "Slitting"] as TabType[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab as TabType)}
-                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab ? "bg-[#00B6E2] text-white" : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                  }`}
-              >
-                {tab}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full md:w-auto gap-4 order-1 lg:order-2">
+            <TableToolbar
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              onExport={() => {
+                const exportData = currentData.map((row: any) => ({
+                  ...(activeTab === "Raw Material"
+                    ? { "Roll No": row.rollNo ?? "", "Net Weight": row.netWeight ?? "", "Gross Weight": row.grossWeight ?? "", "Micron": row.thickness ?? "", "Width (m)": row.width ?? "", "Temperature": row.temperature ?? "", "Supplier": row.supplier ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }
+                    : activeTab === "Metallisation"
+                      ? { "Coil No": row.coilNo ?? "", "RM ID": row.rmId ?? "", "RM Weight": row.rmWeight ?? "", "Factory Wastage": row.factoryWastageWeight ?? "", "Metallisation Weight": row.weight ?? "", "Timestamp": row.timestamp ?? "", "Next Stage": row.nextStage ?? "", "Status": row.status ?? "" }
+                      : { "Product No": row.productNo ?? "", "RM ID": row.rmId ?? "", "Weight": row.weight ?? "", "Thickness": row.thickness ?? "", "Grade": row.grade ?? "", "Timestamp": row.timestampAdded ?? "", "Stage": row.stage ?? "", "Status": row.status ?? "" }),
+                }));
+                exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);
+              }}
+            />
+            {/* Add button — only for Metallisation & Slitting */}
+            {(activeTab === "Metallisation" || activeTab === "Slitting") && (
+              <button onClick={openModal} className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-4 hover:bg-[#0092b5] transition-colors shrink-0 whitespace-nowrap">
+                <Plus className="w-4 h-4" strokeWidth={2.5} />
+                Add {activeTab}
               </button>
-            ))}
+            )}
           </div>
         </div>
 

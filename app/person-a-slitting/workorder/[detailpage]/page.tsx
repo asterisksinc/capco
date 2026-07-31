@@ -279,27 +279,33 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
           status: rm.status || "Completed",
         };
       }),
-      metallisationRows: (woData.metallisation || []).map((met: any) => ({
-        coilNo: met.coil_no || met.id,
-        metallisation_id: met.id,
-        rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
-        rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
-        factoryWastageWeight: met.factory_wastage_kg || "0",
-        weight: met.weight_kg || "0",
-        timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-        nextStage: "Slitting",
-        status: met.status || "Completed",
-      })),
-      slittingRows: (woData.slitting || []).map((slit: any) => ({
-        productNo: slit.product_no || slit.slitting_no || slit.id,
-        coilId: slit.metallisation?.coil_no || "-",
-        weight: slit.weight_kg || "0",
-        thickness: slit.thickness_micron || "-",
-        grade: slit.grade || "-",
-        timestampAdded: new Date(slit.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-        stage: "Ready for Winding",
-        status: slit.status || "Completed",
-      })),
+      metallisationRows: (woData.metallisation || [])
+        .slice()
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .map((met: any) => ({
+          coilNo: met.coil_no || met.id,
+          metallisation_id: met.id,
+          rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
+          rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
+          factoryWastageWeight: met.factory_wastage_kg || "0",
+          weight: met.weight_kg || "0",
+          timestamp: new Date(met.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, }),
+          nextStage: "Slitting",
+          status: met.status || "Completed",
+        })),
+      slittingRows: (woData.slitting || [])
+        .slice()
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .map((slit: any) => ({
+          productNo: slit.product_no || slit.slitting_no || slit.id,
+          coilId: slit.metallisation?.coil_no || "-",
+          weight: slit.weight_kg || "0",
+          thickness: slit.thickness_micron || "-",
+          grade: slit.grade || "-",
+          timestampAdded: new Date(slit.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, }),
+          stage: "Ready for Winding",
+          status: slit.status || "Completed",
+        })),
     };
   }, [woData]);
 
@@ -1151,75 +1157,77 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       </section>
 
       <section className="w-full px-4 md:px-6 py-6 flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <TableToolbar
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-            onExport={() => {
-              const exportData = currentData.map((row: any) => ({
-                ...(activeTab === "RM" ? {
-                  "Roll No": row.rollNo ?? "",
-                  "Net Weight": row.netWeight ?? row.weight ?? "",
-                  "Gross Weight": row.grossWeight ?? "",
-                  "Micron": row.thickness ?? "",
-                  "Width (m)": row.width ?? "",
-                  "Temperature": row.temperature ?? "",
-                  "Supplier": row.supplier ?? "",
-                  "Stage": row.stage ?? "",
-                  "Status": row.status ?? "",
-                } : activeTab === "M" ? {
-                  "Coil No": row.coilNo ?? "",
-                  "RM ID": row.rollNo ?? "",
-                  "RM Weight": row.rmWeight ?? "",
-                  "Factory Wastage": row.factoryWastageWeight ?? "",
-                  "Metallisation Weight": row.weight ?? "",
-                  "Timestamp": row.timestamp ?? "",
-                  "Next Stage": row.nextStage ?? "",
-                  "Status": row.status ?? "",
-                } : {
-                  "Product No": row.productNo ?? "",
-                  "Coil ID": row.rmId ?? "",
-                  "Weight": row.weight ?? "",
-                  "Thickness": row.thickness ?? "",
-                  "Grade": row.grade ?? "",
-                  "Timestamp": row.timestampAdded ?? "",
-                  "Stage": row.stage ?? "",
-                  "Status": row.status ?? "",
-                })
-              }));
-              exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);
-            }}
-          />
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full md:w-auto order-1 lg:order-2">
+            <TableToolbar
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              onExport={() => {
+                const exportData = currentData.map((row: any) => ({
+                  ...(activeTab === "RM" ? {
+                    "Roll No": row.rollNo ?? "",
+                    "Net Weight": row.netWeight ?? row.weight ?? "",
+                    "Gross Weight": row.grossWeight ?? "",
+                    "Micron": row.thickness ?? "",
+                    "Width (m)": row.width ?? "",
+                    "Temperature": row.temperature ?? "",
+                    "Supplier": row.supplier ?? "",
+                    "Stage": row.stage ?? "",
+                    "Status": row.status ?? "",
+                  } : activeTab === "M" ? {
+                    "Coil No": row.coilNo ?? "",
+                    "RM ID": row.rollNo ?? "",
+                    "RM Weight": row.rmWeight ?? "",
+                    "Factory Wastage": row.factoryWastageWeight ?? "",
+                    "Metallisation Weight": row.weight ?? "",
+                    "Timestamp": row.timestamp ?? "",
+                    "Next Stage": row.nextStage ?? "",
+                    "Status": row.status ?? "",
+                  } : {
+                    "Product No": row.productNo ?? "",
+                    "Coil ID": row.rmId ?? "",
+                    "Weight": row.weight ?? "",
+                    "Thickness": row.thickness ?? "",
+                    "Grade": row.grade ?? "",
+                    "Timestamp": row.timestampAdded ?? "",
+                    "Stage": row.stage ?? "",
+                    "Status": row.status ?? "",
+                  })
+                }));
+                exportToExcel(exportData, `workorder-detail-${activeTab.toLowerCase().replace(/\s+/g, "-")}`, activeTab);
+              }}
+            />
 
-          {activeTab !== "RM" && activeTab !== "M" && (
-            <button
-              onClick={openModal}
-              className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
-            >
-              <Plus className="w-4 h-4 shrink-0" strokeWidth={2.5} />
-              <span className="leading-tight truncate">
-                Add Slitting
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* Scrollable tab bar on mobile */}
-        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-          <div className="flex items-center gap-2 border-b border-[#EBEBEB] pb-4 min-w-max">
-            {(["RM", "M", "S"] as TabType[]).map((tab) => (
+            {activeTab !== "RM" && activeTab !== "M" && (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab
-                  ? "bg-[#00B6E2] text-white"
-                  : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                  }`}
-                title={tab === "RM" ? "Raw Material" : tab === "M" ? "Metallisation" : "Slitting"}
+                onClick={openModal}
+                className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
               >
-                {tab}
+                <Plus className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                <span className="leading-tight truncate">
+                  Add Slitting
+                </span>
               </button>
-            ))}
+            )}
+          </div>
+
+          {/* Scrollable tab bar on mobile */}
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0 order-2 lg:order-1">
+            <div className="flex items-center gap-2 min-w-max">
+              {(["RM", "M", "S"] as TabType[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap ${activeTab === tab
+                    ? "bg-[#00B6E2] text-white"
+                    : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                    }`}
+                  title={tab === "RM" ? "Raw Material" : tab === "M" ? "Metallisation" : "Slitting"}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -1254,7 +1262,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                           ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
                             ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", factoryWastageWeight: (row as any).factoryWastageWeight ?? "", weight: (row as any).weight ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
-                            : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
+                            : { productNo: (row as any).productNo ?? "", coilId: (row as any).coilId ?? "", weight: (row as any).weight ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
                             <button
@@ -1273,10 +1281,10 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                         const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
                         const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
                         const qrDetails: any = isRM
-                          ? { rollNo: (row as any).rollNo ?? "", netWeight: (row as any).netWeight ?? (row as any).weight ?? "", grossWeight: (row as any).grossWeight ?? "-", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", temperature: (row as any).temperature ?? "-", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
+                          ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
                           : isMC
-                            ? { "Coil No": (row as any).coilNo ?? "", "RM ID": (row as any).rmId ?? "", "Machine No": (row as any).machineNo ?? "", "Weight": (row as any).weight ?? "", "Status": (row as any).status ?? "" }
-                            : { "Product No": (row as any).productNo ?? "", "RM ID": (row as any).rmId ?? "", "Weight": (row as any).weight ?? "", "Grade": (row as any).grade ?? "", "Status": (row as any).status ?? "" };
+                            ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", factoryWastageWeight: (row as any).factoryWastageWeight ?? "", weight: (row as any).weight ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
+                            : { productNo: (row as any).productNo ?? "", coilId: (row as any).coilId ?? "", weight: (row as any).weight ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
                           <td key={String(col.key)} className="px-4 py-3 whitespace-nowrap">
                             {activeTab !== "RM" ? (

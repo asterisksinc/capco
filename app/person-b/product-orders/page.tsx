@@ -61,22 +61,8 @@ const productOrderConfig: TableConfig<ProductOrderRow> = {
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "quantity", label: "Quantity", type: "number", sortable: true },
     { key: "customer", label: "Customer", type: "text", sortable: true },
-    { 
-      key: "status", 
-      label: "Status", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "In-progress", "Completed"] 
-    },
-    { 
-      key: "stage", 
-      label: "Stage", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] 
-    },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false }
@@ -99,9 +85,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function PersonBProductOrdersPage() {
   const { store, deleteProductOrder } = useStore();
   const productOrders = store.productOrders;
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState<any>(null);
 
   const loadData = async () => {
     // using mock data via useStore hook
@@ -114,17 +98,6 @@ export default function PersonBProductOrdersPage() {
   // All hooks MUST be called before any conditional returns (Rules of Hooks)
   const [qrData, setQrData] = useState<QRModalData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [formData, setFormData] = useState({
-    poId: "PO-CC-4567",
-    micron: "",
-    width: "",
-    product: "",
-    grade: "",
-    specifications: "",
-    quantity: "",
-    customer: "",
-    instructions: "",
-  });
 
   const {
     processedData,
@@ -149,23 +122,6 @@ export default function PersonBProductOrdersPage() {
     state.quantityMax = "";
     return state;
   });
-
-  const generateProductOrderId = () => `PO-CC-${String(Date.now()).slice(-6)}`;
-
-  const openEditModal = (order: ProductOrderRow) => {
-    setFormData({
-      poId: order.id,
-      micron: order.micron,
-      width: order.width,
-      product: order.product,
-      grade: order.grade,
-      specifications: order.specifications,
-      quantity: order.quantity,
-      customer: order.customer,
-      instructions: order.instructions,
-    });
-    setIsModalOpen(true);
-  };
 
   if (isLoading) {
     return (
@@ -207,31 +163,6 @@ export default function PersonBProductOrdersPage() {
     return true;
   });
 
-  const handleCreateOrder = async () => {
-    if (
-      !formData.micron ||
-      !formData.width ||
-      !formData.product ||
-      !formData.quantity
-    ) {
-      return;
-    }
-
-    // Since this is mock data, we just close the modal.
-    setIsModalOpen(false);
-    setFormData({
-      poId: generateProductOrderId(),
-      micron: "",
-      width: "",
-      product: "",
-      grade: "",
-      specifications: "",
-      quantity: "",
-      customer: "",
-      instructions: "",
-    });
-  };
-
   const searchedData = filteredData.filter((row) =>
     row.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -241,123 +172,6 @@ export default function PersonBProductOrdersPage() {
   return (
     <div className="font-dm-sans min-h-[calc(100vh-72px)] bg-white flex flex-col relative w-full max-w-full">
       <MobileHeader title="Product Orders" />
-
-      {/* Modal Overlay */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-[12px] w-full max-w-[700px]  flex flex-col overflow-hidden max-h-[90vh]">
-            <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">Add New Product Order</h2>
-                <p className="text-[14px] text-[#5C5C5C] leading-tight">Enter product specifications and planning details to create a new order.</p>
-              </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="text-[#5C5C5C] hover:text-[#171717] transition-colors p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex flex-col gap-8 px-6 py-6 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] font-medium text-[#171717]">Product Order ID <span className="text-[#FB3748]">*</span></label>
-                  <input type="text" disabled value={formData.poId} className="h-[40px] px-3 bg-[#F5F7FA] border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#5C5C5C] focus:outline-none" />
-                </div>
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Micron <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.micron} onChange={(e) => setFormData({ ...formData, micron: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Micron</option>
-                    {["3.5", "4 HT", "4.5 HT", "5.0", "5.5", "5.5 HT", "6.0", "6 HT", "6.5", "6.5 HT", "7.0", "7.5", "8.0", "9.0", "10.0", "12.0"].map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Width <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.width} onChange={(e) => setFormData({ ...formData, width: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Width</option>
-                    {["30", "37.5", "45", "50", "60", "75", "100"].map(w => (
-                      <option key={w} value={w}>{w}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Product <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.product} onChange={(e) => setFormData({ ...formData, product: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Product</option>
-                    {["MFD", "PP", "AL", "OIL TYPE", "BOX TYPE", "KVAR", "ROUND"].map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Grade <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.grade} onChange={(e) => setFormData({ ...formData, grade: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Grade</option>
-                    {["AAA", "A", "B", "C", "D"].map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] font-medium text-[#171717]">Specifications <span className="text-[#FB3748]">*</span></label>
-                  <input type="text" placeholder="Enter specs" value={formData.specifications} onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] font-medium text-[#171717]">Quantity <span className="text-[#FB3748]">*</span></label>
-                  <input type="number" placeholder="Enter quantity" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className="h-[40px] px-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2]" />
-                </div>
-                <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-[14px] font-medium text-[#171717]">Customer <span className="text-[#FB3748]">*</span></label>
-                  <select value={formData.customer} onChange={(e) => setFormData({ ...formData, customer: e.target.value })} className="h-[40px] pl-3 pr-9 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] appearance-none">
-                    <option value="" disabled>Select Customer</option>
-                    {["OEM", "NON OEM"].map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-[#5C5C5C] absolute right-3 top-[34px] pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[14px] font-medium text-[#171717]">Instructions</label>
-                <textarea rows={3} placeholder="Add any special instructions..." value={formData.instructions} onChange={(e) => setFormData({ ...formData, instructions: e.target.value })} className="p-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] focus:outline-none focus:border-[#00B6E2] resize-none"></textarea>
-              </div>
-
-            </div>
-
-            <div className="flex items-center justify-between px-6 py-5 bg-white border-t border-[#EBEBEB]">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="h-[40px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[14px] font-medium rounded-[6px] hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCreateOrder}
-                className="h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors"
-              >
-                Create Product Order
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Header section */}
       <section className="bg-white w-full flex justify-start border-b border-[#EBEBEB]">
@@ -465,6 +279,7 @@ export default function PersonBProductOrdersPage() {
                 "Micron": row.micron,
                 "Width": row.width,
                 "Product": row.product,
+                "Grade": row.grade,
                 "Quantity": row.quantity,
                 "Customer": row.customer,
                 "Status": row.status,
@@ -518,12 +333,18 @@ export default function PersonBProductOrdersPage() {
                     <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.quantity}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.customer}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={row.stage} />
                     </td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <StatusBadge status={row.status} />
+                    </td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
+                        {row.timestamp
+                          ? new Date(row.timestamp).toLocaleDateString("en-GB", {
+                            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
+                          })
+                          : "-"}
+                      </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { micron: row.micron, width: row.width, product: row.product, quantity: row.quantity, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
                         <QrCode className="w-4 h-4" />
@@ -531,9 +352,8 @@ export default function PersonBProductOrdersPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <OptionsDropdown 
-                        viewHref={`/person-b/productorders/${cleanId}`}
+                        viewHref={`/person-b/product-orders/${cleanId}`}
                         status={row.status}
-                        onEdit={() => openEditModal(row)}
                         onDelete={async () => {
                           if (confirm(`Are you sure you want to delete ${row.id}?`)) {
                             if ((row as any).uuid) {

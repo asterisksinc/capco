@@ -189,39 +189,41 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
 
       {/* Tabs + Table */}
       <section className="bg-white w-full px-4 md:px-6 py-4 flex flex-col gap-6">
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* <button
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full md:w-auto order-1 lg:order-2">
+            {/* <button
                   onClick={() => setIsDocModalOpen(true)}
                   className="flex items-center justify-center gap-2 bg-white border border-[#DDE1E8] text-[#171717] text-[13px] font-medium rounded-[8px] h-[36px] px-4 hover:bg-[#F5F7FA] transition-colors self-start sm:self-auto shadow-sm whitespace-nowrap"
                 >
                   <FileText className="w-4 h-4 text-gray-600" />
                   Docs Uploaded
                 </button> */}
-          <TableToolbar
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-            onExport={(scope = "all") => {
-              const dataToExport = scope === "all" ? processedData : paginatedData;
-              exportToExcel(dataToExport, `po-${poData.id}-${activeTab.toLowerCase()}`, `${activeTab} Details`);
-            }}
-          />
-        </div>
+            <TableToolbar
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              onExport={(scope = "all") => {
+                const dataToExport = scope === "all" ? processedData : paginatedData;
+                exportToExcel(dataToExport, `po-${poData.id}-${activeTab.toLowerCase()}`, `${activeTab} Details`);
+              }}
+            />
+          </div>
 
-        {/* Tab bar */}
-        <div className="flex items-center gap-2 border-b border-[#EBEBEB] pb-4 overflow-x-auto overflow-y-hidden scrollbar-none">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 md:px-4 py-2 text-[13px] md:text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap shrink-0 ${activeTab === tab
-                ? "bg-[#00B6E2] text-white"
-                : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {/* Tab bar */}
+          <div className="flex items-center gap-2 overflow-x-auto overflow-y-hidden scrollbar-none order-2 lg:order-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 md:px-4 py-2 text-[13px] md:text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap shrink-0 ${activeTab === tab
+                  ? "bg-[#00B6E2] text-white"
+                  : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Table */}

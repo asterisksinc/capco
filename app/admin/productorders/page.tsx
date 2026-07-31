@@ -41,8 +41,8 @@ const productOrderConfig: TableConfig<ProductOrderSummary> = {
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "quantity", label: "Quantity", type: "number", sortable: true },
     { key: "customer", label: "Customer", type: "text", sortable: true },
-    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
     { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false }
@@ -56,39 +56,6 @@ export default function ProductOrdersPage() {
   const [rows, setRows] = useState<ProductOrderSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [qrData, setQrData] = useState<QRModalData | null>(null);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalInitialData, setModalInitialData] = useState<ProductOrderFormData | null>(null);
-
-  const openEditModal = (row: ProductOrderSummary) => {
-    setModalInitialData({
-      poId: row.id,
-      micron: row.micron,
-      width: row.width,
-      product: row.product,
-      grade: row.grade,
-      specifications: row.specifications,
-      quantity: row.quantity,
-      customer: row.customer,
-      instructions: row.instructions,
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleModalSubmit = (data: ProductOrderFormData, isEditMode: boolean) => {
-    if (isEditMode) {
-      updateProductOrder(data.poId, data);
-    } else {
-      addProductOrder({
-        ...data,
-        id: data.poId,
-        status: "Yet to Start",
-        stage: "Raw Material",
-        timestamp: new Date().toISOString(),
-      });
-    }
-    setIsModalOpen(false);
-  };
 
   useEffect(() => {
     setRows(productOrders);
@@ -147,13 +114,6 @@ export default function ProductOrdersPage() {
         </div>
       </section>
 
-      <ProductOrderModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleModalSubmit}
-        initialData={modalInitialData}
-      />
-
       {/* MOBILE PAGE TITLE */}
       <section className="px-4 pt-4 sm:hidden">
         <h1 className="text-[16px] font-medium text-[#171717]">Product Orders</h1>
@@ -206,7 +166,9 @@ export default function ProductOrdersPage() {
               "Customer": row.customer ?? "",
               "Status": row.status ?? "",
               "Stage": row.stage ?? "",
-              "Timestamp": row.timestamp ?? "",
+              "Timestamp": row.timestamp ? new Date(row.timestamp).toLocaleString("en-GB", {
+                day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true,
+              }) : "",
             }));
             exportToExcel(exportData, "product-orders", "Product Orders");
           }} />
@@ -283,6 +245,20 @@ export default function ProductOrdersPage() {
                             </td>
                           );
                         }
+                        if(String(col.key) === "timestamp") {
+                          return (
+                            <td key={String(col.key)} className="px-2 py-2 text-[14px] text-[#5C5C5C]">
+                                {row.timestamp ? new Date(row.timestamp).toLocaleString("en-GB", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true
+                                }) : ""}
+                            </td>
+                          )
+                        }
                         if (String(col.key) === "qr") {
                           const cleanId = row.id.replace('#', '');
                           return (
@@ -296,17 +272,13 @@ export default function ProductOrdersPage() {
                         if (String(col.key) === "options") {
                           const cleanId = row.id.replace('#', '');
                           return (
-                            <td key={String(col.key)} className="px-2 py-2">
-                              <OptionsDropdown
-                                viewHref={`/admin/productorders/${cleanId}`}
-                                status={row.status}
-                                onEdit={() => openEditModal(row)}
-                                onDelete={async () => {
-                                  if (confirm(`Are you sure you want to delete ${row.id}?`)) {
-                                    deleteProductOrder(row.id);
-                                  }
-                                }}
-                              />
+                            <td key={String(col.key)} className="px-6 py-4">
+                              <Link
+                                href={`/admin/productorders/${row.id}`}
+                                className="inline-flex items-center justify-center h-8 px-4 bg-[#00B6E2] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#00A0E3] transition-colors"
+                              >
+                                View
+                              </Link>
                             </td>
                           );
                         }

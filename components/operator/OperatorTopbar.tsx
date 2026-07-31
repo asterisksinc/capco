@@ -16,8 +16,7 @@ export function OperatorTopbar() {
     const paths = [];
     const segments = pathname.split("/").filter(Boolean);
     
-    // Find the base path index (person-a, person-a-slitting, person-a-metallisation, slitting-operator)
-    const basePaths = ["person-a", "person-a-slitting", "person-a-metallisation", "slitting-operator"];
+    const basePaths = ["person-a", "person-a-slitting", "person-a-metallisation", "slitting-operator", "person-b-winding", "spray-operator", "spray-qc"];
     const baseIndex = segments.findIndex(seg => basePaths.includes(seg));
     
     if (baseIndex !== -1) {
@@ -30,6 +29,7 @@ export function OperatorTopbar() {
         let href = `/${basePath}/${relevantSegments.slice(0, i + 1).join("/")}`;
         
         if (segment === "workorder") name = "Work Orders";
+        else if (segment === "productorder") name = "Product Orders";
         else if (segment === "stock") name = "Stock";
         else if (segment === "pipeline") name = "Pipeline";
         else if (segment === "overview") name = "Overview";
@@ -57,6 +57,12 @@ export function OperatorTopbar() {
     ? "/person-a-metallisation/workorder"
     : breadcrumbs.length > 0 && breadcrumbs[0].href.includes("/person-a-slitting")
     ? "/person-a-slitting/workorder"
+    : breadcrumbs.length > 0 && breadcrumbs[0].href.includes("/person-b-winding")
+    ? "/person-b-winding/productorder"
+    : breadcrumbs.length > 0 && breadcrumbs[0].href.includes("/spray-operator")
+    ? "/spray-operator/productorder"
+    : breadcrumbs.length > 0 && breadcrumbs[0].href.includes("/spray-qc")
+    ? "/spray-qc/productorder"
     : "/person-a/overview";
 
   return (

@@ -22,7 +22,6 @@ type DetailPageProps = {
     params: Promise<{ id?: string, detailpage?: string }>;
 };
 
-type TabType = "Slitting";
 
 const slittingConfig: TableConfig<any> = {
     columns: [
@@ -47,7 +46,6 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
 
     const [poData, setPoData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<TabType>("Slitting");
     const [qrData, setQrData] = useState<QRModalData | null>(null);
     const [rowImagesData, setRowImagesData] = useState<any>(null);
 
@@ -70,12 +68,18 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
         // Load slitting bags
         stockService.list({ filters: { status: "Pending" } })
           .then(data => {
+            const filtered = data.filter((item: any) => 
+              Number(item.micron) === Number(poData?.micron) &&
+              Number(item.width_m) === Number(poData?.width) &&
+              String(item.grade).trim().toLowerCase() === String(poData?.grade).trim().toLowerCase()
+            );
+
             // FIFO Order (oldest first)
-            const sorted = data.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            const sorted = filtered.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             setAvailableSlittingBags(sorted);
           })
           .catch(console.error);
-    }, []);
+    }, [poData]);
 
     // --- Modal Handlers ---
     const resetModalState = () => {
@@ -178,9 +182,11 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                 <div className="flex items-center gap-4 text-[13px] text-[#5C5C5C] pl-8">
                   <span>Weight: <span className="font-medium text-[#171717]">{item.weight_kg ?? "-"}kgs</span></span>
                   <span className="w-[1px] h-3 bg-[#DDE1E8]"></span>
-                  <span>Grade: <span className="font-medium text-[#171717]">{item.grade ?? "-"}</span></span>
-                  <span className="w-[1px] h-3 bg-[#DDE1E8]"></span>
                   <span>Micron: <span className="font-medium text-[#171717]">{item.micron ?? "-"}</span></span>
+                  <span className="w-[1px] h-3 bg-[#DDE1E8]"></span>
+                  <span>Width: <span className="font-medium text-[#171717]">{item.width_m ?? "-"}</span></span>
+                  <span className="w-[1px] h-3 bg-[#DDE1E8]"></span>
+                  <span>Grade: <span className="font-medium text-[#171717]">{item.grade ?? "-"}</span></span>
                 </div>
               </label>
             );
@@ -245,7 +251,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
     const currentConfig = slittingConfig;
 
     // Empty data for now
-    const rows = useMemo(() => [], [activeTab]);
+    const rows = useMemo(() => [], []);
 
     const {
         processedData,
@@ -260,8 +266,6 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
     } = useTableControls({ data: rows, config: currentConfig });
 
     const { paginatedData, totalPages, validPage: currentPage } = getPaginatedData(processedData);
-
-    const tabs: TabType[] = ["Slitting"];
 
     if (loading) {
         return (
@@ -287,12 +291,12 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
             {/* HEADER SECTION */}
             <section className="bg-white border-b border-[#EBEBEB]">
                 {/* Breadcrumb / Back button (Desktop) */}
-                <div className="hidden md:flex items-center gap-2 px-6 py-4 border-b border-[#EBEBEB] text-[13px] font-medium text-[#5C5C5C]">
+                {/* <div className="hidden md:flex items-center gap-2 px-6 py-4 border-b border-[#EBEBEB] text-[13px] font-medium text-[#5C5C5C]">
                     <Link href=".." className="flex items-center gap-1 hover:text-[#171717] transition-colors">
                         <ArrowLeft className="w-4 h-4" />
                         Back to Orders
                     </Link>
-                </div>
+                </div> */}
 
                 {/* Title row */}
                 <div className="px-4 py-4 md:px-6 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -354,7 +358,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                         onDateRangeChange={setDateRange}
                         onExport={(scope = "all") => {
                             const dataToExport = scope === "all" ? processedData : paginatedData;
-                            exportToExcel(dataToExport, `po-${poData.id}-${activeTab.toLowerCase()}`, `${activeTab} Details`);
+                            exportToExcel(dataToExport, `po-${poData.id}-slitting`, "Slitting Details");
                         }}
                     />
                     <button
@@ -366,21 +370,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                     </button>
                 </div>
 
-                {/* Tab bar */}
-                <div className="flex items-center gap-2 border-b border-[#EBEBEB] pb-4 overflow-x-auto overflow-y-hidden scrollbar-none">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-3 md:px-4 py-2 text-[13px] md:text-[14px] font-medium rounded-[8px] transition-colors whitespace-nowrap shrink-0 ${activeTab === tab
-                                ? "bg-[#00B6E2] text-white"
-                                : "bg-white text-[#5C5C5C] hover:bg-[#F5F7FA]"
-                                }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </div>
+                
 
                 {/* Table */}
                 <div className="bg-white border border-[#EBEBEB] rounded-[12px] overflow-hidden">
@@ -401,11 +391,9 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                                         {currentConfig.columns.map((col) => {
                                             const key = String(col.key);
                                             if (key === "options") {
-                                                const isSlitting = activeTab === "Slitting";
-                                                const rowId = isSlitting ? (row as any).rollNo : (row as any).productNo;
-                                                const qrType = isSlitting ? "SL" : "SP";
-                                                const qrDetails: any = isSlitting
-                                                    && { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
+                                                const rowId = (row as any).rollNo;
+                                                const qrType = "SL";
+                                                const qrDetails: any = { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight?.split("k")[0] ?? "", grossWeight: (row as any).grossWeight?.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" };
                                                 return (
                                                     <td key={key} className="px-4 py-3 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
@@ -434,7 +422,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                                 {paginatedData.length === 0 && (
                                     <tr>
                                         <td colSpan={currentConfig.columns.length} className="px-4 py-10 text-center text-[14px] text-[#5C5C5C]">
-                                            No {activeTab} records yet.
+                                            No Slitting records yet.
                                         </td>
                                     </tr>
                                 )}

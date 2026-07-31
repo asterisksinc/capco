@@ -129,38 +129,46 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
   }, [woData]);
 
   const metallisationRows = useMemo(() => {
-    return ((woData?.metallisation as any[]) || []).map((m) => ({
-      coilNo: m.metallisation_no || "-",
-      rmId: m.inventory?.raw_material_code || m.inventory?.roll_no || "-",
-      rmWeight: m.inventory?.net_weight_kg ? `${m.inventory.net_weight_kg}kgs` : (m.inventory?.gross_weight_kg ? `${m.inventory.gross_weight_kg}kgs` : "-"),
-      factoryWastageWeight: m.factory_wastage_kg != null ? `${m.factory_wastage_kg}kgs` : "-",
-      weight: m.weight_kg != null ? `${m.weight_kg}kgs` : "-",
-      timestamp: m.created_at
-        ? new Date(m.created_at).toLocaleString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric",
-          hour: "2-digit", minute: "2-digit",
-        })
-        : "-",
-      nextStage: m.next_stage || "Slitting",
-      status: m.status || "-",
-      factory_wastage_image_url: m.factory_wastage_image_url,
-      photo_url: m.photo_url,
-    }));
+    return ((woData?.metallisation as any[]) || [])
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((m) => ({
+        coilNo: m.metallisation_no || "-",
+        rmId: m.inventory?.raw_material_code || m.inventory?.roll_no || "-",
+        rmWeight: m.inventory?.net_weight_kg ? `${m.inventory.net_weight_kg}kgs` : (m.inventory?.gross_weight_kg ? `${m.inventory.gross_weight_kg}kgs` : "-"),
+        factoryWastageWeight: m.factory_wastage_kg != null ? `${m.factory_wastage_kg}kgs` : "-",
+        weight: m.weight_kg != null ? `${m.weight_kg}kgs` : "-",
+        timestamp: m.created_at
+          ? new Date(m.created_at).toLocaleString("en-GB", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: true,
+          })
+          : "-",
+        nextStage: m.next_stage || "Slitting",
+        status: m.status || "-",
+        factory_wastage_image_url: m.factory_wastage_image_url,
+        photo_url: m.photo_url,
+      }));
   }, [woData]);
 
   const slittingRows = useMemo(() => {
-    return ((woData?.slitting as any[]) || []).map((s) => ({
-      productNo: s.product_no || "-",
-      rmId: s.metallisation?.metallisation_no || "-",
-      weight: s.weight_kg != null ? `${s.weight_kg}kgs` : "-",
-      // thickness: s.thickness_micron || "-",
-      grade: s.grade || "-",
-      timestampAdded: s.created_at
-        ? new Date(s.created_at).toLocaleDateString("en-GB")
-        : "-",
-      stage: s.stage || "-",
-      status: s.status || "-",
-    }));
+    return ((woData?.slitting as any[]) || [])
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((s) => ({
+        productNo: s.product_no || "-",
+        rmId: s.metallisation?.metallisation_no || "-",
+        weight: s.weight_kg != null ? `${s.weight_kg}kgs` : "-",
+        // thickness: s.thickness_micron || "-",
+        grade: s.grade || "-",
+        timestampAdded: s.created_at
+          ? new Date(s.created_at).toLocaleString("en-GB", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: true,
+          })
+          : "-",
+        stage: s.stage || "-",
+        status: s.status || "-",
+      }));
   }, [woData]);
 
   const currentData = useMemo(() => {

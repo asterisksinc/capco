@@ -101,7 +101,12 @@ export default function ProductionHeadInventoryPage() {
           package_no: item.package_no ?? "-",
           core_inch: item.core_inch ?? "-",
           supplier: item.supplier,
-          date_received: item.date_received ? new Date(item.date_received).toLocaleDateString("en-GB") : "-",
+          date_received: item.date_received
+          ? new Date(item.date_received).toLocaleString("en-GB", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: true,
+          })
+          : "-",
           status: item.status || "In Inventory",
         }));
 

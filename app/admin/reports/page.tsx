@@ -179,10 +179,11 @@ export default function AdminReportsPage() {
         setLoadingPreview(true);
         setPreviewData([]);
 
+        const Inv = await inventoryService.list();
         try {
             let data: any[] = [];
             if (selectedStage === "Raw Material") {
-                data = await inventoryService.list();
+                data = Inv;
             } else if (selectedStage === "Work Order") {
                 data = await workOrderService.list();
             } else if (selectedStage === "Product Order") {
@@ -251,11 +252,11 @@ export default function AdminReportsPage() {
                         createdAt: formatDate(item.created_at)
                     };
                 } else if (selectedStage === "Metallisation") {
-                    // const inv = await inventoryService.getById(item.raw_material_id);
+                    const met_inv: any = Inv.find((inv: any) => inv.id === item.raw_material_id);
                     return {
                         coilNo: item.coil_no || item.metallisation_no || "-",
-                        rmId: item.rmId || item.inventory?.raw_material_code || item.inventory?.roll_no || "-",
-                        rmWeight: item.rmWeight || (item.inventory?.net_weight_kg ? `${item.inventory.net_weight_kg}kgs` : "-"),
+                        rmId: item.rmId || met_inv?.raw_material_code || met_inv?.roll_no || "-",
+                        rmWeight: item.rmWeight || (met_inv?.net_weight_kg ? `${met_inv.net_weight_kg}kgs` : "-"),
                         factoryWastageWeight: item.factory_wastage_kg ? `${item.factory_wastage_kg}kgs` : "-",
                         weight: item.weight_kg ? `${item.weight_kg}kgs` : "-",
                         status: item.status || "-",

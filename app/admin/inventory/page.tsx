@@ -98,6 +98,7 @@ export default function AdminInventoryPage() {
   const [form, setForm] = useState({ ...defaultForm });
   const [showAddHint, setShowAddHint] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgressMessage, setUploadProgressMessage] = useState("");
 
   // Export states
   const [exportFormat, setExportFormat] = useState<"xlsx" | "csv">("xlsx");
@@ -125,7 +126,12 @@ export default function AdminInventoryPage() {
         packageNo: item.package_no || "-",
         coreInch: item.core_inch != null ? String(item.core_inch) : "-",
         supplier: item.supplier || "-",
-        date: item.date_received ? new Date(item.date_received).toLocaleDateString("en-GB") : "-",
+        date: item.created_at
+          ? new Date(item.created_at).toLocaleString("en-GB", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: true,
+          })
+          : "-",
         status: item.status || "In Inventory"
       }));
       setInventoryItems(formatted);
@@ -382,49 +388,85 @@ export default function AdminInventoryPage() {
 
   const handleUploadSubmit = async () => {
     setIsSubmitting(true);
+    setUploadProgressMessage("");
     try {
-      const { nextRmIdNum } = getNextSequentialIds(inventoryItems);
-      let currentRmIdNum = nextRmIdNum;
-      
-      // TODO: Once multi-batch backend support exists, loop over stagedBatches + active batch here
-      const validRows = pasteGridRows.filter(row => row.rollId && row.rollId.trim() !== "");
-      if (validRows.length === 0) {
-        alert("No valid rows to import. Roll ID is required.");
+      // Gather all sets
+      const activeHasData = pasteGridRows.some(row => row.rollId && row.rollId.trim() !== "");
+      const setsToProcess = [...stagedBatches];
+      if (activeHasData && !setsToProcess.some(b => b.id === activeBatchId)) {
+        setsToProcess.push({ id: activeBatchId, rows: pasteGridRows, micron: uploadMicron, supplier: uploadSupplier });
+      }
+
+      if (setsToProcess.length === 0) {
+        alert("No valid rows to import.");
         setIsSubmitting(false);
         return;
       }
-      
-      const finalRows = validRows.map((row) => {
-        const rawMaterialCode = `RM-${String(currentRmIdNum).padStart(4, "0")}`;
-        currentRmIdNum++;
-        return {
+
+      const failedBatches = [];
+      const resultsSummary = [];
+
+      for (let i = 0; i < setsToProcess.length; i++) {
+        const batch = setsToProcess[i];
+        setUploadProgressMessage(`Submitting Material Set ${i + 1} of ${setsToProcess.length}...`);
+
+        const validRows = batch.rows.filter(r => r.rollId && r.rollId.trim() !== "");
+        if (validRows.length === 0) {
+          resultsSummary.push(`Material Set ${batch.id}: skipped (no valid rows).`);
+          failedBatches.push(batch);
+          continue;
+        }
+
+        const batchesPayload = validRows.map(row => ({
           roll_no: String(row.rollId).trim(),
           width_m: parseFloat(row.width || "1.0"),
           net_weight_kg: parseFloat(row.netWeight || row.weight || "0"),
           gross_weight_kg: parseFloat(row.grossWeight || row.weight || "0"),
-          used_weight_kg: 0,
-          wastage_weight_kg: 0,
-          damaged_weight_kg: 0,
-          temperature_c: 25,
           package_no: String(row.packageNo || "").trim(),
           core_inch: parseFloat(row.coreInch || "0"),
-          status: "In Inventory" as any,
-          raw_material_code: rawMaterialCode,
-          micron: Number(uploadMicron),
-          supplier: uploadSupplier,
-        };
-      });
+          temperature_c: 25,
+        }));
 
-      await inventoryService.importRows(finalRows);
+        try {
+          const res = await inventoryService.bulkCreate({
+            micron: Number(batch.micron),
+            supplier: batch.supplier,
+            batches: batchesPayload
+          });
+          resultsSummary.push(`Material Set ${batch.id}: ${res.createdCount} rows created.`);
+        } catch (err: any) {
+          console.error(err);
+          let errorMsg = err.message || "Failed";
+          if (err.issues && err.issues.length > 0) {
+            errorMsg = err.issues.map((iss: any) => `Row ${iss.index + 1} (${iss.field}): ${iss.message}`).join("; ");
+          }
+          resultsSummary.push(`Material Set ${batch.id}: failed — ${errorMsg}`);
+          failedBatches.push(batch);
+        }
+      }
+
       await fetchInventory();
-      alert(`Successfully imported ${finalRows.length} raw material items.`);
-      setIsUploadModalOpen(false);
-      setPasteGridRows(createInitialRows());
+      alert(`Bulk Import Results:\n\n${resultsSummary.join("\n")}`);
+
+      if (failedBatches.length > 0) {
+        setStagedBatches(failedBatches);
+        setActiveBatchId(failedBatches[0].id);
+        setPasteGridRows(failedBatches[0].rows);
+        setUploadMicron(failedBatches[0].micron);
+        setUploadSupplier(failedBatches[0].supplier);
+      } else {
+        setStagedBatches([]);
+        setPasteGridRows(createInitialRows());
+        setActiveBatchId(1);
+        setNextBatchId(2);
+        setIsUploadModalOpen(false);
+      }
     } catch (err) {
       console.error(err);
-      alert("Failed to import rows. There may be a conflict or network issue.");
+      alert("Failed to orchestrate bulk import.");
     } finally {
       setIsSubmitting(false);
+      setUploadProgressMessage("");
     }
   };
 
@@ -525,7 +567,6 @@ export default function AdminInventoryPage() {
     if (!bulkUpdateField || !bulkUpdateValue || selectedIds.size === 0) return;
     
     try {
-      const token = getAccessToken();
       const payload: any = {
         inventoryIds: Array.from(selectedIds),
       };
@@ -536,33 +577,7 @@ export default function AdminInventoryPage() {
         payload.supplier = bulkUpdateValue;
       }
        
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/inventory/bulk-update`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!res.ok) {
-        let errMsg = "Bulk update failed";
-        try {
-          const rawText = await res.text();
-          console.error(`Bulk update API failed with status ${res.status}:`, rawText);
-          const errData = JSON.parse(rawText);
-          errMsg = errData.error || errData.message || errMsg;
-        } catch(e) {
-          console.error("Failed to parse error response:", e);
-        }
-        
-        if (res.status === 403) {
-          throw new Error("You don't have permission to perform bulk updates");
-        }
-        throw new Error(errMsg);
-      }
-      
-      const data = await res.json();
+      const data = await inventoryService.bulkUpdate(payload);
       
       if (data.ok && data.inventory) {
         setInventoryItems(prevItems => {
@@ -577,7 +592,11 @@ export default function AdminInventoryPage() {
       setBulkUpdateValue("");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "An error occurred during bulk update");
+      if (err.status === 403) {
+        alert("You don't have permission to perform bulk updates");
+      } else {
+        alert(err.message || "An error occurred during bulk update");
+      }
     }
   };
 
@@ -1089,7 +1108,7 @@ export default function AdminInventoryPage() {
                 </button>
                 <button onClick={handleUploadSubmit} disabled={isSubmitting} className="h-[38px] px-5 bg-[#00B6E2] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors flex items-center gap-1.5 disabled:opacity-50">
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  {isSubmitting ? "Importing..." : "Confirm"}
+                  {isSubmitting ? (uploadProgressMessage || "Importing...") : "Confirm"}
                 </button>
               </div>
             </div>

@@ -82,36 +82,36 @@ export default function StoreHeadInventoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  async function loadData() {
-    try {
-      const rows = await inventoryService.list();
+    async function loadData() {
+      try {
+        const rows = await inventoryService.list();
 
-      const formatted = (rows as any[]).map(row => ({
-        ...row,
-        wastage_weight_kg: row.wastage_weight_kg ?? null,
-        used_weight_kg: row.used_weight_kg ?? null,
-        damaged_weight_kg: null,
-      }));
+        const formatted = (rows as any[]).map(row => ({
+          ...row,
+          wastage_weight_kg: row.wastage_weight_kg ?? null,
+          used_weight_kg: row.used_weight_kg ?? null,
+          damaged_weight_kg: null,
+        }));
 
-      setInventoryItems(formatted);
-    } catch (err) {
-      console.error("Failed to load inventory", err);
-    } finally {
-      setLoading(false);
+        setInventoryItems(formatted);
+      } catch (err) {
+        console.error("Failed to load inventory", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
-  loadData();
-}, []);
+    loadData();
+  }, []);
 
-const filteredData = inventoryItems.filter((row) => {
-  if (!searchQuery) return true;
-  const q = searchQuery.toLowerCase();
-  return (
-    row.raw_material_code?.toLowerCase().includes(q) ||
-    row.roll_no?.toLowerCase().includes(q) ||
-    row.supplier?.toLowerCase().includes(q)
-  );
-});
+  const filteredData = inventoryItems.filter((row) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      row.raw_material_code?.toLowerCase().includes(q) ||
+      row.roll_no?.toLowerCase().includes(q) ||
+      row.supplier?.toLowerCase().includes(q)
+    );
+  });
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -262,7 +262,14 @@ const filteredData = inventoryItems.filter((row) => {
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.package_no ?? "-"}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.core_inch ?? "-"}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.supplier}</td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.date_received ?? "-"}</td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
+                      {row.date_received
+                        ? new Date(row.date_received).toLocaleString("en-GB", {
+                          day: "2-digit", month: "short", year: "numeric",
+                          hour: "2-digit", minute: "2-digit", hour12: true,
+                        })
+                        : "-"}
+                    </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <button onClick={() => setQrData({ id: row.raw_material_code, type: "RM", data: { rollNo: row.roll_no, micron: row.micron, width: row.width_m, netWeight: row.net_weight_kg, grossWeight: row.gross_weight_kg ?? "-", temperature: row.temperature_c ?? "-", supplier: row.supplier, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors">
                         <QrCode className="w-4 h-4" />

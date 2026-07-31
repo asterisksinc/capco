@@ -61,22 +61,8 @@ const productOrderConfig: TableConfig<ProductOrderRow> = {
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "quantity", label: "Quantity", type: "number", sortable: true },
     { key: "customer", label: "Customer", type: "text", sortable: true },
-    { 
-      key: "status", 
-      label: "Status", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "In-progress", "Completed"] 
-    },
-    { 
-      key: "stage", 
-      label: "Stage", 
-      type: "enum", 
-      sortable: false, 
-      filter: "dropdown", 
-      options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] 
-    },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "In-progress", "Completed"] },
+    { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Yet to Start", "Raw Material", "Metallisation", "Slitting", "Winding", "Completed"] },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false }
@@ -99,14 +85,9 @@ function StatusBadge({ status }: { status: string }) {
 export default function SupervisorProductOrdersPage() {
   const { store, addProductOrder, updateProductOrder, deleteProductOrder } = useStore();
   const productOrders = store.productOrders;
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
-
-  const generateProductOrderId = () => {
-    return `#PO-CC-${Math.floor(1000 + Math.random() * 9000)}`;
-  };
 
   const loadData = async () => {
     // using mock data via useStore hook
@@ -119,49 +100,6 @@ export default function SupervisorProductOrdersPage() {
   // All hooks MUST be called before any conditional returns (Rules of Hooks)
   const [qrData, setQrData] = useState<QRModalData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [formData, setFormData] = useState({
-    poId: generateProductOrderId(),
-    micron: "",
-    width: "",
-    product: "",
-    grade: "",
-    specifications: "",
-    quantity: "",
-    customer: "",
-    instructions: "",
-  });
-
-  const openCreateModal = () => {
-    setIsEditMode(false);
-    setFormData({
-      poId: generateProductOrderId(),
-      micron: "",
-      width: "",
-      product: "",
-      grade: "",
-      specifications: "",
-      quantity: "",
-      customer: "",
-      instructions: "",
-    });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (row: ProductOrderRow) => {
-    setIsEditMode(true);
-    setFormData({
-      poId: row.id,
-      micron: row.micron,
-      width: row.width,
-      product: row.product,
-      grade: row.grade,
-      specifications: row.specifications || "",
-      quantity: row.quantity,
-      customer: row.customer || "",
-      instructions: row.instructions || "",
-    });
-    setIsModalOpen(true);
-  };
 
   const {
     processedData,
@@ -207,47 +145,6 @@ export default function SupervisorProductOrdersPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (
-      !formData.micron ||
-      !formData.width ||
-      !formData.product ||
-      !formData.quantity
-    ) {
-      return;
-    }
-
-    if (isEditMode) {
-      updateProductOrder(formData.poId, {
-        micron: formData.micron,
-        width: formData.width,
-        product: formData.product,
-        grade: formData.grade,
-        specifications: formData.specifications,
-        quantity: formData.quantity,
-        customer: formData.customer,
-        instructions: formData.instructions,
-      });
-    } else {
-      addProductOrder({
-        id: formData.poId,
-        micron: formData.micron,
-        width: formData.width,
-        product: formData.product,
-        grade: formData.grade,
-        specifications: formData.specifications,
-        quantity: formData.quantity,
-        customer: formData.customer,
-        instructions: formData.instructions,
-        status: "Yet to Start",
-        stage: "Raw Material",
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    setIsModalOpen(false);
-  };
-
   const filteredData = processedData.filter((row) => {
     const f = tableFilters;
     if (f.status && !(f.status as string[])?.includes(row.status)) return false;
@@ -279,19 +176,12 @@ export default function SupervisorProductOrdersPage() {
               Manage orders
             </p>
           </div>
-          {/* <button 
-            onClick={openNewOrderModal}
-            className="flex items-center justify-center gap-2 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] h-[40px] px-[18px] hover:bg-[#0092b5] transition-colors shrink-0 w-full sm:w-auto"
-          >
-            <Plus className="w-5 h-5 shrink-0" strokeWidth={2.5} />
-            <span className="leading-tight">Add Product Order</span>
-          </button> */}
         </div>
       </section>
 
       {/* Main Content */}
       <div className="w-full px-4 md:px-6 flex flex-col mt-6 gap-4 md:gap-6 mb-6">
-        
+
         {/* Stats Section - Mobile 2x2 grid */}
         <section className="grid grid-cols-2 gap-0 md:hidden bg-white border border-[#EBEBEB] rounded-[12px]">
           {[
@@ -323,7 +213,7 @@ export default function SupervisorProductOrdersPage() {
             </div>
             <div className="hidden lg:block w-[1px] h-[37px] bg-[#EAECF0]"></div>
           </div>
-          
+
           <div className="flex items-center justify-between px-6 py-2 sm:py-0">
             <div className="flex flex-col gap-[8px]">
               <p className="text-[12px] font-medium text-[#5C5C5C] leading-tight">Units Planned</p>
@@ -365,15 +255,15 @@ export default function SupervisorProductOrdersPage() {
         <section className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative max-w-[400px] w-full">
             <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder="Search by Product Order ID..." 
-              className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] " 
+              placeholder="Search by Product Order ID..."
+              className="h-[40px] w-full pl-9 pr-3 bg-white border border-[#EBEBEB] rounded-[8px] text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] "
             />
           </div>
-          
+
           <TableToolbar
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
@@ -383,7 +273,9 @@ export default function SupervisorProductOrdersPage() {
                 "Micron": row.micron,
                 "Width": row.width,
                 "Product": row.product,
+                "Grade": row.grade,
                 "Quantity": row.quantity,
+                "Customer": row.customer,
                 "Status": row.status,
                 "Stage": row.stage,
                 "Timestamp": row.timestamp,
@@ -422,52 +314,59 @@ export default function SupervisorProductOrdersPage() {
                 {searchedData.map((row) => {
                   const cleanId = row.id.replace('#', '');
                   return (
-                  <tr key={row.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
-                      <Link href={`/spray-qc/productorder/${cleanId}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
-                        {row.id}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.micron}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.width}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.product}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.grade}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.quantity}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.customer}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <StatusBadge status={row.status} />
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <StatusBadge status={row.stage} />
-                    </td>
-                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.timestamp}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { micron: row.micron, width: row.width, product: row.product, quantity: row.quantity, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
-                        <QrCode className="w-4 h-4" />
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <OptionsDropdown 
-                        viewHref={`/spray-qc/productorder/${cleanId}`}
-                        status={row.status}
-                        // onEdit={() => openEditModal(row)}
-                        onDelete={async () => {
-                          if (confirm(`Are you sure you want to delete ${row.id}?`)) {
-                            if ((row as any).uuid) {
-                              try {
-                                deleteProductOrder(row.id);
-                                await loadData();
-                              } catch (e) {
-                                console.error(e);
-                                alert("Failed to delete product order");
+                    <tr key={row.id} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] font-medium whitespace-nowrap">
+                        <Link href={`/spray-qc/productorder/${cleanId}`} className="hover:text-[#00B6E2] hover:underline cursor-pointer">
+                          {row.id}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.micron}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.width}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.product}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.grade}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.quantity}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-[14px] text-[#5C5C5C]">{row.customer}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <StatusBadge status={row.stage} />
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <StatusBadge status={row.status} />
+                      </td>
+                      <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
+                        {row.timestamp
+                          ? new Date(row.timestamp).toLocaleDateString("en-GB", {
+                            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
+                          })
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <button onClick={() => setQrData({ id: cleanId, type: "PO", data: { micron: row.micron, width: row.width, product: row.product, quantity: row.quantity, status: row.status } })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1">
+                          <QrCode className="w-4 h-4" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <OptionsDropdown
+                          viewHref={`/spray-qc/productorder/${cleanId}`}
+                          status={row.status}
+                          // onEdit={() => openEditModal(row)}
+                          onDelete={async () => {
+                            if (confirm(`Are you sure you want to delete ${row.id}?`)) {
+                              if ((row as any).uuid) {
+                                try {
+                                  deleteProductOrder(row.id);
+                                  await loadData();
+                                } catch (e) {
+                                  console.error(e);
+                                  alert("Failed to delete product order");
+                                }
                               }
                             }
-                          }
-                        }}
-                      />
-                    </td>
-                  </tr>
-                )})}
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  )
+                })}
                 {searchedData.length === 0 && (
                   <tr>
                     <td colSpan={10} className="px-1 py-8 text-center text-[14px] text-[#5C5C5C]">
@@ -479,7 +378,7 @@ export default function SupervisorProductOrdersPage() {
             </table>
           </div>
           <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-          
+
           {/* Pagination Footer */}
           <div className="flex items-center justify-between border-t border-[#EAECF0] pt-4 mt-2">
             <p className="text-[14px] text-[#5C5C5C]">

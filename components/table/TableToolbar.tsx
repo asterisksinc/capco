@@ -33,22 +33,22 @@ export function TableToolbar({
   }, []);
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-2 sm:gap-3 w-full">
+    <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-3 w-full">
       {hasDateCol && (
         <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto">
           <input
             type="date"
             value={dateRange.from}
             onChange={(e) => onDateRangeChange({ ...dateRange, from: e.target.value })}
-            className="h-9 sm:h-[40px] flex-1 sm:flex-none w-full sm:w-24 bg-white border border-[#EBEBEB] rounded-lg sm:rounded-[8px] px-2 sm:px-3 text-[12px] sm:text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2]"
+            className="h-9 sm:h-[40px] flex-1 sm:flex-none w-3 sm:w-24 bg-white border border-[#EBEBEB] rounded-lg sm:rounded-[8px] px-2 sm:px-3 text-[12px] sm:text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2]"
             title="From"
           />
-          <span className="text-[#A1A1AA] text-[12px] hidden sm:inline">to</span>
+          <span className="text-[#A1A1AA] text-[12px] inline">to</span>
           <input
             type="date"
             value={dateRange.to}
             onChange={(e) => onDateRangeChange({ ...dateRange, to: e.target.value })}
-            className="h-9 sm:h-[40px] flex-1 sm:flex-none w-full sm:w-24 bg-white border border-[#EBEBEB] rounded-lg sm:rounded-[8px] px-2 sm:px-3 text-[12px] sm:text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2]"
+            className="h-9 sm:h-[40px] flex-1 sm:flex-none w-9 sm:w-24 bg-white border border-[#EBEBEB] rounded-lg sm:rounded-[8px] px-2 sm:px-3 text-[12px] sm:text-[14px] text-[#5C5C5C] focus:outline-none focus:border-[#00B6E2]"
             title="To"
           />
           {(dateRange.from || dateRange.to) && (
@@ -62,7 +62,7 @@ export function TableToolbar({
         </div>
       )}
 
-      <div className="flex items-center gap-2 w-full sm:w-auto relative">
+      <div className="flex items-center gap-2 sm:w-auto relative">
         {filterConfig && filters && onApplyFilters && (
           <FilterPopover
             config={filterConfig}
@@ -80,7 +80,7 @@ export function TableToolbar({
               className="flex items-center justify-center gap-2 h-9 sm:h-[40px] px-3 sm:px-4 bg-white border border-[#EBEBEB] rounded-lg sm:rounded-[8px] text-[12px] sm:text-[14px] font-medium text-[#171717] hover:bg-gray-50 transition-colors"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
+              <span className="inline">Export</span>
               <ChevronDown className="w-3 h-3 text-[#A1A1AA] ml-1" />
             </button>
             {isExportOpen && (

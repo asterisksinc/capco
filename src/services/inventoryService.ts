@@ -1,4 +1,4 @@
-import { buildQrPayload, supabaseRest, supabaseStorage, toCsv, type ListParams, type WorkflowStage, type WorkflowStatus } from "./supabaseClient";
+import { buildQrPayload, supabaseRest, supabaseStorage, toCsv, type ListParams, type WorkflowStage, type WorkflowStatus, getAccessToken } from "./supabaseClient";
 
 export type InventoryPayload = {
   raw_material_code: string;
@@ -22,7 +22,56 @@ export type InventoryPayload = {
   stage?: WorkflowStage;
 };
 
+export type BulkCreateRow = {
+  roll_no: string;
+  width_m: number;
+  net_weight_kg: number;
+  gross_weight_kg: number;
+  package_no?: string;
+  core_inch?: number;
+  temperature_c?: number;
+};
+
 export const inventoryService = {
+  bulkCreate(payload: { micron: number; supplier: string; batches: BulkCreateRow[] }) {
+    return fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/inventory/bulk-create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+      body: JSON.stringify(payload),
+    }).then((res) =>
+      res.ok
+        ? res.json()
+        : res.json().catch(() => ({})).then((errObj) => {
+            throw Object.assign(new Error(errObj?.message || errObj?.error || "Bulk create failed"), {
+              status: res.status,
+              issues: errObj?.issues || [],
+            });
+          })
+    );
+  },
+  
+  bulkUpdate(payload: { inventoryIds: string[]; micron?: number; supplier?: string }) {
+    return fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/inventory/bulk-update`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+      body: JSON.stringify(payload),
+    }).then((res) =>
+      res.ok
+        ? res.json()
+        : res.json().catch(() => ({})).then((errObj) => {
+            throw Object.assign(new Error(errObj?.message || errObj?.error || "Bulk update failed"), {
+              status: res.status,
+              issues: errObj?.issues || [],
+            });
+          })
+    );
+  },
   list(params?: ListParams) {
     return supabaseRest.list("inventory", {
       select: params?.select ?? "*,qr_references(qr_payload,qr_url),work_orders(work_order_no)",

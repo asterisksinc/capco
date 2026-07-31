@@ -16,46 +16,26 @@ import { useStore } from "@/hooks/useStore";
 import { productOrderService } from "@/src/services/productOrderService";
 import { DocsUploadedModal } from "@/components/DocsUploadedModal";
 import { RowImagesModal } from "@/components/RowImagesModal";
+import { WO_STATUS_OPTIONS } from "@/lib/constants";
 
 type DetailPageProps = {
   params: Promise<{ id?: string, detailpage?: string }>;
 };
 
-type TabType = "Raw Material" | "Metallisation" | "Slitting" | "Winding" | "Spray";
-
-const rawMaterialConfig: TableConfig<any> = {
-  columns: [
-    { key: "rollNo", label: "Roll No", type: "text", sortable: true },
-    { key: "netWeight", label: "Net Weight", type: "text", sortable: true },
-    { key: "grossWeight", label: "Gross Weight", type: "text", sortable: true },
-    { key: "thickness", label: "Micron", type: "number", sortable: true },
-    { key: "width", label: "Width", type: "text", sortable: true },
-    { key: "temperature", label: "Temperature", type: "text", sortable: true },
-    { key: "supplier", label: "Supplier", type: "text", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
-  ],
-};
-
-const metallisationConfig: TableConfig<any> = {
-  columns: [
-    { key: "coilNo", label: "Coil No", type: "text", sortable: true },
-    { key: "rmId", label: "RM ID", type: "text", sortable: true },
-    { key: "weight", label: "Weight", type: "number", sortable: true },
-    { key: "opticalDensity", label: "Optical Density", type: "text", sortable: true },
-    { key: "resistance", label: "Resistance", type: "text", sortable: true },
-    { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
-  ],
-};
+type TabType = "Slitting" | "Winding" | "Spray";
 
 const slittingConfig: TableConfig<any> = {
   columns: [
     { key: "productNo", label: "Product No", type: "text", sortable: true },
-    { key: "rmId", label: "Coil ID", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "number", sortable: true },
+    { key: "width", label: "Width", type: "number", sortable: true },
     { key: "weight", label: "Weight", type: "number", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "timestampAdded", label: "Timestamp", type: "date", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "nextStage", label: "Next Stage", type: "text", sortable: false },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: WO_STATUS_OPTIONS },
+    { key: "qr", label: "QR", type: "text", sortable: false },
+    { key: "options", label: "Action", type: "text", sortable: false },
   ],
 };
 
@@ -69,7 +49,7 @@ const windingConfig: TableConfig<any> = {
     { key: "totalFilmConsumed", label: "Total Film Consumed", type: "text", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "nextStage", label: "Next Stage", type: "text", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: WO_STATUS_OPTIONS },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false },
   ],
@@ -86,7 +66,7 @@ const sprayConfig: TableConfig<any> = {
     { key: "rejectedQuantity", label: "Rejected Quantity", type: "number", sortable: true },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
     { key: "nextStage", label: "Next Stage", type: "text", sortable: true },
-    { key: "status", label: "Status", type: "text", sortable: true },
+    { key: "status", label: "Status", type: "enum", sortable: false, filter: "dropdown", options: WO_STATUS_OPTIONS },
     { key: "qr", label: "QR", type: "text", sortable: false },
     { key: "options", label: "Action", type: "text", sortable: false },
   ],
@@ -101,7 +81,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
 
   const [poData, setPoData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>("Raw Material");
+  const [activeTab, setActiveTab] = useState<TabType>("Slitting");
   const [qrData, setQrData] = useState<QRModalData | null>(null);
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [rowImagesData, setRowImagesData] = useState<any>(null);
@@ -113,11 +93,9 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
     setLoading(false);
   }, [orderId, store.productOrders]);
 
-  const currentConfig = activeTab === "Raw Material" ? rawMaterialConfig
-    : activeTab === "Metallisation" ? metallisationConfig
-      : activeTab === "Slitting" ? slittingConfig
-        : activeTab === "Winding" ? windingConfig
-          : sprayConfig;
+  const currentConfig = activeTab === "Slitting" ? slittingConfig
+    : activeTab === "Winding" ? windingConfig
+      : sprayConfig;
 
   // Empty data for now
   const rows = useMemo(() => [], [activeTab]);
@@ -136,7 +114,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
 
   const { paginatedData, totalPages, validPage: currentPage } = getPaginatedData(processedData);
 
-  const tabs: TabType[] = ["Raw Material", "Metallisation", "Slitting", "Winding", "Spray"];
+  const tabs: TabType[] = ["Slitting", "Winding", "Spray"];
 
   if (loading) {
     return (
@@ -162,12 +140,12 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
       {/* HEADER SECTION */}
       <section className="bg-white border-b border-[#EBEBEB]">
         {/* Breadcrumb / Back button (Desktop) */}
-        <div className="hidden md:flex items-center gap-2 px-6 py-4 border-b border-[#EBEBEB] text-[13px] font-medium text-[#5C5C5C]">
+        {/* <div className="hidden md:flex items-center gap-2 px-6 py-4 border-b border-[#EBEBEB] text-[13px] font-medium text-[#5C5C5C]">
           <Link href=".." className="flex items-center gap-1 hover:text-[#171717] transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Orders
           </Link>
-        </div>
+        </div> */}
 
         {/* Title row */}
         <div className="px-4 py-4 md:px-6 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -269,13 +247,13 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                     {currentConfig.columns.map((col) => {
                       const key = String(col.key);
                       if (key === "options") {
-                        const isRM = activeTab === "Raw Material";
-                        const isMC = activeTab === "Metallisation";
-                        const rowId = isRM ? (row as any).rollNo : isMC ? (row as any).coilNo : (row as any).productNo;
-                        const qrType = isRM ? "RM" : isMC ? "MC" : "PM";
-                        const qrDetails: any = isRM
-                          ? { rollNo: (row as any).rollNo ?? "", micron: (row as any).thickness ?? "", width: (row as any).width ?? "", netWeight: (row as any).netWeight.split("k")[0] ?? "", grossWeight: (row as any).grossWeight.split("k")[0] ?? "", supplier: (row as any).supplier ?? "", status: (row as any).status ?? "" }
-                          : isMC
+                        const isSlitting = activeTab === "Slitting";
+                        const isWinding = activeTab === "Winding";
+                        const rowId = isSlitting ? (row as any).rollNo : isWinding ? (row as any).coilNo : (row as any).productNo;
+                        const qrType = isSlitting ? "PM" : isWinding ? "W" : "SP";
+                        const qrDetails: any = isSlitting
+                          ? { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" }
+                          : isWinding
                             ? { coilNo: (row as any).coilNo ?? "", rmId: (row as any).rmId ?? "", factoryWastageWeight: (row as any).factoryWastageWeight ?? "", weight: (row as any).weight.split("k")[0] ?? "", date: (row as any).timestamp ?? "", status: (row as any).status ?? "" }
                             : { productNo: (row as any).productNo ?? "", coilId: (row as any).rmId ?? "", weight: (row as any).weight.split("k")[0] ?? "", grade: (row as any).grade ?? "", date: (row as any).timestampAdded ?? "", status: (row as any).status ?? "" };
                         return (
@@ -284,11 +262,11 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                               <button onClick={() => setQrData({ id: rowId, type: qrType, data: qrDetails })} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="Show QR Code">
                                 <QrCode className="w-4 h-4" />
                               </button>
-                              {isMC && (
+                              {/* {isWinding && (
                                 <button onClick={() => setRowImagesData(row)} className="text-[#5C5C5C] hover:text-[#00B6E2] transition-colors p-1" title="View Coil Images">
                                   <ImageIcon className="w-4 h-4" />
                                 </button>
-                              )}
+                              )} */}
                             </div>
                           </td>
                         );
