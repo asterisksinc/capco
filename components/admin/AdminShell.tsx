@@ -58,6 +58,7 @@ function AdminShellContent({ children }: { children: ReactNode }) {
                 { name: "Pipeline", href: "/admin/pipeline" },
                 { name: "User Management", href: "/admin/users" },
                 { name: "CRM", href: "/admin/crm" },
+                { name: "Reports", href: "/admin/reports" },
                 { name: "Invoices", href: "/admin/invoices" },
                 { name: "Finished Goods", href: "/admin/finishedgoods" },
               ].map((item) => (

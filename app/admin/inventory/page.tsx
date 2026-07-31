@@ -55,6 +55,19 @@ const defaultForm = {
   supplier: supplierOptions[0],
 };
 
+const createEmptyRow = (sno: number) => ({
+  sno: String(sno),
+  rollId: "",
+  width: "",
+  netWeight: "",
+  grossWeight: "",
+  packageNo: "",
+  coreInch: "",
+});
+
+const createInitialRows = () =>
+  Array.from({ length: 10 }, (_, index) => createEmptyRow(index + 1));
+
 export default function AdminInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
@@ -73,10 +86,12 @@ export default function AdminInventoryPage() {
   const [bulkUpdateValue, setBulkUpdateValue] = useState("");
 
   // Upload Material states
-  const [uploadStep, setUploadStep] = useState<1 | 2>(1);
+  const [stagedBatches, setStagedBatches] = useState<{ id: number; rows: any[]; micron: string; supplier: string }[]>([]);
+  const [activeBatchId, setActiveBatchId] = useState<number>(1);
+  const [nextBatchId, setNextBatchId] = useState<number>(2);
+  const [pasteGridRows, setPasteGridRows] = useState<any[]>(createInitialRows());
   const [uploadMicron, setUploadMicron] = useState(micronOptions[0]);
   const [uploadSupplier, setUploadSupplier] = useState(supplierOptions[0]);
-  const [parsedUploadRows, setParsedUploadRows] = useState<any[]>([]);
 
   // Manual Add Form states
   const [addStep, setAddStep] = useState<1 | 2 | 3>(1);
@@ -277,84 +292,92 @@ export default function AdminInventoryPage() {
     }
   };
 
-  // CSV/Excel Import mapper
-  const mapRowToInventoryItem = (row: any) => {
-    const normalizedRow: Record<string, any> = {};
-    for (const [key, val] of Object.entries(row)) {
-      const normKey = key.toLowerCase().trim().replace(/[\s_\.\(\)-]+/g, "");
-      normalizedRow[normKey] = val;
-    }
+    const handleGridPaste = (e: React.ClipboardEvent, rowIndex: number, colIndex: number) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text");
+    if (!pasteData) return;
 
-    const rollId = normalizedRow["rollid"] || normalizedRow["rollno"] || "";
-    const width = parseFloat(normalizedRow["width"] || "1.0");
-    let weight = parseFloat(normalizedRow["weight"] || "0");
-    let netWeight = parseFloat(normalizedRow["netweight"] || weight);
-    let grossWeight = parseFloat(normalizedRow["grossweight"] || weight);
-    const packageNo = normalizedRow["packageno"] || "";
-    const coreInch = parseFloat(normalizedRow["coreinch"] || "0");
-    
-    // Defaulting these since they are removed from CSV
-    let usedWeight = parseFloat(normalizedRow["usedweight"] || "0");
-    let wastageWeight = parseFloat(normalizedRow["wastageweight"] || "0");
-    let damagedWeight = parseFloat(normalizedRow["damagedweight"] || "0");
-    const temperature = 25;
-    let status = "In Inventory";
+    const rows = pasteData.split(/\r?\n/).filter(r => r.trim() !== "");
+    const newGrid = [...pasteGridRows];
 
-    if (!rollId) return null;
+    rows.forEach((rowStr, i) => {
+      const targetRowIndex = rowIndex + i;
+      if (targetRowIndex >= newGrid.length) {
+        newGrid.push({});
+      }
+      
+      const cols = rowStr.split(/\t/);
+      const rowObj = { ...newGrid[targetRowIndex] };
+      
+      const fieldNames = ["sno", "rollId", "width", "netWeight", "grossWeight", "packageNo", "coreInch"];
+      
+      cols.forEach((colVal, j) => {
+        const targetColIndex = colIndex + j;
+        if (targetColIndex < fieldNames.length) {
+          rowObj[fieldNames[targetColIndex]] = colVal.trim();
+        }
+      });
+      newGrid[targetRowIndex] = rowObj;
+    });
 
-    return {
-      roll_no: String(rollId).trim(),
-      width_m: width,
-      net_weight_kg: netWeight,
-      gross_weight_kg: grossWeight,
-      used_weight_kg: usedWeight,
-      wastage_weight_kg: wastageWeight,
-      damaged_weight_kg: damagedWeight,
-      temperature_c: temperature,
-      package_no: String(packageNo).trim(),
-      core_inch: coreInch,
-      status: "In Inventory"
-    };
+    setPasteGridRows(newGrid.slice(0, 100));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleGridChange = (rowIndex: number, field: string, value: string) => {
+    const newGrid = [...pasteGridRows];
+    newGrid[rowIndex] = { ...newGrid[rowIndex], [field]: value };
+    setPasteGridRows(newGrid);
+  };
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json<any>(worksheet);
+  const removeGridRow = (rowIndex: number) => {
+    const newGrid = pasteGridRows.filter((_, i) => i !== rowIndex);
+    if (newGrid.length === 0) newGrid.push({});
+    setPasteGridRows(newGrid);
+  };
 
-        const validItems: any[] = [];
-        let skippedCount = 0;
+  const handleAddBatch = () => {
+    setStagedBatches([...stagedBatches, {
+      id: activeBatchId,
+      rows: pasteGridRows,
+      micron: uploadMicron,
+      supplier: uploadSupplier
+    }]);
+    setActiveBatchId(nextBatchId);
+    setNextBatchId(prev => prev + 1);
+    setPasteGridRows(createInitialRows());
+    setUploadMicron(micronOptions[0]);
+    setUploadSupplier(supplierOptions[0]);
+  };
 
-        json.forEach((row) => {
-          const item = mapRowToInventoryItem(row);
-          if (item) {
-            validItems.push(item);
-          } else {
-            skippedCount++;
-          }
-        });
+  const handleEditBatch = (batchId: number) => {
+    const hasData = pasteGridRows.some(row => row.rollId && row.rollId.trim() !== "");
+    let newStaged = [...stagedBatches];
+    
+    if (hasData) {
+      newStaged.push({ id: activeBatchId, rows: pasteGridRows, micron: uploadMicron, supplier: uploadSupplier });
+    }
+    
+    const batchToEdit = newStaged.find(b => b.id === batchId);
+    if (batchToEdit) {
+      newStaged = newStaged.filter(b => b.id !== batchId);
+      setStagedBatches(newStaged);
+      setActiveBatchId(batchToEdit.id);
+      setPasteGridRows(batchToEdit.rows);
+      setUploadMicron(batchToEdit.micron);
+      setUploadSupplier(batchToEdit.supplier);
+    }
+  };
 
-        if (validItems.length > 0) {
-          setParsedUploadRows(validItems);
-          setUploadStep(2);
-        } else {
-          alert("No valid rows found in the uploaded file.");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Failed to parse file. Please verify that the Excel or CSV template is correct.");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = '';
+  const handleDeleteBatch = (batchId: number) => {
+    if (confirm("Are you sure you want to delete this batch?")) {
+      setStagedBatches(stagedBatches.filter(b => b.id !== batchId));
+    }
+  };
+
+  const addGridRow = () => {
+    if (pasteGridRows.length < 100) {
+      setPasteGridRows([...pasteGridRows, {}]);
+    }
   };
 
   const handleUploadSubmit = async () => {
@@ -363,11 +386,29 @@ export default function AdminInventoryPage() {
       const { nextRmIdNum } = getNextSequentialIds(inventoryItems);
       let currentRmIdNum = nextRmIdNum;
       
-      const finalRows = parsedUploadRows.map((row) => {
+      // TODO: Once multi-batch backend support exists, loop over stagedBatches + active batch here
+      const validRows = pasteGridRows.filter(row => row.rollId && row.rollId.trim() !== "");
+      if (validRows.length === 0) {
+        alert("No valid rows to import. Roll ID is required.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const finalRows = validRows.map((row) => {
         const rawMaterialCode = `RM-${String(currentRmIdNum).padStart(4, "0")}`;
         currentRmIdNum++;
         return {
-          ...row,
+          roll_no: String(row.rollId).trim(),
+          width_m: parseFloat(row.width || "1.0"),
+          net_weight_kg: parseFloat(row.netWeight || row.weight || "0"),
+          gross_weight_kg: parseFloat(row.grossWeight || row.weight || "0"),
+          used_weight_kg: 0,
+          wastage_weight_kg: 0,
+          damaged_weight_kg: 0,
+          temperature_c: 25,
+          package_no: String(row.packageNo || "").trim(),
+          core_inch: parseFloat(row.coreInch || "0"),
+          status: "In Inventory" as any,
           raw_material_code: rawMaterialCode,
           micron: Number(uploadMicron),
           supplier: uploadSupplier,
@@ -378,7 +419,7 @@ export default function AdminInventoryPage() {
       await fetchInventory();
       alert(`Successfully imported ${finalRows.length} raw material items.`);
       setIsUploadModalOpen(false);
-      setUploadStep(1);
+      setPasteGridRows(createInitialRows());
     } catch (err) {
       console.error(err);
       alert("Failed to import rows. There may be a conflict or network issue.");
@@ -488,15 +529,14 @@ export default function AdminInventoryPage() {
       const payload: any = {
         inventoryIds: Array.from(selectedIds),
       };
-      console.log("Token: ", token, "Payload: ", payload);
       
       if (bulkUpdateField === "Micron") {
         payload.micron = Number(bulkUpdateValue);
       } else if (bulkUpdateField === "Supplier") {
         payload.supplier = bulkUpdateValue;
       }
-      
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/inventory/bulk-update`, {
+       
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/inventory/bulk-update`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -504,7 +544,6 @@ export default function AdminInventoryPage() {
         },
         body: JSON.stringify(payload)
       });
-      console.log("Response: ", res);
       
       if (!res.ok) {
         let errMsg = "Bulk update failed";
@@ -576,7 +615,7 @@ export default function AdminInventoryPage() {
               <Download className="w-4.5 h-4.5" />
               Export Options
             </button>
-            <button onClick={() => { setUploadStep(1); setIsUploadModalOpen(true); }} className="h-[40px] px-4 bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] flex items-center gap-2 text-[14px] font-medium transition-colors hover:bg-[#F5F7FA]">
+            <button onClick={() => { setPasteGridRows(createInitialRows());; setStagedBatches([]); setActiveBatchId(1); setNextBatchId(2); setIsUploadModalOpen(true); }} className="h-[40px] px-4 bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] flex items-center gap-2 text-[14px] font-medium transition-colors hover:bg-[#F5F7FA]">
               Import CSV/Excel
             </button>
             <button onClick={openAddModal} className="h-[40px] px-4 bg-[#00B6E2] text-white rounded-[6px] flex items-center gap-2 text-[14px] font-medium hover:bg-[#0092b5] transition-colors">
@@ -594,7 +633,7 @@ export default function AdminInventoryPage() {
           <button onClick={openAddModal} className="h-[36px] bg-[#00B6E2] text-white rounded-[6px] text-[12px] font-medium flex items-center justify-center gap-1">
             <Plus className="w-3.5 h-3.5" /> Add
           </button>
-          <button onClick={() => { setUploadStep(1); setIsUploadModalOpen(true); }} className="h-[36px] bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] text-[12px] font-medium flex items-center justify-center">
+          <button onClick={() => { setPasteGridRows(createInitialRows()); setStagedBatches([]); setActiveBatchId(1); setNextBatchId(2); setIsUploadModalOpen(true); }} className="h-[36px] bg-white border border-[#DDE1E8] text-[#171717] rounded-[6px] text-[12px] font-medium flex items-center justify-center">
             Import
           </button>
           <button onClick={() => setIsExportModalOpen(true)} className="h-[36px] bg-white border border-[#00B6E2] text-[#00B6E2] rounded-[6px] text-[12px] font-medium flex items-center justify-center">
@@ -898,83 +937,166 @@ export default function AdminInventoryPage() {
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#171717]/40 backdrop-blur-sm" onClick={() => setIsUploadModalOpen(false)} />
-          <div className="relative w-full max-w-[600px] bg-white rounded-[12px] shadow-lg flex flex-col overflow-hidden animate-slide-up">
+          <div className="relative w-full max-w-[1400px] h-full max-h-[95vh] bg-white rounded-[12px] shadow-lg flex flex-col overflow-hidden animate-slide-up">
             <div className="flex items-center justify-between px-6 py-5 border-b border-[#EBEBEB]">
               <div>
                 <h2 className="text-[18px] font-semibold text-[#171717]">Upload Material List</h2>
-                <p className="text-[14px] text-[#5C5C5C] mt-1">Import Excel or CSV template sheets into raw materials inventory.</p>
+                <p className="text-[14px] text-[#5C5C5C] mt-1">Paste your Excel/CSV data below. Roll ID is required.</p>
               </div>
               <button onClick={() => setIsUploadModalOpen(false)} className="p-2 hover:bg-[#F5F7FA] rounded-[8px] transition-colors">
                 <X className="w-5 h-5 text-[#5C5C5C]" />
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-5">
-              {uploadStep === 1 ? (
-                <>
-                  <div className="border-2 border-dashed border-[#00B6E2] bg-[#F0FDFF] rounded-[12px] flex flex-col items-center justify-center py-10 px-4 cursor-pointer hover:bg-[#E6F8FC] transition-colors relative">
-                    <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    <Package className="w-8 h-8 text-[#00B6E2] mb-2" />
-                    <span className="text-[15px] font-medium text-[#171717]">Click to upload or drag file here</span>
-                    <span className="text-[12px] text-[#5C5C5C] mt-1">Accepts CSV or Excel (.xlsx) files</span>
-                  </div>
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-[#F9FAFB]">
+              {/* ACTIVE BATCH CONTAINER (Moved to top, Header removed) */}
+              <div className="flex flex-col gap-4">
+                <div className="border border-[#EBEBEB] rounded-[8px] overflow-auto max-h-[50vh] bg-white">
+                  <table className="w-full text-left border-collapse text-[13px]">
+                    <thead className="sticky top-0 bg-[#F5F7FA] z-10 shadow-[0_1px_0_#EBEBEB]">
+                      <tr>
+                        <th className="px-3 py-2 font-semibold text-[#5C5C5C] w-[60px]">S.No</th>
+                        <th className="px-3 py-2 font-semibold text-[#171717]">Roll ID*</th>
+                        <th className="px-3 py-2 font-semibold text-[#5C5C5C]">Width</th>
+                        <th className="px-3 py-2 font-semibold text-[#5C5C5C]">Net Wt.</th>
+                        <th className="px-3 py-2 font-semibold text-[#5C5C5C]">Gross Wt.</th>
+                        <th className="px-3 py-2 font-semibold text-[#5C5C5C]">Package No</th>
+                        <th className="px-3 py-2 font-semibold text-[#5C5C5C]">Core(In)</th>
+                        <th className="px-3 py-2 font-semibold text-[#5C5C5C] w-[40px]"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EBEBEB]">
+                      {pasteGridRows.map((row, i) => {
+                        const isMissingRollId = !row.rollId || row.rollId.trim() === "";
+                        const hasOtherData = row.width || row.netWeight || row.grossWeight || row.packageNo || row.coreInch;
+                        const showError = isMissingRollId && hasOtherData;
+                        
+                        return (
+                          <tr key={i} className="hover:bg-gray-50/50">
+                            <td className="px-2 py-1">
+                              <input 
+                                className="w-full bg-transparent border-none focus:ring-1 focus:ring-[#00B6E2] rounded px-1 text-center h-[30px]" 
+                                value={row.sno || ""} 
+                                onChange={(e) => handleGridChange(i, "sno", e.target.value)}
+                                onPaste={(e) => handleGridPaste(e, i, 0)}
+                                placeholder={(i + 1).toString()}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input 
+                                className={`w-full bg-transparent border ${showError ? 'border-red-400 bg-red-50' : 'border-transparent'} focus:ring-1 focus:ring-[#00B6E2] rounded px-1 h-[30px]`}
+                                value={row.rollId || ""} 
+                                onChange={(e) => handleGridChange(i, "rollId", e.target.value)}
+                                onPaste={(e) => handleGridPaste(e, i, 1)}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input 
+                                className="w-full bg-transparent border-none focus:ring-1 focus:ring-[#00B6E2] rounded px-1 h-[30px]" 
+                                value={row.width || ""} 
+                                onChange={(e) => handleGridChange(i, "width", e.target.value)}
+                                onPaste={(e) => handleGridPaste(e, i, 2)}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input 
+                                className="w-full bg-transparent border-none focus:ring-1 focus:ring-[#00B6E2] rounded px-1 h-[30px]" 
+                                value={row.netWeight || ""} 
+                                onChange={(e) => handleGridChange(i, "netWeight", e.target.value)}
+                                onPaste={(e) => handleGridPaste(e, i, 3)}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input 
+                                className="w-full bg-transparent border-none focus:ring-1 focus:ring-[#00B6E2] rounded px-1 h-[30px]" 
+                                value={row.grossWeight || ""} 
+                                onChange={(e) => handleGridChange(i, "grossWeight", e.target.value)}
+                                onPaste={(e) => handleGridPaste(e, i, 4)}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input 
+                                className="w-full bg-transparent border-none focus:ring-1 focus:ring-[#00B6E2] rounded px-1 h-[30px]" 
+                                value={row.packageNo || ""} 
+                                onChange={(e) => handleGridChange(i, "packageNo", e.target.value)}
+                                onPaste={(e) => handleGridPaste(e, i, 5)}
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input 
+                                className="w-full bg-transparent border-none focus:ring-1 focus:ring-[#00B6E2] rounded px-1 h-[30px]" 
+                                value={row.coreInch || ""} 
+                                onChange={(e) => handleGridChange(i, "coreInch", e.target.value)}
+                                onPaste={(e) => handleGridPaste(e, i, 6)}
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-center">
+                              <button onClick={() => removeGridRow(i)} className="p-1 hover:bg-red-50 text-[#5C5C5C] hover:text-red-500 rounded transition-colors" title="Remove row">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-                  <div className="rounded-[8px] bg-[#F9FAFB] border border-[#EBEBEB] p-4 flex flex-col gap-2">
-                    <p className="text-[13px] font-semibold text-[#171717]">Template Setup</p>
-                    <p className="text-[12px] text-[#5C5C5C] leading-normal">
-                      Make sure your file columns match the template: <span className="font-semibold text-black">S.No, Roll ID, Width, Net Weight, Gross Weight, Package No, Core(Inch)</span>.
-                    </p>
-                    <a href="/sample_inventory.csv" download className="text-[#00B6E2] hover:underline font-semibold text-[13px] mt-1 flex items-center gap-1.5 self-start">
-                      <Download className="w-3.5 h-3.5" /> Download Sample CSV Template
-                    </a>
+                <div className="flex flex-col sm:flex-row gap-4 mt-2 shrink-0">
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <label className="text-[12px] font-medium text-[#444444]">Micron</label>
+                    <select value={uploadMicron} onChange={(e) => setUploadMicron(e.target.value)} className="h-[36px] rounded-[6px] border border-[#DDE1E8] px-3 text-[13px] bg-white">
+                      {micronOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
                   </div>
-                </>
-              ) : (
-                <>
-                  <div className="rounded-[10px] border border-[#DDE1E8] bg-[#FAFCFF] p-4">
-                    <p className="text-[15px] font-semibold text-[#1F2937] mb-1">Step 2: Batch Details</p>
-                    <p className="text-[13px] text-[#6B7280]">Select the Micron and Supplier to apply to all {parsedUploadRows.length} imported rows.</p>
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <label className="text-[12px] font-medium text-[#444444]">Supplier</label>
+                    <select value={uploadSupplier} onChange={(e) => setUploadSupplier(e.target.value)} className="h-[36px] rounded-[6px] border border-[#DDE1E8] px-3 text-[13px] bg-white">
+                      {supplierOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
                   </div>
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[13px] font-medium text-[#171717]">Micron</label>
-                      <select value={uploadMicron} onChange={(e) => setUploadMicron(e.target.value)} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
-                        {micronOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[13px] font-medium text-[#171717]">Supplier</label>
-                      <select value={uploadSupplier} onChange={(e) => setUploadSupplier(e.target.value)} className="h-[42px] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]">
-                        {supplierOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </div>
+                </div>
+              </div>
+
+              {/* STAGED BATCHES LIST (Moved to bottom) */}
+              {stagedBatches.map(batch => (
+                <div key={batch.id} className="rounded-[8px] border border-[#EBEBEB] bg-white p-4 flex items-center justify-between shadow-sm shrink-0">
+                  <div className="flex items-center gap-6">
+                    <span className="text-[15px] font-semibold text-[#171717]">Material Set {batch.id}</span>
+                    <span className="text-[13px] text-[#5C5C5C]">No. of Rows: <span className="font-medium text-[#171717]">{batch.rows.filter(r => r.rollId).length}</span></span>
+                    <span className="text-[13px] text-[#5C5C5C]">Micron: <span className="font-medium text-[#171717]">{batch.micron}</span></span>
+                    <span className="text-[13px] text-[#5C5C5C]">Supplier: <span className="font-medium text-[#171717]">{batch.supplier}</span></span>
                   </div>
-                </>
-              )}
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handleEditBatch(batch.id)} className="p-1.5 text-[#5C5C5C] hover:text-[#00B6E2] hover:bg-[#F0FDFF] rounded transition-colors" title="Edit Batch">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDeleteBatch(batch.id)} className="p-1.5 text-[#5C5C5C] hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete Batch">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#EBEBEB] bg-[#FAFAFA]">
-              {uploadStep === 1 ? (
-                <button onClick={() => setIsUploadModalOpen(false)} className="h-[38px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[13px] font-medium rounded-[6px] hover:bg-[#F5F7FA]">
-                  Cancel
+            <div className="flex items-center justify-between px-6 py-4 border-t border-[#EBEBEB] bg-white shrink-0">
+              <button onClick={() => setIsUploadModalOpen(false)} className="h-[38px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[13px] font-medium rounded-[6px] hover:bg-[#F5F7FA]">
+                Cancel
+              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={handleAddBatch} className="h-[38px] px-4 bg-white border border-[#DDE1E8] text-[#171717] text-[13px] font-medium rounded-[6px] hover:bg-[#F5F7FA] transition-colors flex items-center gap-1.5">
+                  <Plus className="w-4 h-4" /> Add Material Set
                 </button>
-              ) : (
-                <>
-                  <button onClick={() => setUploadStep(1)} disabled={isSubmitting} className="h-[38px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[13px] font-medium rounded-[6px] hover:bg-[#F5F7FA]">
-                    Back
-                  </button>
-                  <button onClick={handleUploadSubmit} disabled={isSubmitting} className="h-[38px] px-5 bg-[#00B6E2] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors flex items-center gap-1.5 disabled:opacity-50">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {isSubmitting ? "Importing..." : "Import List"}
-                  </button>
-                </>
-              )}
+                <button onClick={handleUploadSubmit} disabled={isSubmitting} className="h-[38px] px-5 bg-[#00B6E2] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {isSubmitting ? "Importing..." : "Confirm"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* EXPORT OPTIONS MODAL */}
+{/* EXPORT OPTIONS MODAL */}
       {isExportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#171717]/40 backdrop-blur-sm" onClick={() => setIsExportModalOpen(false)} />

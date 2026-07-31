@@ -186,9 +186,19 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
   const isStepOneValid = selectedInventoryIds.length > 0;
 
   const toggleInventorySelection = (id: string) => {
-    setSelectedInventoryIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+    setSelectedInventoryIds((prev) => {
+      const index = filteredInventory.findIndex((i) => i.id === id);
+      if (index === -1) return prev;
+
+      if (prev.includes(id)) {
+        // Deselecting: Keep only the ones before this index
+        const idsToKeep = filteredInventory.slice(0, index).map(i => i.id);
+        return prev.filter(i => idsToKeep.includes(i));
+      } else {
+        // Selecting: Add to selection
+        return [...prev, id];
+      }
+    });
   };
 
   const submitCurrentStage = async () => {
@@ -218,22 +228,21 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
         status: "In-progress"
       });
 
+      let singleImageUrl: string | undefined = undefined;
+      if (capturedImage?.file) {
+        try {
+          singleImageUrl = await uploadRawMaterialImage(`WO-${workOrderFlowData.id}-QC`, capturedImage.file);
+        } catch (err) {
+          console.error(`Failed to upload QC image`, err);
+          throw err;
+        }
+      }
+
       await Promise.all(
-        selectedInventoryIds.map(async (id) => {
-          let imageUrl;
-          if (capturedImage?.file) {
-            const inv = availableInventory.find((i: any) => i.id === id);
-            const code = inv?.raw_material_code || inv?.roll_no || id;
-            try {
-              imageUrl = await uploadRawMaterialImage(code, capturedImage.file);
-            } catch (err) {
-              console.error(`Failed to upload image for ${code}`, err);
-              throw err;
-            }
-          }
+        selectedInventoryIds.map(async (id, index) => {
           await inventoryService.update(id, { 
             status: "Being Used",
-            ...(imageUrl ? { raw_material_image_url: imageUrl } : {})
+            ...(singleImageUrl && index === 0 ? { raw_material_image_url: singleImageUrl } : {})
           }).catch(() => { });
         })
       );
@@ -290,20 +299,35 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
         {filteredInventory.length === 0 && (
           <p className="text-[13px] text-[#5C5C5C] text-center py-4">No available inventory items match the Work Order's micron and width.</p>
         )}
-        {filteredInventory.map((item) => {
+        {filteredInventory.map((item, index) => {
           const isSelected = selectedInventoryIds.includes(item.id);
+          const isSelectable = index === 0 || selectedInventoryIds.includes(filteredInventory[index - 1].id);
           const displayId = item.raw_material_code || item.roll_no || item.id;
+          
           return (
             <label
               key={item.id}
-              onClick={() => toggleInventorySelection(item.id)}
-              className={`flex flex-col gap-3 p-4 rounded-[8px] border transition-colors cursor-pointer ${isSelected
+              onClick={(e) => {
+                e.preventDefault();
+                if (isSelectable) toggleInventorySelection(item.id);
+              }}
+              className={`flex flex-col gap-3 p-4 rounded-[8px] border transition-colors ${
+                isSelectable ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+              } ${isSelected
                 ? "border-[#00B6E2] bg-[#F4FBFF]"
-                : "border-[#DDE1E8] bg-white hover:border-[#A7DDEB]"
+                : isSelectable 
+                  ? "border-[#DDE1E8] bg-white hover:border-[#A7DDEB]" 
+                  : "border-[#DDE1E8] bg-[#F9FAFB]"
                 }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded-[4px] border flex items-center justify-center shrink-0 ${isSelected ? "bg-[#00B6E2] border-[#00B6E2]" : "border-[#DDE1E8] bg-white"}`}>
+                <div className={`w-5 h-5 rounded-[4px] border flex items-center justify-center shrink-0 ${
+                  isSelected 
+                    ? "bg-[#00B6E2] border-[#00B6E2]" 
+                    : isSelectable 
+                      ? "border-[#DDE1E8] bg-white" 
+                      : "border-[#E5E7EB] bg-[#F3F4F6]"
+                }`}>
                   {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                 </div>
                 <span className="text-[14px] font-semibold text-[#171717]">{displayId}</span>
@@ -324,20 +348,23 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
 
   const renderReviewCards = () => {
     const selectedItems = filteredInventory.filter(i => selectedInventoryIds.includes(i.id));
-    return selectedItems.map((item, idx) => {
-      const net = item.net_weight_kg ?? item.weight ?? 0;
-      const displayId = item.raw_material_code || item.roll_no || item.id;
-      return (
-        <div key={`raw-${idx}`} className="rounded-[12px] border border-[#78CFFA] bg-[#F4FBFF] p-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-[14px] text-[#49526A]">
-          <p>Raw Material ID: {displayId}</p>
-          <p>Supplier: {item.supplier || "Unknown"}</p>
-          <p>Micron: {item.micron || "-"}</p>
-          <p>Width: {item.width_m || "-"}</p>
-          <p>Net Weight: {Number(net).toFixed(1)} kgs</p>
-          <p>Temperature: {item.temperature_c || "25°C"}</p>
-        </div>
-      );
-    });
+    return (
+      <div className="rounded-[12px] border border-[#78CFFA] bg-[#F4FBFF] p-4 flex flex-col gap-3">
+        <p className="text-[14px] font-semibold text-[#171717]">Selected Raw Materials</p>
+        <ul className="list-disc pl-5 text-[13px] text-[#49526A] flex flex-col gap-1.5">
+          {selectedItems.map((item, idx) => {
+            const net = item.net_weight_kg ?? item.weight ?? 0;
+            const displayId = item.raw_material_code || item.roll_no || item.id;
+            return (
+              <li key={`raw-${idx}`}>
+                <span className="font-medium text-[#171717]">{displayId}</span>
+                <span className="text-[#6B7280]"> (Supplier: {item.supplier || "Unknown"}, Micron: {item.micron || "-"}, Width: {item.width_m || "-"}, Net Wt: {Number(net).toFixed(1)}kg)</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
   };
 
   const renderModalBody = () => {
@@ -364,7 +391,7 @@ export default function StoreHeadWorkOrderDetailPage({ params }: DetailPageProps
           <div className="rounded-[12px] border border-[#DDE1E8] bg-white p-2 md:p-4 flex flex-col gap-3">
             {!capturedImage ? (
               <div className="flex items-center justify-between">
-                <label className="text-[13px] font-medium text-[#171717]">Attach Image</label>
+                <label className="text-[13px] font-medium text-[#5C5C5C] px-1">QC Image</label>
                 <div className="flex items-center gap-2">
                   <div className="relative">
                     <input

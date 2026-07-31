@@ -259,7 +259,7 @@ export default function SupervisorProductOrdersPage() {
         customer: formData.customer,
         instructions: formData.instructions,
         status: "Yet to Start",
-        stage: "Raw Material",
+        stage: "Slitting",
         timestamp: new Date().toISOString(),
       });
     }

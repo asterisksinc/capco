@@ -31,6 +31,7 @@ export function AdminSidebar() {
     { name: "Pipeline", href: "/admin/pipeline", icon: Network },
     { name: "User Management", href: "/admin/users", icon: Users },
     { name: "CRM", href: "/admin/crm", icon: Settings },
+    { name: "Reports", href: "/admin/reports", icon: ClipboardList },
     { name: "Invoices", href: "/admin/invoices", icon: Receipt },
     { name: "Finished Goods", href: "/admin/finishedgoods", icon: ClipboardCheck },
     { name: "Vendor Purchases", href: "/admin/vendor-purchases", icon: CreditCard },
@@ -47,7 +48,7 @@ export function AdminSidebar() {
         </button>
       </div>
       
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-4 py-1 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (

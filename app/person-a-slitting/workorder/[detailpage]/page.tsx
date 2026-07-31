@@ -228,6 +228,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       ]);
       if (data) {
         setWoData(data);
+        console.log(data);
       }
       if (allData) {
         setAllWorkOrders(allData);
@@ -279,7 +280,8 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
         };
       }),
       metallisationRows: (woData.metallisation || []).map((met: any) => ({
-        coilNo: met.metallisation_no || met.id,
+        coilNo: met.coil_no || met.id,
+        metallisation_id: met.id,
         rmId: met.inventory?.raw_material_code || met.inventory?.roll_no || "-",
         rmWeight: met.inventory?.net_weight_kg ? `${met.inventory.net_weight_kg}kgs` : (met.inventory?.gross_weight_kg ? `${met.inventory.gross_weight_kg}kgs` : "-"),
         factoryWastageWeight: met.factory_wastage_kg || "0",
@@ -290,7 +292,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
       })),
       slittingRows: (woData.slitting || []).map((slit: any) => ({
         productNo: slit.product_no || slit.slitting_no || slit.id,
-        coilId: slit.metallisation?.metallisation_no || "-",
+        coilId: slit.metallisation?.coil_no || "-",
         weight: slit.weight_kg || "0",
         thickness: slit.thickness_micron || "-",
         grade: slit.grade || "-",
@@ -330,6 +332,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
     for (const row of workOrderFlowData?.metallisationRows ?? []) {
       map.set(row.coilNo, { weight: row.weight, opticalDensity: row.opticalDensity, resistance: row.resistance, metallisation_id: row.metallisation_id });
     }
+    console.log(workOrderFlowData);
     return map;
   }, [workOrderFlowData]);
 

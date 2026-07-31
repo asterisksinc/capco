@@ -54,6 +54,7 @@ const filterConfig: FilterConfig = {
 const stockConfig: TableConfig<StockRow> = {
   columns: [
     { key: "stockId", label: "Product No", type: "text", sortable: true },
+    { key: "linkedWoId", label: "Linked WO ID", type: "text", sortable: true },
     { key: "width", label: "Width", type: "text", sortable: true },
     { key: "micron", label: "Micron", type: "text", sortable: true },
     { key: "weight", label: "Weight", type: "text", sortable: true },
@@ -309,6 +310,7 @@ export default function OperatorSlittingStockPage() {
                         {row.stockId}
                       </Link>
                     </td>
+                    <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.linkedWoId}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
                     <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}kgs</td>

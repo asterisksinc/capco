@@ -38,6 +38,8 @@ type CapturedImage = { url: string; name: string; id: string; file?: File };
 type MetallisationForm = {
   coilNo: string;
   rmId: string;
+  rmIdScanned?: boolean;
+  rmIdError?: boolean;
   factoryWastageWeight: string;
   factoryWastageImage: CapturedImage | null;
   weightAfterMetallisation: string;
@@ -83,6 +85,8 @@ const metallisationConfig: TableConfig<any> = {
 const defaultMetallisationForm: MetallisationForm = {
   coilNo: "",
   rmId: "",
+  rmIdScanned: false,
+  rmIdError: false,
   factoryWastageWeight: "",
   factoryWastageImage: null,
   weightAfterMetallisation: "",
@@ -139,6 +143,8 @@ function createMetallisationRow(defaultRmId: string, coilNo: string): Metallisat
     ...defaultMetallisationForm,
     coilNo,
     rmId: defaultRmId,
+    rmIdScanned: false,
+    rmIdError: false,
   };
 }
 
@@ -375,6 +381,8 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
       return Boolean(
         row.coilNo.trim() &&
         row.rmId.trim() &&
+        row.rmIdScanned &&
+        !row.rmIdError &&
         hasPositiveNumber(row.factoryWastageWeight) &&
         row.factoryWastageImage
       );
@@ -651,22 +659,19 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
                     isSelect
                     value={row.rmId}
                     onChange={(e) => {
-                      // EDIT: switching RM ID changes the RM weight, so recompute the derived field too
                       const newRmId = e.target.value;
                       const recalculated = computeWeightAfterMetallisation(rmLookup.get(newRmId)?.weight, row.factoryWastageWeight);
-                      updateMetallisationRow(idx, { rmId: newRmId, weightAfterMetallisation: recalculated });
+                      updateMetallisationRow(idx, { rmId: newRmId, weightAfterMetallisation: recalculated, rmIdScanned: false, rmIdError: false });
                     }}
                     onScanData={(data) => {
                       const cleanData = data.trim();
-                      if (availableRollIds.includes(cleanData)) {
-                        // EDIT: same recalculation when RM ID is set via barcode scan
-                        const recalculated = computeWeightAfterMetallisation(rmLookup.get(cleanData)?.weight, row.factoryWastageWeight);
-                        updateMetallisationRow(idx, { rmId: cleanData, weightAfterMetallisation: recalculated });
+                      if (cleanData !== row.rmId) {
+                        updateMetallisationRow(idx, { rmIdError: true, rmIdScanned: false });
                       } else {
-                        alert(`Scanned barcode (${cleanData}) is not available in RM pool.`);
+                        updateMetallisationRow(idx, { rmIdError: false, rmIdScanned: true });
                       }
                     }}
-                    className="h-[42px] rounded-[8px] border border-[#DDE1E8] pl-3 text-[14px]"
+                    className={`h-[42px] rounded-[8px] border ${row.rmIdError ? 'border-[#D92D20]' : 'border-[#DDE1E8]'} pl-3 text-[14px]`}
                   >
                     <option value="" disabled>Select RM ID...</option>
                     {availableRollIds.map((rollId: string) => (
@@ -675,6 +680,17 @@ export default function OperatorMetallisationDetailPage({ params }: DetailPagePr
                   </ScannerInput>
                 ) : (
                   <input value={row.rmId} readOnly className="h-[42px] rounded-[8px] border border-[#DDE1E8] bg-gray-50 px-3 text-[14px] text-gray-500 cursor-not-allowed" />
+                )}
+                {!row.rmIdScanned && !row.rmIdError && (
+                  <p className="text-[12px] text-[#444444]">Verify Selected RM ID</p>
+                )}
+                {row.rmIdError && (
+                    <p className="text-[12px] text-[#D92D20]">Incorrect RM ID</p>
+                )}
+                {row.rmIdScanned && !row.rmIdError && (
+                    <p className="text-[12px] text-[#039855] flex items-center gap-1">
+                      <Check className="w-3 h-3" strokeWidth={3} /> Verified
+                    </p>
                 )}
               </div>
 

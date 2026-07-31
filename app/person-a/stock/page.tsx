@@ -85,11 +85,12 @@ const filterConfigMet: FilterConfig = {
 const stockConfig: TableConfig<any> = {
   columns: [
     { key: "stockId", label: "Product No", type: "text", sortable: true },
+    { key: "linkedWoId", label: "Linked WO ID", type: "text", sortable: true },
+    { key: "width", label: "Width", type: "text", sortable: true },
+    { key: "micron", label: "Micron", type: "text", sortable: true },
     { key: "weight", label: "Weight", type: "text", sortable: true },
     { key: "grossWeight", label: "Gross Weight", type: "text", sortable: true },
     { key: "usedWeight", label: "Used Weight", type: "text", sortable: true },
-    { key: "width", label: "Width", type: "text", sortable: true },
-    { key: "micron", label: "Micron", type: "text", sortable: true },
     { key: "grade", label: "Grade", type: "text", sortable: true },
     { key: "stage", label: "Stage", type: "enum", sortable: false, filter: "dropdown", options: ["Slitting", "Ready for Winding", "Completed"] },
     { key: "timestamp", label: "Timestamp", type: "date", sortable: true },
@@ -141,11 +142,11 @@ export default function OperatorStockPage() {
         return {
           stockId: row.stock_no || row.id,
           linkedWoId: row.work_orders?.work_order_no || "-",
+          width: row.width_m ? String(row.width_m) : "-",
+          micron: row.micron ? String(row.micron) : "-",
           weight: row.weight_kg ? String(row.weight_kg) : "-",
           grossWeight: row.gross_weight_kg || row.slitting?.gross_weight_kg ? String(row.gross_weight_kg || row.slitting?.gross_weight_kg) : "-",
           usedWeight: row.used_weight_kg || row.slitting?.used_weight_kg ? String(row.used_weight_kg || row.slitting?.used_weight_kg) : "-",
-          width: row.width_m ? String(row.width_m) : "-",
-          micron: row.micron ? String(row.micron) : "-",
           grade: row.grade || "-",
           stage: row.stage === "Stock" ? "Ready for Winding" : (row.stage || "Ready for Winding"),
           timestamp: new Date(row.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
@@ -504,11 +505,12 @@ export default function OperatorStockPage() {
                             {row.stockId}
                           </Link>
                         </td>
+                        <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.linkedWoId}</td>
+                        <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
+                        <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.weight}</td>
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.grossWeight}</td>
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.usedWeight}</td>
-                        <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.width}</td>
-                        <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.micron}</td>
                         <td className="px-4 py-4 text-[14px] font-medium text-[#171717] whitespace-nowrap">{row.grade}</td>
                         <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
                           <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-[6px] text-xs font-medium tracking-wide">

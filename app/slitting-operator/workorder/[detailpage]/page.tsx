@@ -260,6 +260,7 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
 
     try {
       const scan = await slittingService.scanMetallisationCoil(rawValue);
+      console.log(scan);
       
       if (isLocked(scan.work_order_id)) {
         setScanError(`Coil belongs to locked Work Order (${scan.work_order_id}). Complete active ones first.`);
@@ -418,8 +419,6 @@ export default function OperatorSlittingDetailPage({ params }: DetailPageProps) 
                       ["Material", pendingScanData.material || "-"],
                       ["Micron", pendingScanData.micron != null ? `${pendingScanData.micron}µ` : "-"],
                       ["Width", pendingScanData.width_m != null ? `${pendingScanData.width_m} m` : "-"],
-                      ["RM Weight", pendingScanData.rmWeight || "-"],
-                      ["Factory Wastage", pendingScanData.factoryWastageWeight || "-"],
                       ["Metallisation Weight", pendingScanData.weight_kg != null ? `${pendingScanData.weight_kg} kg` : "-"],
                       ["Metallisation Status", pendingScanData.metallisation_status || "-"],
                       ["Existing Slitting Status", pendingScanData.existing_slitting_status || "None"],
