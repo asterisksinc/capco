@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Capco Manufacturing ERP",
-    "description": "Supabase Auth and PostgREST collection for Capco Manufacturing ERP backend APIs.",
+    "description": "Supabase Auth, PostgREST, and Next.js server API collection for the Capco Manufacturing ERP backend.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -28,6 +28,10 @@
     { "key": "slittingId", "value": "70000000-0000-0000-0000-000000000003" },
     { "key": "slittingBatchId", "value": "" },
     { "key": "generatedDocumentId", "value": "" },
+    { "key": "reportId", "value": "" },
+    { "key": "reportStage", "value": "Work Order" },
+    { "key": "reportDateFrom", "value": "2026-07-01" },
+    { "key": "reportDateTo", "value": "2026-08-02" },
     { "key": "inventoryId", "value": "40000000-0000-0000-0000-000000000003" },
     { "key": "secondInventoryId", "value": "40000000-0000-0000-0000-000000000004" },
     { "key": "stockId", "value": "80000000-0000-0000-0000-000000000001" },
@@ -643,6 +647,91 @@
       }
     },
     {
+      "name": "Reports - Preview",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/reports/preview",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stage\": \"{{reportStage}}\",\n  \"dateFrom\": \"{{reportDateFrom}}\",\n  \"dateTo\": \"{{reportDateTo}}\"\n}"
+        },
+        "description": "Super Admin only. Returns formatted report rows for the selected stage and inclusive Capco business-date range without persisting a report. Supported stages: Raw Material, Work Order, Metallisation, Slitting, Product Order, Winding, and Spray. Success: { \"ok\": true, \"rows\": [...], \"rowCount\": 10 }."
+      }
+    },
+    {
+      "name": "Reports - Generate",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/reports",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stage\": \"{{reportStage}}\",\n  \"dateFrom\": \"{{reportDateFrom}}\",\n  \"dateTo\": \"{{reportDateTo}}\"\n}"
+        },
+        "description": "Super Admin only. Rebuilds report data on the server and stores an immutable snapshot. Success returns HTTP 201 with the generated report. A range with no rows returns 422; invalid input returns 400; unauthorized roles return 403."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Report generated', function () {",
+              "  pm.response.to.have.status(201);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.ok).to.eql(true);",
+              "  pm.expect(body.report.databaseId).to.be.a('string');",
+              "});",
+              "if (pm.response.code === 201) {",
+              "  const body = pm.response.json();",
+              "  if (body.report?.databaseId) pm.collectionVariables.set('reportId', body.report.databaseId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports - List",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/reports",
+        "description": "Super Admin only. Lists persisted report metadata in newest-first order. The response excludes the potentially large data snapshot; use Reports - View for snapshot rows."
+      }
+    },
+    {
+      "name": "Reports - View",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/reports/{{reportId}}",
+        "description": "Super Admin only. Returns one persisted report, including its immutable dataSnapshot. reportId is the database UUID saved automatically by Reports - Generate."
+      }
+    },
+    {
+      "name": "Reports - Download Excel",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/reports/{{reportId}}/download",
+        "description": "Super Admin only. Downloads the stored report snapshot as an XLSX attachment. reportId is the database UUID saved automatically by Reports - Generate. Use Postman's Save Response to file option to retain the workbook."
+      }
+    },
+    {
       "name": "Push - Register Subscription",
       "request": {
         "method": "POST",
@@ -663,7 +752,7 @@
           { "key": "Authorization", "value": "Bearer {{accessToken}}" }
         ],
         "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/documents/slitting_batches/{{slittingBatchId}}?kind=stickers&intent=print",
-        "description": "Returns one inline printer-friendly HTML document containing all stickers in the selected Slitting batch. Each sticker is exactly 50 mm x 25 mm in landscape orientation, prints on its own label page, and includes a blank Notes strip at the bottom for handwriting. Configure the printer driver for 50 mm x 25 mm paper with margins disabled."
+        "description": "Returns one inline printer-friendly HTML document containing all stickers in the selected Slitting batch. Each 50 mm x 25 mm sticker shows ID, Coil ID, Weight, Grade, Date, and Status in a right-aligned detail area. The complete vertical SLITTING BAG/SLITTING PACKET badge is rendered at reduced font size, and a blank Notes strip remains at the bottom. Configure the printer driver for 50 mm x 25 mm paper with margins disabled."
       }
     },
     {
@@ -674,7 +763,7 @@
           { "key": "Authorization", "value": "Bearer {{accessToken}}" }
         ],
         "url": "{{NEXT_PUBLIC_BACKEND_URL}}/api/documents/generated_documents/{{generatedDocumentId}}?intent=download",
-        "description": "Downloads one generated 50 mm x 25 mm landscape sticker with a blank Notes strip at the bottom, without recreating the business record or changing serial numbers."
+        "description": "Downloads one generated 50 mm x 25 mm landscape sticker using the same ID-based, right-aligned batch-sticker layout, without recreating the business record or changing serial numbers."
       }
     },
     {

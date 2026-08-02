@@ -21,6 +21,7 @@ alter table public.vendor_purchases enable row level security;
 alter table public.vendor_purchase_items enable row level security;
 alter table public.pipeline_tracking enable row level security;
 alter table public.import_export_jobs enable row level security;
+alter table public.reports enable row level security;
 
 create or replace function public.current_profile_id()
 returns uuid
@@ -95,6 +96,14 @@ drop policy if exists "profiles_admin_write" on public.profiles;
 create policy "profiles_admin_write" on public.profiles for all to authenticated
 using (public.has_any_role(array['super_admin']))
 with check (public.has_any_role(array['super_admin']));
+
+drop policy if exists "reports_super_admin_all" on public.reports;
+create policy "reports_super_admin_all" on public.reports for all to authenticated
+using (public.has_any_role(array['super_admin']))
+with check (
+  public.has_any_role(array['super_admin'])
+  and generated_by = public.current_profile_id()
+);
 
 drop policy if exists "admin_all_qr" on public.qr_references;
 create policy "admin_all_qr" on public.qr_references for all to authenticated

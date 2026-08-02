@@ -45,7 +45,7 @@ async function renderSticker(payload: Record<string, unknown>) {
       ? `${payload.weight_kg} Kgs`
       : "—";
   const rows = [
-    ["Product No", payload.product_order_no || payload.serial_no],
+    ["ID", payload.serial_no],
     ["Coil ID", payload.metallisation_coil_no],
     ["Weight", weight],
     ["Grade", payload.grade || "—"],
@@ -102,7 +102,7 @@ function documentShell(content: string, title: string) {
     .sticker:last-child { break-after: auto; page-break-after: auto; }
     .sticker-content {
       display: grid;
-      grid-template-columns: 5.2mm 5.4mm 14.8mm 0.3mm minmax(0, 1fr);
+      grid-template-columns: 5.2mm 5.8mm 14.4mm 0.3mm minmax(0, 1fr);
       align-items: stretch;
       width: 100%;
       height: 18.7mm;
@@ -125,23 +125,23 @@ function documentShell(content: string, title: string) {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0.8mm 0.6mm;
-      overflow: hidden;
+      padding: 0.55mm 0.45mm;
+      overflow: visible;
     }
     .batch-badge span {
       display: block;
-      max-height: 100%;
-      padding: 1.1mm 0.8mm;
-      overflow: hidden;
+      max-height: 17.6mm;
+      padding: 0.65mm 0.7mm;
+      overflow: visible;
       border: 0.25mm solid #777;
       border-radius: 3mm;
-      font-size: 1.65mm;
+      font-size: 1.1mm;
       font-weight: 700;
       line-height: 1;
       white-space: nowrap;
       writing-mode: vertical-rl;
       transform: rotate(180deg);
-      text-overflow: ellipsis;
+      letter-spacing: -0.02mm;
     }
     .qr-block {
       display: flex;
@@ -174,7 +174,7 @@ function documentShell(content: string, title: string) {
     }
     .details div {
       display: grid;
-      grid-template-columns: 8.2mm minmax(0, 1fr);
+      grid-template-columns: 6.8mm minmax(0, 1fr);
       align-items: center;
       min-width: 0;
       font-size: 1.65mm;
@@ -183,6 +183,7 @@ function documentShell(content: string, title: string) {
     .details dt {
       overflow: hidden;
       color: #6c6c6c;
+      text-align: right;
       white-space: nowrap;
       text-overflow: ellipsis;
     }
@@ -192,6 +193,7 @@ function documentShell(content: string, title: string) {
       overflow: hidden;
       color: #171717;
       font-weight: 600;
+      text-align: right;
       white-space: nowrap;
       text-overflow: ellipsis;
     }

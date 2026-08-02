@@ -5,12 +5,9 @@ import { TablePagination } from "@/components/table/TablePagination";
 import { SortableHeader } from "@/components/table/SortableHeader";
 import { useTableControls, type TableConfig } from "@/hooks/useTableControls";
 import { MobileHeader } from "@/components/MobileHeader";
-import { Search, Plus, Calendar, FileText, Download, Eye, Loader2, X } from "lucide-react";
+import { FileText, Download, Eye, Loader2, X } from "lucide-react";
 import { exportToExcel } from "@/lib/exportExcel";
-import { inventoryService } from "@/src/services/inventoryService";
-import { workOrderService } from "@/src/services/workOrderService";
-import { productOrderService } from "@/src/services/productOrderService";
-import { productionStageService } from "@/src/services/productionStageService";
+import { reportService } from "@/src/services/reportService";
 
 // Options
 const STAGE_OPTIONS = [
@@ -24,21 +21,24 @@ const STAGE_OPTIONS = [
 ] as const;
 
 type StageType = typeof STAGE_OPTIONS[number];
+type ReportDataRow = Record<string, string | number | boolean | null>;
 
 // Types
 type ReportHistoryRow = {
     id: string; // e.g. RPT-0001
+    databaseId: string;
     stage: string;
     fromDate: string;
     toDate: string;
     timestamp: string; // ISO string
-    dataSnapshot: any[];
+    dataSnapshot: ReportDataRow[];
+    rowCount: number;
     dateRange?: string;
     actions?: string;
 };
 
 // Configs for preview tables
-const rawMaterialConfig: TableConfig<any> = {
+const rawMaterialConfig: TableConfig<ReportDataRow> = {
     columns: [
         { key: "rollNo", label: "Roll No", type: "text", sortable: true },
         { key: "micron", label: "Micron", type: "text", sortable: true },
@@ -55,7 +55,7 @@ const rawMaterialConfig: TableConfig<any> = {
     ],
 };
 
-const workOrderConfig: TableConfig<any> = {
+const workOrderConfig: TableConfig<ReportDataRow> = {
     columns: [
         { key: "workOrderNo", label: "WO Number", type: "text", sortable: true },
         { key: "micron", label: "Micron", type: "text", sortable: true },
@@ -67,11 +67,9 @@ const workOrderConfig: TableConfig<any> = {
     ],
 };
 
-const productOrderConfig: TableConfig<any> = {
+const productOrderConfig: TableConfig<ReportDataRow> = {
     columns: [
         { key: "orderId", label: "Order ID", type: "text", sortable: true },
-        { key: "micron", label: "Micron", type: "text", sortable: true },
-        { key: "width", label: "Width", type: "text", sortable: true },
         { key: "product", label: "Product", type: "text", sortable: true },
         { key: "grade", label: "Grade", type: "text", sortable: true },
         { key: "quantity", label: "Quantity", type: "text", sortable: true },
@@ -82,7 +80,29 @@ const productOrderConfig: TableConfig<any> = {
     ],
 };
 
-const metallisationConfig: TableConfig<any> = {
+const windingConfig: TableConfig<ReportDataRow> = {
+    columns: [
+        { key: "windingNo", label: "Winding No", type: "text", sortable: true },
+        { key: "filmWidth", label: "Film Width", type: "text", sortable: true },
+        { key: "quantityWound", label: "Quantity Wound", type: "text", sortable: true },
+        { key: "rejectedQuantity", label: "Rejected Quantity", type: "text", sortable: true },
+        { key: "status", label: "Status", type: "text", sortable: true },
+        { key: "createdAt", label: "Created At", type: "text", sortable: true },
+    ],
+};
+
+const sprayConfig: TableConfig<ReportDataRow> = {
+    columns: [
+        { key: "sprayNo", label: "Spray No", type: "text", sortable: true },
+        { key: "sprayType", label: "Spray Type", type: "text", sortable: true },
+        { key: "quantity", label: "Quantity", type: "text", sortable: true },
+        { key: "rejectedQuantity", label: "Rejected Quantity", type: "text", sortable: true },
+        { key: "status", label: "Status", type: "text", sortable: true },
+        { key: "createdAt", label: "Created At", type: "text", sortable: true },
+    ],
+};
+
+const metallisationConfig: TableConfig<ReportDataRow> = {
     columns: [
         { key: "coilNo", label: "Coil No.", type: "text", sortable: true },
         { key: "rmId", label: "RM ID", type: "text", sortable: true },
@@ -94,7 +114,7 @@ const metallisationConfig: TableConfig<any> = {
     ],
 };
 
-const slittingConfig: TableConfig<any> = {
+const slittingConfig: TableConfig<ReportDataRow> = {
     columns: [
         { key: "productNo", label: "Product No", type: "text", sortable: true },
         { key: "coilId", label: "Coil ID", type: "text", sortable: true },
@@ -106,20 +126,22 @@ const slittingConfig: TableConfig<any> = {
     ],
 };
 
-const emptyStateConfig: TableConfig<any> = {
+const emptyStateConfig: TableConfig<ReportDataRow> = {
     columns: [
         { key: "id", label: "ID", type: "text", sortable: false },
         { key: "status", label: "Status", type: "text", sortable: false },
     ],
 };
 
-function getTableConfigForStage(stage: StageType): TableConfig<any> {
+function getTableConfigForStage(stage: StageType): TableConfig<ReportDataRow> {
     switch (stage) {
         case "Raw Material": return rawMaterialConfig;
         case "Work Order": return workOrderConfig;
         case "Product Order": return productOrderConfig;
         case "Metallisation": return metallisationConfig;
         case "Slitting": return slittingConfig;
+        case "Winding": return windingConfig;
+        case "Spray": return sprayConfig;
         default: return emptyStateConfig;
     }
 }
@@ -146,32 +168,29 @@ export default function AdminReportsPage() {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
     // Generate / View State
-    const [previewData, setPreviewData] = useState<any[]>([]);
+    const [previewData, setPreviewData] = useState<ReportDataRow[]>([]);
     const [loadingPreview, setLoadingPreview] = useState(false);
+    const [savingReport, setSavingReport] = useState(false);
+    const [loadingView, setLoadingView] = useState(false);
     const [activeReportToView, setActiveReportToView] = useState<ReportHistoryRow | null>(null);
 
-    // Initialize history from localStorage
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem("capco_reports_history");
-            if (stored) {
-                setReportsHistory(JSON.parse(stored));
-            }
-        } catch (err) {
-            console.error("Failed to load reports history", err);
-        }
+        let active = true;
+        reportService.list()
+            .then((reports) => {
+                if (active) setReportsHistory(reports.map((report) => ({ ...report, dataSnapshot: report.dataSnapshot ?? [] })));
+            })
+            .catch((error) => console.error("Failed to load report history", error));
+        return () => { active = false; };
     }, []);
-
-    // Save history to localStorage on change
-    useEffect(() => {
-        if (reportsHistory.length > 0) {
-            localStorage.setItem("capco_reports_history", JSON.stringify(reportsHistory));
-        }
-    }, [reportsHistory]);
 
     const handleGenerateClick = async () => {
         if (!fromDate || !toDate) {
             alert("Please select both From and To dates.");
+            return;
+        }
+        if (fromDate > toDate) {
+            alert("From date cannot be after To date.");
             return;
         }
 
@@ -179,135 +198,27 @@ export default function AdminReportsPage() {
         setLoadingPreview(true);
         setPreviewData([]);
 
-        const Inv = await inventoryService.list();
         try {
-            let data: any[] = [];
-            if (selectedStage === "Raw Material") {
-                data = Inv;
-            } else if (selectedStage === "Work Order") {
-                data = await workOrderService.list();
-            } else if (selectedStage === "Product Order") {
-                data = await productOrderService.list();
-            } else if (selectedStage === "Metallisation") {
-                data = (await productionStageService.listMetallisation()) as any[];
-            } else if (selectedStage === "Slitting") {
-                data = (await productionStageService.listSlitting()) as any[];
-            } else {
-                // Winding / Spray currently empty
-                data = [];
-            }
-
-            // Filter by date
-            const start = new Date(fromDate).getTime();
-            const end = new Date(toDate).getTime() + 86400000; // Add 1 day to include end date fully
-
-            const filtered = data.filter((item) => {
-                const dateValue = item.created_at || item.timestamp;
-
-                if (!dateValue) return false;
-
-                const itemDate = new Date(dateValue).getTime();
-                return itemDate >= start && itemDate <= end;
-            });
-
-            const formatted = filtered.map((item) => {
-                const formatDate = (dateStr?: string) => dateStr ? new Date(dateStr).toLocaleDateString() : "-";
-                
-                if (selectedStage === "Raw Material") {
-                    return {
-                        rollNo: item.raw_material_code || "-",
-                        micron: item.micron ? `${item.micron}μ` : "-",
-                        width: item.width_m ? `${item.width_m}m` : "-",
-                        netWeight: item.net_weight_kg ? `${item.net_weight_kg}kgs` : "-",
-                        grossWeight: item.gross_weight_kg ? `${item.gross_weight_kg}kgs` : "-",
-                        usedWeight: item.used_weight_kg ? `${item.used_weight_kg}kgs` : "-",
-                        wastageWeight: item.wastage_weight_kg ? `${item.wastage_weight_kg}kgs` : "-",
-                        damagedWeight: item.damagedWeight ? `${item.damagedWeight}kgs` : "-",
-                        temperature: item.temperature_c ? `${item.temperature_c}°C` : "-",
-                        supplier: item.supplier || "-",
-                        status: item.status || "-",
-                        createdAt: formatDate(item.created_at)
-                    };
-                } else if (selectedStage === "Work Order") {
-                    return {
-                        workOrderNo: item.work_order_no || "-",
-                        micron: item.micron ? `${item.micron}μ` : "-",
-                        width: item.width_m ? `${item.width_m}m` : (item.width ? `${item.width}mm` : "-"),
-                        quantity: item.quantity ? `${item.quantity}kg` : "-",
-                        stage: item.stage || "-",
-                        status: item.status || "-",
-                        createdAt: formatDate(item.created_at)
-                    };
-                } else if (selectedStage === "Product Order") {
-                    return {
-                        orderId: item.id || "-",
-                        micron: item.micron ? `${item.micron}μ` : "-",
-                        width: item.width ? `${item.width}mm` : "-",
-                        product: item.product || "-",
-                        grade: item.grade || "-",
-                        quantity: item.quantity ? `${item.quantity}kg` : "-",
-                        customer: item.customer || "-",
-                        stage: item.stage || "-",
-                        status: item.status || "-",
-                        createdAt: formatDate(item.created_at)
-                    };
-                } else if (selectedStage === "Metallisation") {
-                    const met_inv: any = Inv.find((inv: any) => inv.id === item.raw_material_id);
-                    return {
-                        coilNo: item.coil_no || item.metallisation_no || "-",
-                        rmId: item.rmId || met_inv?.raw_material_code || met_inv?.roll_no || "-",
-                        rmWeight: item.rmWeight || (met_inv?.net_weight_kg ? `${met_inv.net_weight_kg}kgs` : "-"),
-                        factoryWastageWeight: item.factory_wastage_kg ? `${item.factory_wastage_kg}kgs` : "-",
-                        weight: item.weight_kg ? `${item.weight_kg}kgs` : "-",
-                        status: item.status || "-",
-                        createdAt: formatDate(item.created_at)
-                    };
-                } else if (selectedStage === "Slitting") {
-                    return {
-                        productNo: item.slitting_no || item.product_no || "-",
-                        coilId: item.coilId || item.metallisation?.coil_no || item.metallisation?.metallisation_no || "-",
-                        weight: item.weight_kg ? `${item.weight_kg}kgs` : "-",
-                        thickness: item.thickness_micron ? `${item.thickness_micron}μ` : "-",
-                        grade: item.grade || "-",
-                        status: item.status || "-",
-                        createdAt: formatDate(item.created_at)
-                    };
-                }
-                return item;
-            });
-
-            setPreviewData(formatted);
+            setPreviewData(await reportService.preview(selectedStage, fromDate, toDate));
         } catch (err) {
             console.error(err);
-            alert("Failed to fetch data for report.");
+            alert(err instanceof Error ? err.message : "Failed to fetch data for report.");
         } finally {
             setLoadingPreview(false);
         }
     };
 
-    const handleConfirmGenerate = () => {
-        const nextReportNumber =
-            reportsHistory.length === 0
-                ? 1
-                : Math.max(
-                    ...reportsHistory.map((r) =>
-                        Number(r.id.replace("RPT-", ""))
-                    )
-                ) + 1;
-
-        const rId = `RPT-${String(nextReportNumber).padStart(4, "0")}`;
-
-        const newReport: ReportHistoryRow = {
-            id: rId,
-            stage: selectedStage,
-            fromDate,
-            toDate,
-            timestamp: new Date().toISOString(),
-            dataSnapshot: previewData,
-        };
-
-        setReportsHistory(prev => [newReport, ...prev]);
-        setIsGenerateModalOpen(false);
+    const handleConfirmGenerate = async () => {
+        setSavingReport(true);
+        try {
+            const report = await reportService.generate(selectedStage, fromDate, toDate);
+            setReportsHistory((previous) => [{ ...report, dataSnapshot: report.dataSnapshot ?? [] }, ...previous]);
+            setIsGenerateModalOpen(false);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : "Failed to generate report.");
+        } finally {
+            setSavingReport(false);
+        }
     };
 
     const handleDownloadPreview = () => {
@@ -318,17 +229,27 @@ export default function AdminReportsPage() {
         exportToExcel(previewData, `report_${selectedStage.toLowerCase().replace(" ", "_")}`, `${selectedStage} Report`);
     };
 
-    const handleDownloadHistory = (row: ReportHistoryRow) => {
-        if (row.dataSnapshot.length === 0) {
-            alert("No data in this report.");
-            return;
+    const handleDownloadHistory = async (row: ReportHistoryRow) => {
+        try {
+            await reportService.download(row.databaseId, `report_${row.id}`);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : "Failed to download report.");
         }
-        exportToExcel(row.dataSnapshot, `report_${row.id}`, `${row.stage} Report ${row.id}`);
     };
 
-    const handleViewHistory = (row: ReportHistoryRow) => {
-        setActiveReportToView(row);
+    const handleViewHistory = async (row: ReportHistoryRow) => {
         setIsViewModalOpen(true);
+        setLoadingView(true);
+        setActiveReportToView(row);
+        try {
+            const report = await reportService.get(row.databaseId);
+            setActiveReportToView({ ...report, dataSnapshot: report.dataSnapshot ?? [] });
+        } catch (error) {
+            setIsViewModalOpen(false);
+            alert(error instanceof Error ? error.message : "Failed to load report.");
+        } finally {
+            setLoadingView(false);
+        }
     };
 
     // Main table controls
@@ -422,7 +343,7 @@ export default function AdminReportsPage() {
                                             <SortableHeader
                                                 column={col}
                                                 sortConfig={sortConfig}
-                                                onSort={handleSort as any}
+                                                onSort={handleSort}
                                                 filters={{}}
                                                 onFilterChange={() => { }}
                                             />
@@ -432,7 +353,7 @@ export default function AdminReportsPage() {
                             </thead>
                             <tbody className="divide-y divide-[#EAECF0]">
                                 {paginatedData.length > 0 ? (
-                                    paginatedData.map((row: ReportHistoryRow, idx: number) => (
+                                    paginatedData.map((row: ReportHistoryRow) => (
                                         <tr key={row.id} className="hover:bg-gray-50/50 transition-colors group">
                                             <td className="px-4 py-4 text-[14px] font-medium text-[#171717] whitespace-nowrap">{row.id}</td>
                                             <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">{row.stage}</td>
@@ -519,7 +440,7 @@ export default function AdminReportsPage() {
                                                 <tr key={i} className="hover:bg-gray-50/50">
                                                     {getTableConfigForStage(selectedStage).columns.map(col => (
                                                         <td key={String(col.key)} className="px-4 py-3 text-[14px] text-[#171717] whitespace-nowrap">
-                                                            {row[col.key] ?? "-"}
+                                                            {String(row[col.key] ?? "-")}
                                                         </td>
                                                     ))}
                                                 </tr>
@@ -558,10 +479,10 @@ export default function AdminReportsPage() {
                             </button>
                             <button
                                 onClick={handleConfirmGenerate}
-                                disabled={loadingPreview || previewData.length === 0}
+                                disabled={loadingPreview || savingReport || previewData.length === 0}
                                 className="px-4 py-2 text-[14px] font-medium text-white bg-[#00B6E2] rounded-[8px] hover:bg-[#0092b5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Generate Report
+                                {savingReport ? "Generating..." : "Generate Report"}
                             </button>
                         </div>
                     </div>
@@ -583,7 +504,11 @@ export default function AdminReportsPage() {
                         </div>
 
                         <div className="p-6 overflow-auto flex-1">
-                            <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto">
+                            {loadingView ? (
+                                <div className="flex items-center justify-center h-48">
+                                    <Loader2 className="w-8 h-8 text-[#00B6E2] animate-spin" />
+                                </div>
+                            ) : <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-[#F5F7FA] border-b border-[#EBEBEB]">
                                         <tr>
@@ -599,14 +524,14 @@ export default function AdminReportsPage() {
                                             <tr key={i} className="hover:bg-gray-50/50">
                                                 {getTableConfigForStage(activeReportToView.stage as StageType).columns.map(col => (
                                                     <td key={String(col.key)} className="px-4 py-3 text-[14px] text-[#171717] whitespace-nowrap">
-                                                        {row[col.key] ?? "-"}
+                                                        {String(row[col.key] ?? "-")}
                                                     </td>
                                                 ))}
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                            </div>}
                         </div>
 
                         <div className="p-6 border-t border-[#EBEBEB] flex items-center justify-end gap-3 bg-[#F5F7FA]/50 rounded-b-xl">
