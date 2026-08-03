@@ -215,7 +215,11 @@ export default function AdminReportsPage() {
             setReportsHistory((previous) => [{ ...report, dataSnapshot: report.dataSnapshot ?? [] }, ...previous]);
             setIsGenerateModalOpen(false);
         } catch (error) {
-            alert(error instanceof Error ? error.message : "Failed to generate report.");
+            if (error instanceof Error && (error as any).status === 422) {
+                alert("Cannot generate report: No records found in the selected date range.");
+            } else {
+                alert(error instanceof Error ? error.message : "Failed to generate report.");
+            }
         } finally {
             setSavingReport(false);
         }
@@ -361,7 +365,9 @@ export default function AdminReportsPage() {
                                                 {new Date(row.fromDate).toLocaleDateString()} - {new Date(row.toDate).toLocaleDateString()}
                                             </td>
                                             <td className="px-4 py-4 text-[14px] text-[#5C5C5C] whitespace-nowrap">
-                                                {new Date(row.timestamp).toLocaleString()}
+                                                {new Date(row.timestamp).toLocaleString("en-GB", {
+                                                    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
+                                                })}
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">

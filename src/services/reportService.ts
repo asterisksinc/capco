@@ -18,10 +18,17 @@ async function reportRequest<T>(path: string, init: RequestInit = {}): Promise<T
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
   if (init.body) headers.set("Content-Type", "application/json");
-  const response = await fetch(path, { ...init, headers });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.message || "Report request failed");
-  return data as T;
+  const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}${path}`, { ...init, headers });
+  
+  if (response.ok) {
+    return response.json();
+  } else {
+    const errObj = await response.json().catch(() => ({}));
+    throw Object.assign(new Error(errObj?.message || errObj?.error || "Report request failed"), {
+      status: response.status,
+      issues: errObj?.issues || [],
+    });
+  }
 }
 
 export const reportService = {
@@ -53,12 +60,15 @@ export const reportService = {
 
   async download(databaseId: string, fallbackName: string) {
     const token = getAccessToken();
-    const response = await fetch(`/api/reports/${encodeURIComponent(databaseId)}/download`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/reports/${encodeURIComponent(databaseId)}/download`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      throw new Error(data?.message || "Failed to download report");
+      const errObj = await response.json().catch(() => ({}));
+      throw Object.assign(new Error(errObj?.message || errObj?.error || "Failed to download report"), {
+        status: response.status,
+        issues: errObj?.issues || [],
+      });
     }
 
     const disposition = response.headers.get("Content-Disposition") || "";
