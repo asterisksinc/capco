@@ -190,7 +190,7 @@ export default function OverviewPage() {
   const [sortBy, setSortBy] = useState("name-asc");
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ micron: "", width: "", quantity: "" });
+  const [formData, setFormData] = useState({ micron: "", width: "", otherWidth: "", quantity: "" });
   const [isPOModalOpen, setIsPOModalOpen] = useState(false);
   const [poFormData, setPOFormData] = useState({
     poId: `PO-CC-${String(Date.now()).slice(-4)}`,
@@ -247,7 +247,8 @@ export default function OverviewPage() {
   };
 
   const handleCreateWorkOrder = async () => {
-    if (!formData.micron || !formData.width || !formData.quantity) return;
+    const finalWidth = formData.width === "Other" ? formData.otherWidth : formData.width;
+  if (!formData.micron || !finalWidth || !formData.quantity) return;
 
     const currentYear = new Date().getFullYear();
 
@@ -264,12 +265,12 @@ export default function OverviewPage() {
       await workOrderService.create({
         work_order_no: newId,
         micron: Number(formData.micron),
-        width_m: Number(formData.width),
+        width_m: Number(finalWidth),
         quantity: Number(formData.quantity),
       });
       await loadData();
       setIsModalOpen(false);
-      setFormData({ micron: "", width: "", quantity: "" });
+      setFormData({ micron: "", width: "", otherWidth: "", quantity: "" });
     } catch (error) {
       console.error(error);
       alert("Failed to create work order");
@@ -960,7 +961,10 @@ export default function OverviewPage() {
                 <div className="relative">
                   <select
                     value={formData.width}
-                    onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+                    onChange={(e) => {
+                      const newWidth = e.target.value;
+                      setFormData({ ...formData, width: newWidth, otherWidth: newWidth !== "Other" ? "" : formData.otherWidth });
+                    }}
                     className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#171717] appearance-none focus:outline-none focus:border-[#00B6E2] transition-colors"
                   >
                     <option value="" disabled hidden>Select width...</option>
@@ -971,9 +975,21 @@ export default function OverviewPage() {
                     <option value="60">60 Width</option>
                     <option value="75">75 Width</option>
                     <option value="100">100 Width</option>
+                    <option value="Other">Other</option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-[#525866] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
+                {formData.width === "Other" && (
+                  <input
+                    type="number"
+                    placeholder="Enter width"
+                    value={formData.otherWidth}
+                    onChange={(e) => setFormData({ ...formData, otherWidth: e.target.value })}
+                    className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors mt-1"
+                    min="0"
+                    step="any"
+                  />
+                )}
               </div>
 
               {/* Quantity Field */}

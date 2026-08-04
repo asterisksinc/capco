@@ -2,7 +2,7 @@
 
 import { WO_STATUS_OPTIONS, WO_STAGE_OPTIONS } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Search, ChevronRight, Layers, Ruler, Package, QrCode, FileText, Image as ImageIcon } from "lucide-react";
+import { Search, ChevronRight, X, Layers, Ruler, Package, QrCode, FileText, Image as ImageIcon, PenBox } from "lucide-react";
 import { DocsUploadedModal } from "@/components/DocsUploadedModal";
 import { RowImagesModal } from "@/components/RowImagesModal";
 import { MobileHeader } from "@/components/MobileHeader";
@@ -83,6 +83,11 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [rowImagesData, setRowImagesData] = useState<any>(null);
 
+  // ── Update Quantity Modal State ───────────────────────────────────────────
+  const [isUpdateQtyModalOpen, setIsUpdateQtyModalOpen] = useState(false);
+  const [newQuantity, setNewQuantity] = useState("");
+  const [isUpdatingQty, setIsUpdatingQty] = useState(false);
+
   // ── Fetch ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function fetchWO() {
@@ -99,6 +104,29 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
     }
     fetchWO();
   }, [orderId]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleUpdateQuantity = async () => {
+    if (!newQuantity || isNaN(Number(newQuantity)) || Number(newQuantity) <= 0) {
+      alert("Please enter a valid positive quantity");
+      return;
+    }
+    
+    setIsUpdatingQty(true);
+    try {
+      await workOrderService.update(woData.id, { quantity: Number(newQuantity) });
+      alert("Quantity updated successfully");
+      setIsUpdateQtyModalOpen(false);
+      
+      // Reload woData
+      const updatedData: any = await workOrderService.getByWorkOrderNo(orderId);
+      if (updatedData) setWoData(updatedData);
+    } catch (err: any) {
+      alert(err.message || "Failed to update quantity");
+    } finally {
+      setIsUpdatingQty(false);
+    }
+  };
 
   // ── Derived table rows ────────────────────────────────────────────────────
   const rawMaterialRows = useMemo(() => {
@@ -310,11 +338,24 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
         ))}
       </section>
 
-      {/* Desktop breadcrumb */}
-      <section className="hidden md:flex items-center gap-2 px-4 md:px-6 pt-6 mb-2">
-        <span className="text-[14px] font-medium text-[#5C5C5C] leading-tight">Work Orders</span>
-        <ChevronRight className="w-4 h-4 text-[#A1A1AA]" />
-        <span className="text-[14px] font-medium text-[#00B6E2] leading-tight">{woData.work_order_no}</span>
+      {/* Desktop breadcrumb & Actions */}
+      <section className="hidden md:flex items-center justify-between px-4 md:px-6 pt-6 mb-2 w-full">
+        <div className="flex items-center gap-2">
+          <span className="text-[14px] font-medium text-[#5C5C5C] leading-tight">Work Orders</span>
+          <ChevronRight className="w-4 h-4 text-[#A1A1AA]" />
+          <span className="text-[14px] font-medium text-[#00B6E2] leading-tight">{woData.work_order_no}</span>
+        </div>
+        
+        <button
+          onClick={() => {
+            setNewQuantity(woData.quantity?.toString() || "");
+            setIsUpdateQtyModalOpen(true);
+          }}
+          className="flex items-center gap-2 h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors whitespace-nowrap"
+        >
+          <PenBox className="w-4 h-4" />
+          Update Quantity
+        </button>
       </section>
 
       {/* Desktop KPI row */}
@@ -379,7 +420,7 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsDocModalOpen(true)}
-              className="flex items-center justify-center gap-2 bg-white border border-[#DDE1E8] text-[#171717] text-[13px] font-medium rounded-[8px] h-[36px] px-4 hover:bg-[#F5F7FA] transition-colors self-start sm:self-auto shadow-sm whitespace-nowrap"
+              className="flex items-center justify-center gap-2 bg-white border border-[#DDE1E8] text-[#171717] text-[13px] font-medium rounded-[8px] h-[36px] px-4 hover:bg-[#F5F7FA] transition-colors self-start sm:self-auto whitespace-nowrap"
             >
               <FileText className="w-4 h-4 text-gray-600" />
               Docs Uploaded
@@ -480,6 +521,84 @@ export default function SupervisorWorkOrderDetailPage({ params }: DetailPageProp
         onClose={() => setRowImagesData(null)}
         rowData={rowImagesData}
       />
+
+      {/* Update Quantity Modal */}
+      {isUpdateQtyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-[12px] w-full max-w-[500px] shadow-lg flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between px-6 py-5 border-b border-[#EBEBEB]">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-[18px] font-semibold text-[#171717] leading-tight">{woData.work_order_no}</h2>
+                <p className="text-[14px] text-[#5C5C5C] leading-tight">Update the quantity for this work order</p>
+              </div>
+              <button 
+                onClick={() => setIsUpdateQtyModalOpen(false)}
+                className="text-[#5C5C5C] hover:text-[#171717] transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="flex flex-col gap-5 px-6 py-6 border-b border-[#EBEBEB]">
+              {/* Micron Field (Read Only) */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-medium text-[#171717] uppercase tracking-wider">MICRON</label>
+                <input 
+                  type="text"
+                  value={woData.micron + ' Micron'}
+                  disabled
+                  className="w-full h-[44px] bg-gray-50 border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] cursor-not-allowed"
+                />
+              </div>
+
+              {/* Width Field (Read Only) */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-medium text-[#171717] uppercase tracking-wider">WIDTH</label>
+                <input 
+                  type="text"
+                  value={woData.width_m + ' Width'}
+                  disabled
+                  className="w-full h-[44px] bg-gray-50 border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#5C5C5C] cursor-not-allowed"
+                />
+              </div>
+
+              {/* Quantity Field */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[12px] font-medium text-[#171717] uppercase tracking-wider">QUANTITY</label>
+                <input 
+                  type="number"
+                  placeholder="Enter Quantity"
+                  value={newQuantity}
+                  onChange={(e) => setNewQuantity(e.target.value)}
+                  className="w-full h-[44px] bg-white border border-[#EBEBEB] rounded-[8px] px-3 text-[14px] text-[#171717] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#00B6E2] transition-colors"
+                  min="0"
+                  step="any"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-5 bg-[#FAFAFA]">
+              <button 
+                onClick={() => setIsUpdateQtyModalOpen(false)}
+                className="h-[40px] px-4 bg-white border border-[#EBEBEB] text-[#171717] text-[14px] font-medium rounded-[6px] hover:bg-gray-50 transition-colors"
+                disabled={isUpdatingQty}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleUpdateQuantity}
+                disabled={isUpdatingQty}
+                className="h-[40px] px-5 bg-[#00B6E2] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#0092b5] transition-colors disabled:opacity-50 flex items-center justify-center min-w-[140px]"
+              >
+                {isUpdatingQty ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Quantity"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

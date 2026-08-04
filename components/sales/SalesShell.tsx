@@ -32,11 +32,11 @@ function SalesShellContent({ children }: { children: ReactNode }) {
       {isMobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-50 bg-[#171717]/40 backdrop-blur-sm sm:hidden"
+            className="fixed inset-0 z-50 bg-[#171717]/40 backdrop-blur-sm md:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
           />
 
-          <div className="fixed top-0 left-0 bottom-0 w-[260px] bg-[#F5F7FA] z-50 sm:hidden overflow-y-auto animate-slide-in">
+          <div className="fixed top-0 left-0 bottom-0 w-[260px] bg-[#F5F7FA] z-50 md:hidden overflow-y-auto animate-slide-in">
             <div className="h-[72px] px-4 flex items-center justify-between border-b border-[#EBEBEB] bg-[#F5F7FA]">
               <span className="text-[16px] font-semibold text-[#171717]">Capco</span>
               <button

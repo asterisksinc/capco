@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useState, useEffect, useMemo } from "react";
-import { ChevronRight, ArrowLeft, Loader2, QrCode } from "lucide-react";
+import { use, useState, useEffect, useMemo, useRef } from "react";
+import { ChevronRight, ArrowLeft, Loader2, QrCode, Ruler, Maximize2, PackageSearchIcon, Package, ShieldPlus, ContactRound } from "lucide-react";
 import Link from "next/link";
 import { MobileHeader } from "@/components/MobileHeader";
 import type { TableConfig } from "@/hooks/useTableControls";
@@ -25,6 +25,8 @@ type DetailPageProps = {
 };
 
 type TabType = "Slitting" | "Winding";
+
+const AVAILABLE_PM_IDS = ["PM-9250", "PM-9251", "PM-9252", "PM-9253", "PM-9254"];
 
 const slittingConfig: TableConfig<any> = {
   columns: [
@@ -75,6 +77,19 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
   const [showValidationHint, setShowValidationHint] = useState(false);
   const [capturedImage, setCapturedImage] = useState<{ url: string; name: string; id: string; file: File } | null>(null);
 
+  const [isPmDropdownOpen, setIsPmDropdownOpen] = useState(false);
+  const pmDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (pmDropdownRef.current && !pmDropdownRef.current.contains(event.target as Node)) {
+        setIsPmDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
 
   const [windingState, setWindingState] = useState({
     wdId: "W-0001",
@@ -82,6 +97,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
     filmTurns: "",
     weightOfElement: "",
     quantity: "",
+    pmIds: [] as string[],
   });
 
 
@@ -97,6 +113,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
       filmTurns: "",
       weightOfElement: "",
       quantity: "",
+      pmIds: [],
     });
 
   };
@@ -125,9 +142,8 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
   };
 
 
-  const isCurrentStepOneValid = windingState.mfd && windingState.filmTurns && windingState.weightOfElement && windingState.quantity;
+  const isCurrentStepOneValid = windingState.mfd && windingState.filmTurns && windingState.weightOfElement && windingState.quantity && windingState.pmIds.length > 0;
   const isStepTwoValid = true;
-
 
   const renderStepHeader = () => {
     const labels = ["Winding Details", "Review Overview", "Submit Details"];
@@ -165,6 +181,58 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
             <label className="text-[13px] font-medium text-[#171717]">WD ID</label>
             <input disabled value={windingState.wdId} className="h-[42px] bg-[#F5F7FA] text-[#5C5C5C] rounded-[8px] border border-[#DDE1E8] px-3 text-[14px]" />
           </div>
+          <div className="flex flex-col gap-1.5" ref={pmDropdownRef}>
+            <label className="text-[13px] font-medium text-[#171717]">PM ID's <span className="text-red-500">*</span></label>
+            <div className="relative">
+              <div 
+                className={`min-h-[42px] flex flex-wrap items-center gap-1.5 rounded-[8px] border ${showValidationHint && windingState.pmIds.length === 0 ? "border-red-500 bg-red-50" : "border-[#DDE1E8]"} px-3 py-1.5 bg-white cursor-pointer`}
+                onClick={() => setIsPmDropdownOpen(true)}
+              >
+                {windingState.pmIds.length === 0 && (
+                  <span className="text-[14px] text-[#6B7280]">Select PM ID's</span>
+                )}
+                {windingState.pmIds.map(pmId => (
+                  <div key={pmId} className="flex items-center gap-1 bg-[#DDF4FB] border border-[#00B6E2] rounded-[16px] px-2.5 py-0.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[13px] text-[#171717]">{pmId}</span>
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setWindingState(prev => ({ ...prev, pmIds: prev.pmIds.filter(id => id !== pmId) }));
+                      }} 
+                      className="text-[#00B6E2] hover:text-[#0092b5] ml-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              {isPmDropdownOpen && (
+                <div className="absolute z-10 top-[calc(100%+4px)] left-0 w-full bg-white border border-[#DDE1E8] rounded-[8px] shadow-lg max-h-[160px] overflow-y-auto">
+                  {AVAILABLE_PM_IDS.map(pmId => {
+                    const isSelected = windingState.pmIds.includes(pmId);
+                    return (
+                      <div 
+                        key={pmId} 
+                        className={`flex items-center justify-between px-3 py-2.5 cursor-pointer text-[14px] ${isSelected ? "bg-[#00B6E2] text-white" : "hover:bg-[#F5F7FA] text-[#171717]"}`}
+                        onClick={() => {
+                          if (isSelected) {
+                            setWindingState(prev => ({ ...prev, pmIds: prev.pmIds.filter(id => id !== pmId) }));
+                          } else {
+                            setWindingState(prev => ({ ...prev, pmIds: [...prev.pmIds, pmId] }));
+                          }
+                        }}
+                      >
+                        {pmId}
+                        {isSelected && <X className="w-4 h-4 text-white" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-medium text-[#171717]">MFD <span className="text-red-500">*</span></label>
             <select value={windingState.mfd} onChange={(e) => setWindingState({ ...windingState, mfd: e.target.value })} className={`h-[42px] rounded-[8px] border ${showValidationHint && !windingState.mfd ? "border-red-500 bg-red-50" : "border-[#DDE1E8]"} px-3 text-[14px] bg-white`}>
@@ -200,6 +268,7 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
     const fields = [
       { label: "WD ID", value: windingState.wdId },
       { label: "MFD", value: windingState.mfd },
+      { label: "PM ID's", value: windingState.pmIds.length ? windingState.pmIds.join(", ") : "-" },
       { label: "Film Turns", value: windingState.filmTurns },
       { label: "Weight of Element", value: windingState.weightOfElement },
       { label: "Quantity", value: windingState.quantity },
@@ -230,6 +299,31 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
     setPoData(order || null);
     setLoading(false);
   }, [orderId, store.productOrders]);
+
+  const overviewFields = [
+    { label: "Micron", value: poData?.micron || "-" },
+    { label: "Width", value: poData?.width || "-" },
+    { label: "Product", value: poData?.product || "-" },
+    { label: "Target Quantity", value: poData?.quantity ? `${poData.quantity}kgs` : "-" },
+    { label: "Grade", value: poData?.grade || "-" },
+    { label: "Customer", value: poData?.customer || "-" },
+    { label: "Current Stage", value: poData?.stage || "-" },
+    { label: "Created Date", value: poData?.timestamp ? new Date(poData.timestamp).toLocaleDateString("en-GB") : "-" },
+  ];
+
+  const detailKpiStats = [
+    { label: "Micron", value: poData?.micron || "-", icon: Ruler, valClass: "text-[#171717]" },
+    { label: "Width", value: poData?.width || "-", icon: Maximize2, valClass: "text-[#171717]" },
+    { label: "Product", value: poData?.product || "-", icon: PackageSearchIcon, valClass: "text-[#171717]" },
+    { label: "Quantity", value: poData?.quantity ? `${poData.quantity}kgs` : "-", icon: Package, valClass: "text-[#171717]" },
+    { label: "Grade", value: poData?.grade || "-", icon: ShieldPlus, valClass: "text-[#171717]" },
+    { label: "Customer", value: poData?.customer || "-", icon: ContactRound, valClass: "text-[#171717]" },
+  ];
+
+  const detailChips = [
+    { label: "Stage", value: poData?.stage },
+    { label: "Date", value: poData?.timestamp ? new Date(poData.timestamp).toLocaleDateString("en-GB") : "-" },
+  ];
 
   const currentConfig = activeTab === "Slitting" ? slittingConfig
     : windingConfig;
@@ -285,10 +379,10 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
                 </div> */}
 
         {/* Title row */}
-        <div className="px-4 py-4 md:px-6 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-[20px] font-semibold text-[#171717]">
-              Product Order #{poData.id}
+        <div className="px-4 py-4 md:px-6 md:py-6 mt-[52px] md:mt-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center justify-between gap-4 w-full md:w-auto">
+            <h1 className="flex flex-col sm:flex-row items-start gap-2 text-[16px] lg:text-[20px] font-semibold text-[#171717]">
+              Product Order <span>#{poData.id}</span>
             </h1>
             <StatusBadge status={poData.status || "Yet to Start"} />
           </div>
@@ -303,29 +397,49 @@ export default function ProductOrderDetailPage({ params }: DetailPageProps) {
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="px-4 pb-4 md:px-6 md:pb-6">
-          <div className="bg-[#F9FAFB] rounded-[12px] p-4 flex flex-wrap gap-x-8 gap-y-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-[12px] font-medium text-[#5C5C5C]">Current Stage</span>
-              <span className="text-[14px] font-semibold text-[#171717]">{poData.stage || "-"}</span>
+        {/* Mobile KPI section */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 gap-0 md:hidden mx-4 bg-white border border-[#EBEBEB] rounded-[12px]">
+          {detailKpiStats.map((stat, i) => {
+            const Icon = stat.icon;
+            return (
+              <div key={i} className={`p-3 border-r border-b border-[#EBEBEB] rounded-[12px]`}>
+                <div className="flex items-start gap-2">
+                  <div className="w-8 h-8 rounded-full bg-[#E6F8FD] flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-[#00B6E2]" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-[11px] font-medium text-[#5C5C5C]">{stat.label}</p>
+                    <span className={`text-[13px] font-semibold ${stat.valClass}`}>{stat.value}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        {/* Mobile detail chips */}
+        <section className="md:hidden mx-4 mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+          {detailChips.map((chip, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-[12px] font-medium text-[#5C5C5C]">{chip.label}:</span>
+              <span className="text-[12px] font-semibold text-[#171717]">{chip.value}</span>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[12px] font-medium text-[#5C5C5C]">Target Quantity</span>
-              <span className="text-[14px] font-semibold text-[#171717]">{poData.quantity ? `${poData.quantity}kgs` : "-"}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[12px] font-medium text-[#5C5C5C]">Customer</span>
-              <span className="text-[14px] font-semibold text-[#171717]">{poData.customer || "-"}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[12px] font-medium text-[#5C5C5C]">Created Date</span>
-              <span className="text-[14px] font-semibold text-[#171717]">
-                {poData.timestamp ? new Date(poData.timestamp).toLocaleDateString("en-GB") : "-"}
-              </span>
-            </div>
+          ))}
+        </section>
+
+        {/* Desktop Overview Row */}
+        <section className="hidden md:flex w-full px-4 md:px-6 py-6 border-b border-[#EBEBEB]">
+          <div className="flex items-center gap-6 w-full">
+            {overviewFields.map((field, idx) => (
+              <div key={idx} className="flex flex-col gap-[6px] min-w-0">
+                <span className="text-[12px] font-normal text-[#5C5C5C] leading-tight whitespace-nowrap">{field.label}</span>
+                <div className="text-[14px] font-semibold text-[#171717] leading-tight flex items-center h-5">
+                  {field.value}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </section>
       </section>
 
       {/* Tabs + Table */}

@@ -297,7 +297,7 @@ export default function SupervisorProductOrdersPage() {
         <FilterChips config={filterConfig} filters={tableFilters} onRemove={handleRemoveFilter} />
 
         {/* Data Table */}
-        <section className="hidden md:block bg-white rounded-[12px] flex flex-col gap-4 overflow-hidden">
+        <section className="bg-white rounded-[12px] flex flex-col gap-4 overflow-hidden">
           <div className="border border-[#EAECF0] rounded-[8px] overflow-x-auto min-h-[400px]">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>

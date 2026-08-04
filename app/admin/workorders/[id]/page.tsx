@@ -380,7 +380,7 @@ export default function AdminWorkOrderDetailPage({ params }: DetailPageProps) {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <button
             onClick={() => setIsDocModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-white border border-[#DDE1E8] text-[#171717] text-[13px] font-medium rounded-[8px] h-[36px] px-4 hover:bg-[#F5F7FA] transition-colors self-start sm:self-auto shadow-sm whitespace-nowrap"
+            className="flex items-center justify-center gap-2 bg-white border border-[#DDE1E8] text-[#171717] text-[13px] font-medium rounded-[8px] h-[36px] px-4 hover:bg-[#F5F7FA] transition-colors self-start sm:self-auto whitespace-nowrap"
           >
             <FileText className="w-4 h-4 text-gray-600" />
             Docs Uploaded
